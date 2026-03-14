@@ -3,7 +3,7 @@ const menuRoutes = {
     'customer.php':           '/PHP/DATN/Internal/Staff/layout/Customer_Management/Customer_Management.php',
     'Schedule_Management.php':'/PHP/DATN/Internal/Staff/layout/Schedule_Management/Schedule_Management.php',
     'facilities.php':         '/PHP/DATN/Internal/Staff/layout/Facilities_Management/Facilities_Management.php',
-    'Profile.php':         '/PHP/DATN/Internal/Staff/layout/Profile/Profile.php'
+    'Profile.php':         '/PHP/DATN/Internal/Staff/Layout/Profile/Profile.php'
 };
 
 // Page meta: title, breadcrumb, icon, color
