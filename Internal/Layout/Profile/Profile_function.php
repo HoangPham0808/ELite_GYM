@@ -1,27 +1,27 @@
 <?php
 // ============================================================
 //  ELITE GYM — Profile_function.php
-//  Đặt tại: DATN/Internal/Staff/layout/Profile/Profile_function.php
+//  Đặt tại: ELITE_GYM/Internal/Layout/Profile/Profile_function.php
 // ============================================================
 
-require_once __DIR__ . '/../../../../auth_check.php';
-requireRole('Customer');
+require_once __DIR__ . '/../../auth_check.php';
+requireRole('Employee');
 
 header('Content-Type: application/json; charset=utf-8');
 
 $db = new mysqli('localhost', 'root', '', 'datn');
 if ($db->connect_error) {
-    echo json_encode(['success' => false, 'message' => 'DB error']);
+    echo json_encode(['success' => false, 'message' => 'DB error: ' . $db->connect_error]);
     exit;
 }
 $db->set_charset('utf8mb4');
 
-$account_id = (int)$_SESSION['account_id'];
-$action     = '';
+$account_id = (int)($_SESSION['account_id'] ?? 0);
 
-// Support both GET and POST (JSON body)
+// Support GET and POST JSON
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $action = $_GET['action'] ?? '';
+    $body   = [];
 } else {
     $body   = json_decode(file_get_contents('php://input'), true) ?? [];
     $action = $body['action'] ?? '';
@@ -32,10 +32,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 // ============================================================
 if ($action === 'get_profile') {
 
-    $sql = "SELECT c.customer_id, c.full_name, c.date_of_birth, c.gender,
-                   c.phone, c.email, c.address, c.registered_at
-            FROM Customer c
-            WHERE c.account_id = ?";
+    $sql = "SELECT e.employee_id, e.full_name, e.date_of_birth, e.gender,
+                   e.phone, e.email, e.address, e.hire_date, e.position
+            FROM Employee e
+            WHERE e.account_id = ?";
     $stmt = $db->prepare($sql);
     $stmt->bind_param('i', $account_id);
     $stmt->execute();
@@ -46,26 +46,7 @@ if ($action === 'get_profile') {
         exit;
     }
 
-    // Active membership
-    $membership = null;
-    $sql2 = "SELECT mp.plan_name, mr.start_date, mr.end_date
-             FROM MembershipRegistration mr
-             JOIN MembershipPlan mp ON mr.plan_id = mp.plan_id
-             WHERE mr.customer_id = ?
-               AND mr.end_date >= CURDATE()
-             ORDER BY mr.end_date DESC
-             LIMIT 1";
-    $stmt2 = $db->prepare($sql2);
-    $stmt2->bind_param('i', $row['customer_id']);
-    $stmt2->execute();
-    $mRow = $stmt2->get_result()->fetch_assoc();
-    if ($mRow) $membership = $mRow;
-
-    echo json_encode([
-        'success'    => true,
-        'data'       => $row,
-        'membership' => $membership
-    ]);
+    echo json_encode(['success' => true, 'data' => $row]);
     exit;
 }
 
@@ -89,7 +70,7 @@ if ($action === 'update_profile') {
     $dob = (!empty($date_of_birth)) ? $date_of_birth : null;
     $gen = in_array($gender, ['Male','Female','Other']) ? $gender : null;
 
-    $sql = "UPDATE Customer
+    $sql = "UPDATE Employee
             SET full_name = ?, phone = ?, email = ?,
                 date_of_birth = ?, gender = ?, address = ?
             WHERE account_id = ?";
@@ -97,7 +78,9 @@ if ($action === 'update_profile') {
     $stmt->bind_param('ssssssi', $full_name, $phone, $email, $dob, $gen, $address, $account_id);
 
     if ($stmt->execute()) {
-        $_SESSION['ho_ten'] = $full_name;
+        // Cập nhật session
+        $_SESSION['ho_ten']    = $full_name;
+        $_SESSION['full_name'] = $full_name;
         echo json_encode(['success' => true, 'message' => 'Cập nhật thành công']);
     } else {
         echo json_encode(['success' => false, 'message' => 'Lỗi cập nhật: ' . $db->error]);
@@ -110,15 +93,14 @@ if ($action === 'update_profile') {
 // ============================================================
 if ($action === 'change_password') {
 
-    $current  = $body['current_password'] ?? '';
-    $new_pw   = $body['new_password']     ?? '';
+    $current = $body['current_password'] ?? '';
+    $new_pw  = $body['new_password']     ?? '';
 
     if (strlen($new_pw) < 6) {
         echo json_encode(['success' => false, 'message' => 'Mật khẩu mới phải có ít nhất 6 ký tự']);
         exit;
     }
 
-    // Get current hashed password
     $stmt = $db->prepare("SELECT password FROM Account WHERE account_id = ?");
     $stmt->bind_param('i', $account_id);
     $stmt->execute();
@@ -129,7 +111,7 @@ if ($action === 'change_password') {
         exit;
     }
 
-    // Verify current password (support both plain and hashed)
+    // Verify: hỗ trợ cả password_hash và plain text
     $valid = password_verify($current, $row['password']) || ($current === $row['password']);
 
     if (!$valid) {
@@ -149,5 +131,4 @@ if ($action === 'change_password') {
     exit;
 }
 
-// Unknown action
 echo json_encode(['success' => false, 'message' => 'Action không hợp lệ']);

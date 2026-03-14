@@ -1,10 +1,17 @@
 <?php
+ob_start();
+// Đặt tại: ELITE_GYM/Internal/Layout/Profile/Profile.php
 require_once __DIR__ . '/../../auth_check.php';
-requireRole('Customer');
+requireRole('Employee'); // Dành cho HLV và Receptionist
 
-$account_id = $_SESSION['account_id'];
-$ho_ten     = htmlspecialchars($_SESSION['ho_ten'] ?? 'Khách hàng');
-$initials   = mb_strtoupper(mb_substr($ho_ten, 0, 1));
+$ho_ten   = htmlspecialchars($_SESSION['ho_ten']   ?? ($_SESSION['full_name'] ?? 'Nhân viên'));
+$initials = mb_strtoupper(mb_substr($ho_ten, 0, 1));
+$chuc_vu  = $_SESSION['position'] ?? '';
+$chuc_vu_display = match($chuc_vu) {
+    'Personal Trainer' => 'HUẤN LUYỆN VIÊN',
+    'Receptionist'     => 'LỄ TÂN',
+    default            => strtoupper($chuc_vu)
+};
 ?>
 <!DOCTYPE html>
 <html lang="vi">
@@ -24,23 +31,6 @@ $initials   = mb_strtoupper(mb_substr($ho_ten, 0, 1));
 </div>
 
 <div class="page-wrap">
-
-    <!-- ===== TOPBAR ===== -->
-    <header class="topbar">
-        <div class="topbar-brand">
-            <svg class="brand-hex" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
-                <polygon points="30,2 56,16 56,44 30,58 4,44 4,16" fill="none" stroke="#d4a017" stroke-width="2.5"/>
-                <text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle" fill="#d4a017" font-size="16" font-weight="800" font-family="Barlow Condensed">EG</text>
-            </svg>
-            <span class="brand-name">ELITE GYM</span>
-        </div>
-        <div class="topbar-right">
-            <span class="topbar-time" id="topbar-time"></span>
-            <a href="/PHP/DATN/Internal/Index/Login/logout.php" class="logout-btn">
-                <i class="fas fa-sign-out-alt"></i> Đăng xuất
-            </a>
-        </div>
-    </header>
 
     <!-- ===== MAIN ===== -->
     <main class="main-content">
@@ -65,32 +55,20 @@ $initials   = mb_strtoupper(mb_substr($ho_ten, 0, 1));
                     <div class="avatar-circle" id="avatarCircle"><?= $initials ?></div>
                 </div>
                 <h2 class="avatar-name" id="displayName"><?= $ho_ten ?></h2>
-                <span class="avatar-badge"><i class="fas fa-dumbbell"></i> Khách hàng</span>
+                <span class="avatar-badge">
+                    <i class="fas fa-<?= $chuc_vu === 'Personal Trainer' ? 'dumbbell' : 'concierge-bell' ?>"></i>
+                    <?= $chuc_vu_display ?>
+                </span>
 
                 <div class="avatar-stats">
                     <div class="stat-item">
-                        <span class="stat-val" id="statDays">–</span>
-                        <span class="stat-label">Ngày tham gia</span>
+                        <span class="stat-val" id="statHireDate">–</span>
+                        <span class="stat-label">Ngày vào làm</span>
                     </div>
                     <div class="stat-divider"></div>
                     <div class="stat-item">
-                        <span class="stat-val" id="statPlan">–</span>
-                        <span class="stat-label">Gói hiện tại</span>
-                    </div>
-                    <div class="stat-divider"></div>
-                    <div class="stat-item">
-                        <span class="stat-val" id="statExpiry">–</span>
-                        <span class="stat-label">Hết hạn</span>
-                    </div>
-                </div>
-
-                <div class="membership-bar-wrap">
-                    <div class="membership-bar-label">
-                        <span>Thời gian còn lại</span>
-                        <span id="membershipPct">–</span>
-                    </div>
-                    <div class="membership-bar">
-                        <div class="membership-bar-fill" id="membershipBarFill" style="width:0%"></div>
+                        <span class="stat-val" id="statGender">–</span>
+                        <span class="stat-label">Giới tính</span>
                     </div>
                 </div>
             </div>
@@ -139,8 +117,9 @@ $initials   = mb_strtoupper(mb_substr($ho_ten, 0, 1));
                             </select>
                         </div>
                         <div class="form-group">
-                            <label><i class="fas fa-calendar-check"></i> Ngày đăng ký</label>
-                            <input type="text" id="inp_regdate" class="form-input" readonly disabled>
+                            <label><i class="fas fa-briefcase"></i> Chức vụ</label>
+                            <input type="text" id="inp_position" class="form-input" readonly disabled
+                                   value="<?= htmlspecialchars($chuc_vu) ?>">
                         </div>
                     </div>
                     <div class="form-row form-row-full">
@@ -207,7 +186,7 @@ $initials   = mb_strtoupper(mb_substr($ho_ten, 0, 1));
                 </form>
             </div>
 
-        </div><!-- /cards-grid -->
+        </div>
     </main>
 </div>
 

@@ -1,18 +1,11 @@
-// ============================================================
-//  ELITE GYM — Profile.js
-// ============================================================
-
-const API = '/PHP/DATN/Internal/Staff/layout/Profile/Profile_function.php';
+const API = '/PHP/ELITE_GYM/Internal/Layout/Profile/Profile_function.php';
 
 // ===== CLOCK =====
 function updateClock() {
     const el = document.getElementById('topbar-time');
     if (!el) return;
     const now = new Date();
-    const hh = String(now.getHours()).padStart(2,'0');
-    const mm = String(now.getMinutes()).padStart(2,'0');
-    const ss = String(now.getSeconds()).padStart(2,'0');
-    el.textContent = `${hh}:${mm}:${ss}`;
+    el.textContent = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
 }
 setInterval(updateClock, 1000);
 updateClock();
@@ -35,13 +28,11 @@ async function loadProfile() {
 
         const p = d.data;
 
-        // Info fields
         document.getElementById('inp_name').value    = p.full_name    || '';
         document.getElementById('inp_phone').value   = p.phone        || '';
         document.getElementById('inp_email').value   = p.email        || '';
         document.getElementById('inp_dob').value     = p.date_of_birth|| '';
         document.getElementById('inp_address').value = p.address      || '';
-        document.getElementById('inp_regdate').value = formatDate(p.registered_at);
         document.getElementById('displayName').textContent = p.full_name || '';
 
         const sel = document.getElementById('inp_gender');
@@ -54,29 +45,11 @@ async function loadProfile() {
         document.getElementById('avatarCircle').textContent = initials;
 
         // Stats
-        const regDate = p.registered_at ? new Date(p.registered_at) : null;
-        if (regDate) {
-            const days = Math.floor((Date.now() - regDate) / 86400000);
-            document.getElementById('statDays').textContent = days + ' ngày';
+        if (p.hire_date) {
+            document.getElementById('statHireDate').textContent = formatDate(p.hire_date);
         }
-
-        // Membership info
-        if (d.membership) {
-            const m = d.membership;
-            document.getElementById('statPlan').textContent = m.plan_name || '–';
-            document.getElementById('statExpiry').textContent = formatDate(m.end_date);
-
-            // Progress bar
-            const start = new Date(m.start_date);
-            const end   = new Date(m.end_date);
-            const now   = new Date();
-            const total = end - start;
-            const elapsed = now - start;
-            const pct = Math.min(100, Math.max(0, Math.round((elapsed / total) * 100)));
-            const remaining = 100 - pct;
-            document.getElementById('membershipBarFill').style.width = remaining + '%';
-            document.getElementById('membershipPct').textContent = remaining + '%';
-        }
+        const genderMap = { Male: 'Nam', Female: 'Nữ', Other: 'Khác' };
+        document.getElementById('statGender').textContent = genderMap[p.gender] || '–';
 
     } catch(e) {
         console.error('loadProfile error:', e);
@@ -101,11 +74,7 @@ function toggleEdit() {
     const gender  = document.getElementById('inp_gender');
 
     if (editMode) {
-        fields.forEach(id => {
-            const el = document.getElementById(id);
-            el.removeAttribute('readonly');
-            el.classList.add('editable');
-        });
+        fields.forEach(id => { document.getElementById(id).removeAttribute('readonly'); });
         gender.removeAttribute('disabled');
         btn.innerHTML = '<i class="fas fa-times"></i> Huỷ';
         btn.classList.add('active');
@@ -120,18 +89,12 @@ function cancelEdit() {
     const fields = ['inp_name','inp_phone','inp_email','inp_dob','inp_address'];
     const btn    = document.getElementById('editToggleBtn');
     const actions= document.getElementById('formActions');
-
-    fields.forEach(id => {
-        const el = document.getElementById(id);
-        el.setAttribute('readonly','');
-        el.classList.remove('editable');
-    });
+    fields.forEach(id => { document.getElementById(id).setAttribute('readonly',''); });
     document.getElementById('inp_gender').setAttribute('disabled','');
     btn.innerHTML = '<i class="fas fa-pen"></i> Chỉnh sửa';
     btn.classList.remove('active');
     actions.classList.add('hidden');
-
-    loadProfile(); // restore original values
+    loadProfile();
 }
 
 // ===== SAVE PROFILE =====
@@ -161,6 +124,7 @@ async function saveProfile(e) {
         if (d.success) {
             showToast('toast', 'Cập nhật thông tin thành công!', 'success');
             document.getElementById('displayName').textContent = payload.full_name;
+            document.getElementById('avatarCircle').textContent = payload.full_name.charAt(0).toUpperCase();
             cancelEdit();
         } else {
             showToast('toast', d.message || 'Có lỗi xảy ra.', 'error');
@@ -176,33 +140,25 @@ async function saveProfile(e) {
 // ===== CHANGE PASSWORD =====
 async function changePassword(e) {
     e.preventDefault();
-    const btn     = document.getElementById('btnChangePw');
-    const newPw   = document.getElementById('inp_newpw').value;
-    const confPw  = document.getElementById('inp_confpw').value;
+    const btn    = document.getElementById('btnChangePw');
+    const newPw  = document.getElementById('inp_newpw').value;
+    const confPw = document.getElementById('inp_confpw').value;
 
-    if (newPw !== confPw) {
-        showToast('pwToast', 'Mật khẩu xác nhận không khớp!', 'error');
-        return;
-    }
-    if (newPw.length < 6) {
-        showToast('pwToast', 'Mật khẩu mới phải có ít nhất 6 ký tự!', 'error');
-        return;
-    }
+    if (newPw !== confPw) { showToast('pwToast','Mật khẩu xác nhận không khớp!','error'); return; }
+    if (newPw.length < 6) { showToast('pwToast','Mật khẩu mới phải có ít nhất 6 ký tự!','error'); return; }
 
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang cập nhật...';
-
-    const payload = {
-        action:           'change_password',
-        current_password: document.getElementById('inp_curpw').value,
-        new_password:     newPw
-    };
 
     try {
         const res = await fetch(API, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+            body: JSON.stringify({
+                action: 'change_password',
+                current_password: document.getElementById('inp_curpw').value,
+                new_password: newPw
+            })
         });
         const d = await res.json();
         if (d.success) {
@@ -224,45 +180,37 @@ async function changePassword(e) {
 function togglePw(inputId, btn) {
     const inp = document.getElementById(inputId);
     const icon = btn.querySelector('i');
-    if (inp.type === 'password') {
-        inp.type = 'text';
-        icon.className = 'fas fa-eye-slash';
-    } else {
-        inp.type = 'password';
-        icon.className = 'fas fa-eye';
-    }
+    if (inp.type === 'password') { inp.type = 'text'; icon.className = 'fas fa-eye-slash'; }
+    else { inp.type = 'password'; icon.className = 'fas fa-eye'; }
 }
 
 // ===== PASSWORD STRENGTH =====
-document.getElementById('inp_newpw').addEventListener('input', function() {
-    const val  = this.value;
-    const wrap = document.getElementById('pwStrengthWrap');
-    const fill = document.getElementById('pwStrengthFill');
-    const text = document.getElementById('pwStrengthText');
-
-    if (!val) { wrap.style.display = 'none'; return; }
-    wrap.style.display = 'flex';
-
-    let score = 0;
-    if (val.length >= 6)  score++;
-    if (val.length >= 10) score++;
-    if (/[A-Z]/.test(val)) score++;
-    if (/[0-9]/.test(val)) score++;
-    if (/[^A-Za-z0-9]/.test(val)) score++;
-
-    const levels = [
-        { pct: '20%', color: '#ef4444', label: 'Rất yếu' },
-        { pct: '40%', color: '#f97316', label: 'Yếu'     },
-        { pct: '60%', color: '#eab308', label: 'Trung bình' },
-        { pct: '80%', color: '#22c55e', label: 'Mạnh'    },
-        { pct: '100%',color: '#10b981', label: 'Rất mạnh' }
-    ];
-    const lv = levels[Math.min(score, 4)];
-    fill.style.width      = lv.pct;
-    fill.style.background = lv.color;
-    text.textContent      = lv.label;
-    text.style.color      = lv.color;
+document.addEventListener('DOMContentLoaded', () => {
+    loadProfile();
+    document.getElementById('inp_newpw').addEventListener('input', function() {
+        const val  = this.value;
+        const wrap = document.getElementById('pwStrengthWrap');
+        const fill = document.getElementById('pwStrengthFill');
+        const text = document.getElementById('pwStrengthText');
+        if (!val) { wrap.style.display = 'none'; return; }
+        wrap.style.display = 'flex';
+        let score = 0;
+        if (val.length >= 6)  score++;
+        if (val.length >= 10) score++;
+        if (/[A-Z]/.test(val)) score++;
+        if (/[0-9]/.test(val)) score++;
+        if (/[^A-Za-z0-9]/.test(val)) score++;
+        const levels = [
+            { pct:'20%', color:'#ef4444', label:'Rất yếu' },
+            { pct:'40%', color:'#f97316', label:'Yếu'     },
+            { pct:'60%', color:'#eab308', label:'Trung bình' },
+            { pct:'80%', color:'#22c55e', label:'Mạnh'    },
+            { pct:'100%',color:'#10b981', label:'Rất mạnh' }
+        ];
+        const lv = levels[Math.min(score, 4)];
+        fill.style.width = lv.pct;
+        fill.style.background = lv.color;
+        text.textContent = lv.label;
+        text.style.color = lv.color;
+    });
 });
-
-// ===== INIT =====
-document.addEventListener('DOMContentLoaded', loadProfile);
