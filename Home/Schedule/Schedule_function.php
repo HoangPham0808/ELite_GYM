@@ -11,13 +11,11 @@ if (!isset($_SESSION['account_id']) || ($_SESSION['role'] ?? '') !== 'Customer')
     echo json_encode(['success' => false, 'message' => 'Chưa đăng nhập']);
     exit;
 }
-
 // ── Chỉ nhận POST ─────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo json_encode(['success' => false, 'message' => 'Method không hợp lệ']);
     exit;
 }
-
 require_once '../../Database/db.php';
 
 $account_id = (int)$_SESSION['account_id'];
