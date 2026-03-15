@@ -367,3 +367,72 @@ body {
     transition: background 0.2s;
 }
 .error-message button:hover { background: var(--gold-light); }
+
+/* ===== SUBMENU (Setting) ===== */
+
+/* Nút cha có mũi tên */
+.nav-has-sub > a {
+    position: relative;
+}
+.nav-arrow {
+    margin-left: auto;
+    font-size: 11px !important;
+    width: auto !important;
+    color: var(--text-muted);
+    transition: transform .25s ease, color .2s;
+}
+
+/* Submenu ẩn mặc định */
+.nav-submenu {
+    list-style: none;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height .3s ease;
+    background: rgba(0,0,0,.18);
+    border-left: 2px solid rgba(212,160,23,.18);
+    margin-left: 20px;
+    border-radius: 0 0 6px 6px;
+}
+
+/* Khi group open → mở submenu */
+.nav-group-sub.open .nav-submenu {
+    max-height: 300px;
+}
+.nav-group-sub.open .nav-arrow {
+    transform: rotate(180deg);
+    color: var(--gold);
+}
+
+/* Item trong submenu */
+.nav-submenu .nav-item a {
+    padding: 10px 20px 10px 18px;
+    font-size: 14px;
+    color: var(--text-muted);
+    border-left: 2px solid transparent;
+}
+.nav-submenu .nav-item a i {
+    font-size: 13px;
+    color: var(--text-muted);
+}
+.nav-submenu .nav-item a:hover {
+    color: var(--text-primary);
+    background: rgba(255,255,255,.04);
+}
+.nav-submenu .nav-item.active a {
+    color: var(--gold);
+    background: var(--gold-dim);
+    border-left-color: var(--gold);
+    font-weight: 600;
+}
+.nav-submenu .nav-item.active a i {
+    color: var(--gold);
+}
+
+/* Khi active → tự mở submenu cha */
+.nav-group-sub:has(.nav-item.active) .nav-submenu {
+    max-height: 300px;
+}
+.nav-group-sub:has(.nav-item.active) .nav-arrow {
+    transform: rotate(180deg);
+    color: var(--gold);
+}

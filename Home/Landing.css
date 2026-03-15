@@ -625,6 +625,7 @@ body::after {
    RESPONSIVE
 ═══════════════════════════════════════════ */
 @media (max-width:1024px) {
+  .wrap { padding:0 32px; }
   .hero { padding: calc(var(--nav-h) + 30px) 40px 60px; gap:40px; }
   .hero-right { width:320px; }
   .feat-grid { grid-template-columns:1fr 1fr; }
@@ -655,6 +656,9 @@ body::after {
   .footer-grid { grid-template-columns:1fr; gap:32px; }
   .fg-brand { grid-column:span 1; }
   .nav-inner { padding:0 20px; }
+}
+@media (max-width:480px) {
+  .wrap { padding:0 14px; }
 }
 
 /* ══════════════════════════════════

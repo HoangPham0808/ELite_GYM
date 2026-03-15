@@ -90,6 +90,30 @@ $initials    = mb_strtoupper(mb_substr($full_name, 0, 1));
                         </li>
                     </ul>
                 </div>
+
+                <!-- ── CÀI ĐẶT (có submenu) ── -->
+                <div class="nav-group nav-group-sub" id="groupSetting">
+                    <span class="nav-group-label">CÀI ĐẶT</span>
+                    <ul>
+                        <!-- Nút cha Setting — toggle submenu -->
+                        <li class="nav-item nav-has-sub">
+                            <a href="#" class="nav-parent">
+                                <i class="fas fa-cog"></i>
+                                <span>Cài đặt</span>
+                                <i class="fas fa-chevron-down nav-arrow"></i>
+                            </a>
+                            <!-- Submenu -->
+                            <ul class="nav-submenu">
+                                <li class="nav-item" data-page="landing_image.php">
+                                    <a href="#landing_image.php">
+                                        <i class="fas fa-images"></i>
+                                        <span>Ảnh Landing</span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
             </nav>
 
             <!-- User + Logout -->

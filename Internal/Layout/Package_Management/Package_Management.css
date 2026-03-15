@@ -933,3 +933,94 @@ thead th.sortable.desc .sort-icon::before { content: '↓'; opacity: 1; color: #
     .filter-bar { gap: 10px; }
     .search-box { min-width: 100%; }
 }
+
+/* ===== IMAGE UPLOAD ZONE ===== */
+.img-upload-zone {
+    border: 2px dashed rgba(212,160,23,.35);
+    border-radius: 12px;
+    min-height: 130px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all .2s;
+    position: relative;
+    overflow: hidden;
+    background: rgba(212,160,23,.04);
+}
+.img-upload-zone:hover,
+.img-upload-zone.drag-over {
+    border-color: #d4a017;
+    background: rgba(212,160,23,.08);
+}
+
+/* Placeholder (khi chưa có ảnh) */
+#imgPlaceholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    color: rgba(255,255,255,.35);
+    pointer-events: none;
+    padding: 20px;
+    text-align: center;
+}
+#imgPlaceholder i    { font-size: 2rem; color: rgba(212,160,23,.5); }
+#imgPlaceholder span { font-size: .9rem; font-weight: 500; }
+#imgPlaceholder small { font-size: .75rem; color: rgba(255,255,255,.2); }
+
+/* Preview wrapper */
+#imgPreviewWrap {
+    width: 100%;
+    height: 180px;
+    position: relative;
+    align-items: center;
+    justify-content: center;
+}
+#imgPreview {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: 10px;
+    display: block;
+}
+
+/* Nút xóa ảnh (X) */
+.img-remove-btn {
+    position: absolute;
+    top: 8px; right: 8px;
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: rgba(0,0,0,.7);
+    border: 1px solid rgba(255,255,255,.15);
+    color: #f87171;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .75rem;
+    cursor: pointer;
+    transition: all .2s;
+    z-index: 5;
+}
+.img-remove-btn:hover {
+    background: rgba(248,113,113,.2);
+    border-color: rgba(248,113,113,.4);
+}
+
+/* ===== THUMBNAIL TRONG BẢNG ===== */
+.pkg-thumb {
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    object-fit: cover;
+    border: 1px solid rgba(212,160,23,.25);
+    flex-shrink: 0;
+}
+
+/* ===== ẢNH TRONG CHI TIẾT ===== */
+.detail-pkg-img {
+    width: 80px;
+    height: 80px;
+    border-radius: 12px;
+    object-fit: cover;
+    border: 2px solid rgba(212,160,23,.3);
+    flex-shrink: 0;
+}

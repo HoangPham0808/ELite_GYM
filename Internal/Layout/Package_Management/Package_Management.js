@@ -86,16 +86,26 @@ function renderTable(packages) {
 
     tbody.innerHTML = packages.map(p => {
         const durationLabel = formatDuration(p.duration_months);
-        const totalSubs = parseInt(p.total_subscribers) || 0;
+        const totalSubs  = parseInt(p.total_subscribers) || 0;
         const activeSubs = parseInt(p.active_subscribers) || 0;
-        const moTa = p.description ? escHtml(p.description).substring(0, 60) + (p.description.length > 60 ? '...' : '') : '<span style="color:rgba(255,255,255,0.25)">—</span>';
-
+        const moTa = p.description
+            ? escHtml(p.description).substring(0, 60) + (p.description.length > 60 ? '...' : '')
+            : '<span style="color:rgba(255,255,255,0.25)">—</span>';
         const isHot = totalSubs >= 10;
+
+        // Ảnh thumbnail
+        const imgHtml = p.image_url
+            ? `<img src="${escHtml(p.image_url)}" class="pkg-thumb" alt="${escHtml(p.plan_name)}"
+                    onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+            : '';
+        const avatarHtml = p.image_url
+            ? `${imgHtml}<div class="pkg-avatar" style="display:none"><i class="fas fa-dumbbell"></i></div>`
+            : `<div class="pkg-avatar"><i class="fas fa-dumbbell"></i></div>`;
 
         return `<tr>
             <td>
                 <div class="pkg-name-cell">
-                    <div class="pkg-avatar"><i class="fas fa-dumbbell"></i></div>
+                    ${avatarHtml}
                     <div>
                         <div class="pkg-name-text">${escHtml(p.plan_name)}</div>
                         <div class="pkg-id-text">#${p.plan_id}</div>
@@ -175,6 +185,7 @@ function openAddModal() {
     document.getElementById('fThoiHan').value   = '';
     document.getElementById('fGia').value       = '';
     document.getElementById('fMoTa').value      = '';
+    resetImagePreview();
     document.getElementById('packageModal').classList.add('active');
     setTimeout(() => document.getElementById('fTenGoi').focus(), 100);
 }
@@ -190,6 +201,14 @@ window.openEdit = function(encoded) {
     document.getElementById('fThoiHan').value   = pkg.duration_months || '';
     document.getElementById('fGia').value       = pkg.price || '';
     document.getElementById('fMoTa').value      = pkg.description || '';
+
+    // Load ảnh cũ vào preview
+    if (pkg.image_url) {
+        setImagePreview(pkg.image_url);
+    } else {
+        resetImagePreview();
+    }
+
     document.getElementById('packageModal').classList.add('active');
     setTimeout(() => document.getElementById('fTenGoi').focus(), 100);
 };
@@ -200,15 +219,17 @@ function closePackageModal() {
 
 // ===== SAVE PACKAGE =====
 async function savePackage() {
-    const id      = document.getElementById('packageId').value;
-    const planName  = document.getElementById('fTenGoi').value.trim();
-    const duration = document.getElementById('fThoiHan').value;
-    const price     = document.getElementById('fGia').value;
-    const description    = document.getElementById('fMoTa').value.trim();
+    const id          = document.getElementById('packageId').value;
+    const planName    = document.getElementById('fTenGoi').value.trim();
+    const duration    = document.getElementById('fThoiHan').value;
+    const price       = document.getElementById('fGia').value;
+    const description = document.getElementById('fMoTa').value.trim();
+    const removeImg   = document.getElementById('fRemoveImage').value;
+    const imageFile   = document.getElementById('fImage').files[0];
 
-    if (!planName)         { showToast('Vui lòng nhập tên gói tập', 'warning'); return; }
-    if (!duration || parseInt(duration) < 1) { showToast('Thời hạn phải lớn hơn 0', 'warning'); return; }
-    if (!price || parseFloat(price) < 0)       { showToast('Vui lòng nhập giá hợp lệ', 'warning'); return; }
+    if (!planName)                             { showToast('Vui lòng nhập tên gói tập', 'warning'); return; }
+    if (!duration || parseInt(duration) < 1)  { showToast('Thời hạn phải lớn hơn 0', 'warning'); return; }
+    if (!price || parseFloat(price) < 0)      { showToast('Vui lòng nhập giá hợp lệ', 'warning'); return; }
 
     const isEdit = !!id;
     const body = new FormData();
@@ -218,6 +239,8 @@ async function savePackage() {
     body.append('duration_months', duration);
     body.append('price', price);
     body.append('description', description);
+    body.append('remove_image', removeImg);
+    if (imageFile) body.append('image_package', imageFile);
 
     const btn = document.querySelector('#packageModal .btn-primary');
     btn.disabled = true;
@@ -326,7 +349,11 @@ function renderDetail(d) {
 
     document.getElementById('detailContent').innerHTML = `
         <div class="detail-pkg-header">
-            <div class="detail-pkg-icon"><i class="fas fa-dumbbell"></i></div>
+            ${p.image_url
+                ? `<img src="${escHtml(p.image_url)}" class="detail-pkg-img" alt="${escHtml(p.plan_name)}"
+                        onerror="this.style.display='none'">`
+                : `<div class="detail-pkg-icon"><i class="fas fa-dumbbell"></i></div>`
+            }
             <div>
                 <div class="detail-pkg-name">${escHtml(p.plan_name)}</div>
                 <div class="detail-pkg-id">Plan ID: #${p.plan_id}</div>
@@ -447,5 +474,63 @@ document.addEventListener('click', function(e) {
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
+    }
+});
+
+// ===== IMAGE PREVIEW HELPERS =====
+function setImagePreview(url) {
+    document.getElementById('imgPreview').src = url;
+    document.getElementById('imgPreviewWrap').style.display = 'flex';
+    document.getElementById('imgPlaceholder').style.display = 'none';
+    document.getElementById('fRemoveImage').value = '0';
+}
+
+function resetImagePreview() {
+    document.getElementById('fImage').value = '';
+    document.getElementById('imgPreview').src = '';
+    document.getElementById('imgPreviewWrap').style.display = 'none';
+    document.getElementById('imgPlaceholder').style.display = 'flex';
+    document.getElementById('fRemoveImage').value = '0';
+}
+
+function removeImage(e) {
+    e.stopPropagation();
+    document.getElementById('fRemoveImage').value = '1';
+    resetImagePreview();
+}
+
+// File input change → preview
+document.addEventListener('DOMContentLoaded', () => {
+    const fImage = document.getElementById('fImage');
+    if (fImage) {
+        fImage.addEventListener('change', function() {
+            const file = this.files[0];
+            if (!file) return;
+            if (file.size > 5 * 1024 * 1024) {
+                showToast('Ảnh vượt quá 5 MB', 'error');
+                this.value = '';
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = e => setImagePreview(e.target.result);
+            reader.readAsDataURL(file);
+        });
+    }
+
+    // Drag & drop vào zone
+    const zone = document.getElementById('imgUploadZone');
+    if (zone) {
+        zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+        zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+        zone.addEventListener('drop', e => {
+            e.preventDefault();
+            zone.classList.remove('drag-over');
+            const file = e.dataTransfer.files[0];
+            if (!file || !file.type.startsWith('image/')) return;
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            document.getElementById('fImage').files = dt.files;
+            document.getElementById('fImage').dispatchEvent(new Event('change'));
+        });
     }
 });

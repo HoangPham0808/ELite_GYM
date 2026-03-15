@@ -24,7 +24,13 @@ $reviews = $conn->query("
     FROM Review r JOIN Customer c ON r.customer_id = c.customer_id
     WHERE r.rating >= 4 ORDER BY r.review_date DESC LIMIT 3
 ")->fetch_all(MYSQLI_ASSOC);
-
+// ── Đọc ảnh slideshow từ DB ──────────────────────────────────────
+$slide_imgs = $conn->query("
+    SELECT image_id, image_name, file_url
+    FROM landing_images
+    WHERE is_active = 1
+    ORDER BY sort_order ASC, image_id ASC
+")->fetch_all(MYSQLI_ASSOC);
 // ── Extra data for CUSTOMER view ─────────────────────────────
 $cus_active_plan = null;
 $cus_checkins    = [];
@@ -82,8 +88,20 @@ if ($is_customer) {
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
-<link rel="stylesheet" href="fontawesome/css/all.min.css"/>
+<!-- Font Awesome 6.5.2 — CDN (không dùng integrity để tránh hash mismatch) -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+      crossorigin="anonymous" referrerpolicy="no-referrer" id="fa-cdn"/>
+<script>
+  // Fallback: nếu CDN lỗi (mất mạng) → load file local
+  document.getElementById('fa-cdn').onerror = function(){
+    var lnk = document.createElement('link');
+    lnk.rel  = 'stylesheet';
+    lnk.href = 'fontawesome/css/all.min.css';
+    document.head.appendChild(lnk);
+  };
+</script>
 <link rel="stylesheet" href="Landing.css"/>
+ <link rel="stylesheet" href="Image_landing_display.css"/>
 </head>
 <body>
 
@@ -380,7 +398,195 @@ if ($is_customer) {
   </div>
 </div>
 
+<?php if (!empty($slide_imgs)): ?>
+<section class="gallery-section" id="gallery">
 
+  <!-- Tiêu đề section vẫn theo .wrap (đồng bộ với các section khác) -->
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div class="eyebrow"><span></span>Không gian tập luyện</div>
+      <h2>Khám phá <span>Elite Gym</span></h2>
+    </div>
+  </div>
+
+  <!-- Slideshow dùng .gallery-inner: padding 5% hai bên, co giãn theo cửa sổ -->
+  <div class="gallery-inner">
+
+    <div class="slideshow-wrap reveal" id="slideshowWrap">
+
+      <!-- Progress bar -->
+      <div class="slide-progress">
+        <div class="slide-progress-bar" id="slideProgressBar"></div>
+      </div>
+
+      <!-- Counter -->
+      <div class="slide-counter">
+        <span id="slideCur">1</span> / <?= count($slide_imgs) ?>
+      </div>
+
+      <!-- Autoplay toggle -->
+      <button class="slide-autoplay-btn" id="autoplayBtn" title="Tạm dừng / Phát">
+        <i class="fas fa-pause" id="autoplayIcon"></i>
+      </button>
+
+      <!-- Slides -->
+      <?php foreach($slide_imgs as $si => $img): ?>
+      <div class="slide <?= $si === 0 ? 'active' : '' ?>" data-index="<?= $si ?>">
+        <img src="<?= htmlspecialchars($img['file_url']) ?>"
+             alt="<?= htmlspecialchars($img['image_name']) ?>"
+             loading="<?= $si < 2 ? 'eager' : 'lazy' ?>"/>
+        <div class="slide-caption">
+          <div class="sc-label">
+            <i class="fas fa-circle" style="font-size:.4rem"></i> ELITE GYM
+          </div>
+          <div class="sc-title"><?= htmlspecialchars($img['image_name']) ?></div>
+        </div>
+      </div>
+      <?php endforeach; ?>
+
+      <!-- Arrow controls -->
+      <button class="slide-prev" id="slidePrev"><i class="fas fa-chevron-left"></i></button>
+      <button class="slide-next" id="slideNext"><i class="fas fa-chevron-right"></i></button>
+
+      <!-- Dots -->
+      <div class="slide-dots" id="slideDots">
+        <?php foreach($slide_imgs as $si => $img): ?>
+        <button class="dot <?= $si === 0 ? 'active' : '' ?>" data-i="<?= $si ?>"></button>
+        <?php endforeach; ?>
+      </div>
+
+    </div><!-- /slideshow-wrap -->
+
+    <!-- Thumbnails -->
+    <?php if (count($slide_imgs) > 1): ?>
+    <div class="slide-thumbs" id="slideThumbs">
+      <?php foreach($slide_imgs as $si => $img): ?>
+      <div class="slide-thumb <?= $si === 0 ? 'active' : '' ?>" data-i="<?= $si ?>">
+        <img src="<?= htmlspecialchars($img['file_url']) ?>"
+             alt="<?= htmlspecialchars($img['image_name']) ?>"
+             loading="lazy"/>
+      </div>
+      <?php endforeach; ?>
+    </div>
+    <?php endif; ?>
+
+  </div><!-- /gallery-inner -->
+
+</section>
+ 
+<!-- ══ SLIDESHOW JS ══ -->
+<script>
+(function () {
+  const wrap = document.getElementById('slideshowWrap');
+  if (!wrap) return;
+ 
+  const slides     = [...wrap.querySelectorAll('.slide')];
+  const dots       = [...document.querySelectorAll('#slideDots .dot')];
+  const thumbs     = [...document.querySelectorAll('#slideThumbs .slide-thumb')];
+  const prevBtn    = document.getElementById('slidePrev');
+  const nextBtn    = document.getElementById('slideNext');
+  const autoBtn    = document.getElementById('autoplayBtn');
+  const autoIcon   = document.getElementById('autoplayIcon');
+  const curEl      = document.getElementById('slideCur');
+  const progBar    = document.getElementById('slideProgressBar');
+ 
+  const INTERVAL   = 4500;  // ms mỗi slide
+  const TRANS      = 900;   // ms CSS transition
+ 
+  let cur     = 0;
+  let playing = true;
+  let timer   = null;
+  let pTimer  = null;
+ 
+  /* ── Chuyển slide ── */
+  function goTo(idx) {
+    if (idx === cur) return;
+    slides[cur].classList.remove('active');
+    slides[cur].classList.add('prev');
+    dots[cur]?.classList.remove('active');
+    thumbs[cur]?.classList.remove('active');
+    const old = cur;
+    setTimeout(() => slides[old]?.classList.remove('prev'), TRANS);
+ 
+    cur = ((idx % slides.length) + slides.length) % slides.length;
+    slides[cur].classList.remove('prev');
+    slides[cur].classList.add('active');
+    dots[cur]?.classList.add('active');
+    thumbs[cur]?.classList.add('active');
+    if (curEl) curEl.textContent = cur + 1;
+    thumbs[cur]?.scrollIntoView({ behavior:'smooth', block:'nearest', inline:'center' });
+    resetProg();
+  }
+ 
+  /* ── Progress bar ── */
+  function resetProg() {
+    if (!progBar) return;
+    progBar.style.transition = 'none';
+    progBar.style.width = '0%';
+    clearTimeout(pTimer);
+    if (playing) {
+      pTimer = setTimeout(() => {
+        progBar.style.transition = `width ${INTERVAL}ms linear`;
+        progBar.style.width = '100%';
+      }, 50);
+    }
+  }
+ 
+  /* ── Autoplay ── */
+  function play() {
+    clearInterval(timer);
+    timer   = setInterval(() => goTo(cur + 1), INTERVAL);
+    playing = true;
+    resetProg();
+    if (autoIcon) autoIcon.className = 'fas fa-pause';
+    autoBtn?.classList.remove('paused');
+  }
+  function pause() {
+    clearInterval(timer); clearTimeout(pTimer);
+    playing = false;
+    if (progBar) progBar.style.transition = 'none';
+    if (autoIcon) autoIcon.className = 'fas fa-play';
+    autoBtn?.classList.add('paused');
+  }
+ 
+  /* ── Bind controls ── */
+  prevBtn?.addEventListener('click', () => { goTo(cur - 1); if (playing) { pause(); play(); } });
+  nextBtn?.addEventListener('click', () => { goTo(cur + 1); if (playing) { pause(); play(); } });
+  autoBtn?.addEventListener('click', () => playing ? pause() : play());
+ 
+  dots.forEach(d => d.addEventListener('click', () => { goTo(+d.dataset.i); if (playing) { pause(); play(); } }));
+  thumbs.forEach(t => t.addEventListener('click', () => { goTo(+t.dataset.i); if (playing) { pause(); play(); } }));
+ 
+  /* ── Swipe (mobile) ── */
+  let tx = null;
+  wrap.addEventListener('touchstart', e => { tx = e.touches[0].clientX; }, { passive:true });
+  wrap.addEventListener('touchend',   e => {
+    if (tx === null) return;
+    const dx = e.changedTouches[0].clientX - tx;
+    if (Math.abs(dx) > 42) goTo(dx < 0 ? cur + 1 : cur - 1);
+    tx = null;
+    if (playing) { pause(); play(); }
+  });
+ 
+  /* ── Keyboard ── */
+  document.addEventListener('keydown', e => {
+    if (document.activeElement?.tagName === 'INPUT') return;
+    if (e.key === 'ArrowLeft')  goTo(cur - 1);
+    if (e.key === 'ArrowRight') goTo(cur + 1);
+    if (e.key === ' ')          playing ? pause() : play();
+  });
+ 
+  /* ── Pause on hover ── */
+  wrap.addEventListener('mouseenter', pause);
+  wrap.addEventListener('mouseleave', () => { if (!autoBtn?.classList.contains('paused')) play(); });
+ 
+  /* ── Start ── */
+  if (slides.length > 1) play();
+  else resetProg();
+})();
+</script>
+ 
+<?php endif; /* end if slide_imgs not empty */ ?>
 <!-- ══════════════════════════════════════════
      MAIN BODY SECTIONS
      ══════════════════════════════════════════ -->

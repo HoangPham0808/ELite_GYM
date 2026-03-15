@@ -389,3 +389,96 @@ CREATE INDEX idx_equipment_type               ON Equipment(type_id);
 CREATE INDEX idx_equipment_last_maintenance   ON Equipment(last_maintenance_date);
 CREATE INDEX idx_maintenance_date             ON EquipmentMaintenance(maintenance_date);
 CREATE INDEX idx_maintenance_status           ON EquipmentMaintenance(status);
+-- ════════════════════════════════════════════════════════════════
+--  File    : landing_images.sql
+--  Database: datn  (WAMP64 / phpMyAdmin)
+--
+--  CÁCH CHẠY:
+--    1. Mở trình duyệt → http://localhost/phpmyadmin
+--    2. Chọn database "datn" ở cột trái
+--    3. Nhấn tab "SQL" phía trên
+--    4. Paste toàn bộ nội dung file này → nhấn "Go"
+--
+--  Vị trí lưu file:
+--    C:\wamp64\www\PHP\ELite_GYM\Database\landing_images.sql
+-- ════════════════════════════════════════════════════════════════
+
+USE `datn`;
+
+-- ── Xóa bảng cũ nếu muốn tạo lại (bỏ comment -- nếu cần reset) ──
+-- DROP TABLE IF EXISTS `landing_images`;
+
+-- ── Tạo bảng ──────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS `landing_images` (
+
+    `image_id`    INT          NOT NULL AUTO_INCREMENT
+                               COMMENT 'Khóa chính tự tăng',
+
+    `image_name`  VARCHAR(255) NOT NULL
+                               COMMENT 'Tên hiển thị / caption dưới ảnh trong slideshow',
+
+    `file_name`   VARCHAR(255) NOT NULL
+                               COMMENT 'Tên file thực tế, vd: gym_hall_6abc123.jpg',
+
+    `file_path`   VARCHAR(500) NOT NULL
+                               COMMENT 'Đường dẫn vật lý đầy đủ trên server, vd: C:/wamp64/www/PHP/ELite_GYM/upload/image_panel/gym_hall.jpg',
+
+    `file_url`    VARCHAR(500) NOT NULL
+                               COMMENT 'URL tương đối để trình duyệt hiển thị, vd: /PHP/ELite_GYM/upload/image_panel/gym_hall.jpg',
+
+    `file_size`   INT          NOT NULL DEFAULT 0
+                               COMMENT 'Kích thước file tính bằng byte',
+
+    `file_ext`    VARCHAR(10)  NOT NULL DEFAULT ''
+                               COMMENT 'Phần mở rộng không có dấu chấm: jpg | png | webp | gif',
+
+    `sort_order`  INT          NOT NULL DEFAULT 0
+                               COMMENT 'Thứ tự hiển thị trong slideshow, sắp xếp tăng dần (ASC)',
+
+    `is_active`   TINYINT(1)   NOT NULL DEFAULT 1
+                               COMMENT '1 = đang hiển thị  |  0 = đang ẩn',
+
+    `uploaded_by` INT              NULL DEFAULT NULL
+                               COMMENT 'account_id của Admin thực hiện upload (tham chiếu bảng Account)',
+
+    `uploaded_at` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+                               COMMENT 'Thời điểm upload ảnh lên server',
+
+    `updated_at`  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+                                        ON UPDATE CURRENT_TIMESTAMP
+                               COMMENT 'Thời điểm cập nhật bản ghi gần nhất',
+
+    -- Khóa chính
+    PRIMARY KEY (`image_id`),
+
+    -- Index tra cứu nhanh khi query slideshow (lọc is_active + sort_order)
+    KEY `idx_active_order` (`is_active`, `sort_order`),
+
+    -- Index theo người upload
+    KEY `idx_uploaded_by`  (`uploaded_by`)
+
+) ENGINE  = InnoDB
+  DEFAULT CHARSET  = utf8mb4
+  COLLATE          = utf8mb4_unicode_ci
+  AUTO_INCREMENT   = 1
+  COMMENT          = 'Ảnh slideshow hiển thị trang chủ Landing — Elite Gym';
+
+
+-- ════════════════════════════════════════════════════════════════
+--  Kiểm tra bảng vừa tạo
+--  (Chạy riêng dòng này để xem cấu trúc)
+-- ════════════════════════════════════════════════════════════════
+-- DESCRIBE `landing_images`;
+-- SELECT * FROM `landing_images`;
+-- ════════════════════════════════════════════════════════════════
+--  Thêm cột image_url vào bảng MembershipPlan
+--  Chạy trong phpMyAdmin → database "datn" → tab SQL
+-- ════════════════════════════════════════════════════════════════
+
+ALTER TABLE `MembershipPlan`
+    ADD COLUMN `image_url` VARCHAR(500) NULL DEFAULT NULL
+        COMMENT 'URL ảnh đại diện gói tập (lưu trong /upload/package/)'
+    AFTER `description`;
+
+-- Tạo thư mục upload nếu chưa có (thực hiện thủ công trên server):
+-- C:\wamp64\www\PHP\ELite_GYM\upload\package\

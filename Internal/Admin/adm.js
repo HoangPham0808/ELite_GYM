@@ -11,7 +11,8 @@ const menuRoutes = {
     'management_package.php':    '../layout/Package_Management/Package_Management.php',
     'customer.php':              '../layout/Customer_Management/Customer_Management.php',
     'management_staff.php':      '../layout/Employee_Management/Employee_Management.php',
-    'management_branch.php':     '../layout/Gym_Management/Gym_Management.php'
+    'management_branch.php':     '../layout/Gym_Management/Gym_Management.php',
+    'landing_image.php':         '../Layout/Setting/Image_landing/Image_landing.php'
 };
 
 // Page meta: title, breadcrumb, icon, icon-bg-color
@@ -27,7 +28,8 @@ const pageMeta = {
     'promotion.php':             { title: 'QUẢN LÝ KHUYẾN MÃI',       breadcrumb: 'Trang chủ / Khuyến mãi',       icon: 'fa-tag',           color: 'rgba(236,72,153,0.2)',    iconColor: '#f472b6' },
     'management_support.php':    { title: 'HỖ TRỢ NGƯỜI DÙNG',        breadcrumb: 'Trang chủ / Hỗ trợ',           icon: 'fa-headset',       color: 'rgba(14,165,233,0.2)',    iconColor: '#38bdf8' },
     'Account_Management.php':                { title: 'QUẢN LÝ HỆ THỐNG',          breadcrumb: 'Trang chủ / Hệ thống',         icon: 'fa-cog',           color: 'rgba(100,116,139,0.25)', iconColor: '#94a3b8' },
-    'management_statistics.php': { title: 'BÁO CÁO THỐNG KÊ',         breadcrumb: 'Trang chủ / Báo cáo',          icon: 'fa-chart-bar',     color: 'rgba(234,179,8,0.2)',     iconColor: '#fbbf24' }
+    'management_statistics.php': { title: 'BÁO CÁO THỐNG KÊ',         breadcrumb: 'Trang chủ / Báo cáo',          icon: 'fa-chart-bar',     color: 'rgba(234,179,8,0.2)',     iconColor: '#fbbf24' },
+    'landing_image.php':         { title: 'ẢNH SLIDESHOW TRANG CHỦ',   breadcrumb: 'Trang chủ / Cài đặt / Landing', icon: 'fa-images',        color: 'rgba(212,160,23,0.2)',    iconColor: '#d4a017' }
 };
 
 const contentWrapper = document.getElementById('content-wrapper');
@@ -165,6 +167,15 @@ document.querySelectorAll('.nav-item a').forEach(link => {
         updateActiveMenu(href);
         loadContent(href);
         window.location.hash = href;
+    });
+});
+
+// ============ SUBMENU TOGGLE (Setting) ============
+document.querySelectorAll('.nav-parent').forEach(parent => {
+    parent.addEventListener('click', e => {
+        e.preventDefault();
+        const group = parent.closest('.nav-group-sub');
+        group.classList.toggle('open');
     });
 });
 

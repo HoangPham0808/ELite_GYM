@@ -114,6 +114,7 @@
         </div>
         <div class="modal-body">
             <input type="hidden" id="packageId">
+            <input type="hidden" id="fRemoveImage" value="0">
             <div class="form-grid">
                 <div class="form-group full">
                     <label>Tên gói tập <span class="required">*</span></label>
@@ -133,6 +134,27 @@
                 <div class="form-group full">
                     <label>Mô tả</label>
                     <textarea id="fMoTa" class="form-control" placeholder="Mô tả chi tiết về gói tập, quyền lợi kèm theo..."></textarea>
+                </div>
+
+                <!-- ── ẢNH GÓI TẬP ── -->
+                <div class="form-group full">
+                    <label>Ảnh gói tập</label>
+                    <div class="img-upload-zone" id="imgUploadZone" onclick="document.getElementById('fImage').click()">
+                        <input type="file" id="fImage" accept="image/jpeg,image/png,image/webp,image/gif" style="display:none">
+                        <!-- Preview ảnh cũ / ảnh mới chọn -->
+                        <div id="imgPreviewWrap" style="display:none">
+                            <img id="imgPreview" src="" alt="Preview"/>
+                            <button type="button" class="img-remove-btn" onclick="removeImage(event)" title="Xóa ảnh">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <!-- Placeholder khi chưa có ảnh -->
+                        <div id="imgPlaceholder">
+                            <i class="fas fa-image"></i>
+                            <span>Nhấp hoặc kéo thả ảnh vào đây</span>
+                            <small>JPG · PNG · WEBP · GIF · Tối đa 5 MB</small>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
