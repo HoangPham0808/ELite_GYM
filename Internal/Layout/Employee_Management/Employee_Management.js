@@ -699,7 +699,7 @@ function escJson(obj) {
 }
 
 // ===== QUICK ATTENDANCE MODAL =====
-const ATT_API = 'Employee_attendance_tracking/Employee_attendance_tracking_funtion.php';
+const ATT_API = 'Employee_attendance_tracking/Employee_attendance_tracking_function.php';
 
 function openQuickAttModal(empId, empName, gioiTinh) {
     document.getElementById('qAttEmpId').value = empId;
@@ -749,7 +749,7 @@ async function saveQuickAtt() {
     const body = new FormData();
     body.append('action', 'add_attendance');
     body.append('employee_id', empId);
-    body.append('ngay', ngay);
+    body.append('work_date', ngay);
     body.append('status', trangThai);
     body.append('check_in', gioVao);
     body.append('check_out', gioRa);

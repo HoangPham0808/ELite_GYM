@@ -281,7 +281,7 @@ if (isset($_GET['success'])) {
             </div>
 
             <div class="register-footer">
-                <p>Đã có tài khoản? <a href="../Login/" class="login-link">Đăng nhập ngay</a></p>
+                <p>Đã có tài khoản? <a href="../Login/Login.php" class="login-link">Đăng nhập ngay</a></p>
                 
             </div>
         </div>

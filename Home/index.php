@@ -119,8 +119,8 @@ if ($is_customer) {
     </a>
     <nav class="nav-links">
       <?php if ($is_customer): ?>
-        <a href="#membership">Gói tập</a>
-        <a href="#schedule">Lớp tập</a>
+        <a href="#schedule">Gói tập</a>
+        <a href="Schedule/Schedule.php">Lớp tập</a>
         <a href="#checkin">Hướng dẫn</a>
         <a href="#reviews">Đánh giá</a>
       <?php else: ?>
@@ -155,8 +155,8 @@ if ($is_customer) {
   </div>
   <div class="mobile-menu" id="mobileMenu">
     <?php if ($is_customer): ?>
-      <a href="#membership">Gói tập</a>
-      <a href="#schedule">Lớp tập</a>
+      <a href="#schedule">Gói tập</a>
+      <a href="Schedule/Schedule.php">Lịch tập</a>
       <a href="#checkin">Hướng dẫn</a>
       <a href="#reviews">Đánh giá</a>
       <a href="Profile/Profile.php" class="mm-cta"><i class="fas fa-user-circle"></i> Hồ sơ của tôi</a>
@@ -514,7 +514,15 @@ if ($is_customer) {
     dots[cur]?.classList.add('active');
     thumbs[cur]?.classList.add('active');
     if (curEl) curEl.textContent = cur + 1;
-    thumbs[cur]?.scrollIntoView({ behavior:'smooth', block:'nearest', inline:'center' });
+    // Chỉ cuộn ngang trong container thumb, KHÔNG cuộn dọc cả trang
+    const thumbsWrap = document.getElementById('slideThumbs');
+    if (thumbsWrap && thumbs[cur]) {
+      const t = thumbs[cur];
+      thumbsWrap.scrollTo({
+        left: t.offsetLeft - thumbsWrap.offsetWidth / 2 + t.offsetWidth / 2,
+        behavior: 'smooth'
+      });
+    }
     resetProg();
   }
  

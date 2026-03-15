@@ -138,7 +138,6 @@ function buildCard(img) {
       <button class="btn-del" title="Xóa ảnh"><i class="fas fa-trash-alt"></i></button>
     </div>`;
 
-  bindCard(card, img);
   return card;
 }
 
@@ -147,22 +146,9 @@ function prependCard(img) {
   const empty = grid.querySelector('.empty-state');
   if (empty) empty.remove();
   grid.prepend(buildCard(img));
+  initAllCards();  // bind event cho card mới (bao gồm cả drag)
   rebindDrag();
   updateOrderBadges();
-}
-
-function bindCard(card, img) {
-  // Toggle
-  card.querySelector('.btn-toggle').addEventListener('click', () => toggleImage(card));
-  // Delete
-  card.querySelector('.btn-del').addEventListener('click', () => deleteImage(card));
-  // Rename
-  card.querySelector('.btn-rename').addEventListener('click', () => openRename(card));
-  // Copy URL
-  card.querySelector('.img-url-row').addEventListener('click', () => {
-    const url = card.querySelector('.img-url-row span').textContent;
-    navigator.clipboard.writeText(url).then(() => showToast('Đã sao chép URL!', 'info'));
-  });
 }
 
 function escHtml(s) {
@@ -357,7 +343,31 @@ document.getElementById('saveOrderBtn')?.addEventListener('click', async () => {
 });
 
 /* ══ INIT ════════════════════════════════════════════════════════ */
+
+// Bind event cho TẤT CẢ card — cả card PHP render lẫn card JS thêm mới
+function initAllCards() {
+  document.querySelectorAll('.img-card').forEach(card => {
+    // Tránh bind trùng
+    if (card.dataset.bound === '1') return;
+    card.dataset.bound = '1';
+
+    const btnToggle = card.querySelector('.btn-toggle');
+    const btnDel    = card.querySelector('.btn-del');
+    const btnRename = card.querySelector('.btn-rename');
+    const urlRow    = card.querySelector('.img-url-row');
+
+    if (btnToggle) btnToggle.addEventListener('click', () => toggleImage(card));
+    if (btnDel)    btnDel.addEventListener('click',    () => deleteImage(card));
+    if (btnRename) btnRename.addEventListener('click', () => openRename(card));
+    if (urlRow)    urlRow.addEventListener('click', () => {
+      const url = urlRow.querySelector('span')?.textContent?.trim();
+      if (url) navigator.clipboard.writeText(url).then(() => showToast('Đã sao chép URL!', 'info'));
+    });
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+  initAllCards();   // bind cho card PHP đã render sẵn
   rebindDrag();
   updateStats();
 });
