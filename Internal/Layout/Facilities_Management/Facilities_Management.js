@@ -28,6 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     loadStats();
     loadCategories();
+    loadRooms();
     loadDevices();
     loadMaintenance();
 });
@@ -40,17 +41,10 @@ const esc      = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;')
 
 // ── PHÂN QUYỀN ────────────────────────────────────────────────────
 function applyPermissions() {
-    // Receptionist: ẩn tab Loại thiết bị
-    if (IS_RECEPT) {
-        const catTab = document.querySelector('[data-tab="categories"]');
-        if (catTab) catTab.style.display = 'none';
-    }
-    // Personal Trainer: chỉ thấy tab Bảo trì, ẩn Thiết bị + Loại thiết bị
+    // Personal Trainer: chỉ thấy tab Bảo trì, ẩn Thiết bị
     if (IS_HLV) {
         const devTab = document.querySelector('[data-tab="devices"]');
-        const catTab = document.querySelector('[data-tab="categories"]');
         if (devTab) devTab.style.display = 'none';
-        if (catTab) catTab.style.display = 'none';
         document.querySelectorAll('.tab-btn,.tab-content').forEach(el => el.classList.remove('active'));
         const btBtn = document.querySelector('[data-tab="maintenance"]');
         if (btBtn) btBtn.classList.add('active');
@@ -124,61 +118,30 @@ async function loadCategories() {
     const opts = categories.map(c => `<option value="${c.type_id}">${esc(c.type_name)}</option>`).join('');
     document.getElementById('devLoai').innerHTML  = '<option value="">Tất cả loại</option>' + opts;
     document.getElementById('fDevLoai').innerHTML = '<option value="">-- Chọn loại --</option>' + opts;
-    renderCatTable(categories);
 }
 
-function renderCatTable(rows) {
-    const tb = document.getElementById('catTbody');
-    if (!rows.length) {
-        tb.innerHTML = `<tr><td colspan="5"><div class="empty-state"><i class="fas fa-tags"></i>Chưa có loại nào</div></td></tr>`;
-        return;
+
+// ── ROOMS (GymRoom) ───────────────────────────────────────────────
+let rooms = [];
+
+async function loadRooms() {
+    try {
+        const d = await apiFetch('get_rooms');
+        if (!d.success) { console.warn('get_rooms failed:', d.message); return; }
+        rooms = d.data || [];
+    } catch(e) { console.error('loadRooms error:', e); }
+}
+
+function _populateRoomSelect(selectedId) {
+    const sel = document.getElementById('fDevRoom');
+    if (!sel) return;
+    const opts = rooms.map(r =>
+        `<option value="${r.room_id}">${esc(r.room_name)}</option>`
+    ).join('');
+    sel.innerHTML = '<option value="">-- Chưa phân phòng --</option>' + opts;
+    if (selectedId !== null && selectedId !== undefined && selectedId !== '') {
+        sel.value = String(selectedId);
     }
-    tb.innerHTML = rows.map(r => `<tr>
-        <td class="id-cell">${r.type_id}</td>
-        <td><strong class="col-primary">${esc(r.type_name)}</strong></td>
-        <td><span class="days-badge"><i class="fas fa-clock"></i> ${r.maintenance_interval} ngày</span></td>
-        <td class="col-muted">${r.description ? esc(r.description) : '—'}</td>
-        <td><div class="action-btns">
-            <button class="btn-icon" onclick='openCatEdit(${JSON.stringify(r)})' title="Sửa"><i class="fas fa-pen"></i></button>
-            <button class="btn-icon delete" onclick="confirmDel('Xóa loại <strong>${esc(r.type_name)}</strong>?', () => deleteCat(${r.type_id}))" title="Xóa"><i class="fas fa-trash"></i></button>
-        </div></td>
-    </tr>`).join('');
-}
-
-function openCatModal() {
-    document.getElementById('fCatId').value   = '';
-    document.getElementById('fCatTen').value  = '';
-    document.getElementById('fCatHan').value  = 180;
-    document.getElementById('fCatMoTa').value = '';
-    document.getElementById('catModalTitle').innerHTML = '<i class="fas fa-tag" style="color:#d4a017;margin-right:8px"></i>Thêm loại thiết bị';
-    openModal('catModal');
-}
-function openCatEdit(r) {
-    // r.type_id, r.type_name, r.maintenance_interval, r.description
-    document.getElementById('fCatId').value   = r.type_id;
-    document.getElementById('fCatTen').value  = r.type_name            || '';
-    document.getElementById('fCatHan').value  = r.maintenance_interval || 180;
-    document.getElementById('fCatMoTa').value = r.description          || '';
-    document.getElementById('catModalTitle').innerHTML = '<i class="fas fa-pen" style="color:#d4a017;margin-right:8px"></i>Sửa loại thiết bị';
-    openModal('catModal');
-}
-async function saveCat() {
-    const id = document.getElementById('fCatId').value;
-    const body = fd({
-        action: id ? 'update_category' : 'add_category',
-        ...(id ? { id } : {}),
-        ten_loai:         document.getElementById('fCatTen').value.trim(),
-        han_bao_tri_ngay: document.getElementById('fCatHan').value,
-        mo_ta:            document.getElementById('fCatMoTa').value.trim()
-    });
-    const d = await apiPost(body);
-    toast(d.message, d.success ? 'success' : 'error');
-    if (d.success) { closeModal('catModal'); loadCategories(); }
-}
-async function deleteCat(id) {
-    const d = await apiPost(fd({ action: 'delete_category', id }));
-    toast(d.message, d.success ? 'success' : 'error');
-    if (d.success) loadCategories();
 }
 
 // ── DEVICES (Equipment) ───────────────────────────────────────────
@@ -201,7 +164,7 @@ async function loadDevices(page = devPage) {
 function renderDevTable(rows) {
     const tb = document.getElementById('devTbody');
     if (!rows.length) {
-        tb.innerHTML = `<tr><td colspan="9"><div class="empty-state"><i class="fas fa-dumbbell"></i>Không có thiết bị nào</div></td></tr>`;
+        tb.innerHTML = `<tr><td colspan="10"><div class="empty-state"><i class="fas fa-dumbbell"></i>Không có thiết bị nào</div></td></tr>`;
         return;
     }
     tb.innerHTML = rows.map(r => {
@@ -225,6 +188,9 @@ function renderDevTable(rows) {
                 hanHtml = `<span class="day-ok"><i class="fas fa-check"></i> Còn ${days} ngày${suffix}</span>`;
             }
         }
+        const roomHtml = r.room_name
+            ? `<span class="room-tag"><i class="fas fa-door-open"></i> ${esc(r.room_name)}</span>`
+            : '<span class="day-muted">—</span>';
         return `<tr>
             <td class="id-cell">#${r.equipment_id}</td>
             <td>
@@ -232,6 +198,7 @@ function renderDevTable(rows) {
                 ${r.description ? `<div class="col-muted" style="font-size:11px;margin-top:2px">${esc(r.description.slice(0,50))}${r.description.length>50?'…':''}</div>` : ''}
             </td>
             <td>${r.type_name ? `<span class="cat-tag">${esc(r.type_name)}</span>` : '<span class="day-muted">—</span>'}</td>
+            <td>${roomHtml}</td>
             <td><span class="status-badge ${stCls}">${esc(r.condition_status || '—')}</span></td>
             <td class="money-cell">${fmtMoney(r.purchase_price)}</td>
             <td class="date-cell">${fmtDate(r.purchase_date)}</td>
@@ -257,6 +224,7 @@ function openDeviceModal() {
     ['fDevId','fDevTen','fDevGia','fDevNgayMua','fDevNgayBao','fDevMoTa'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('fDevLoai').value   = '';
     document.getElementById('fDevStatus').value = 'Hoạt động';
+    _populateRoomSelect('');
     document.getElementById('devModalTitle').innerHTML = '<i class="fas fa-dumbbell" style="color:#d4a017;margin-right:8px"></i>Thêm thiết bị';
     openModal('deviceModal');
 }
@@ -264,8 +232,8 @@ async function openDevEdit(id) {
     const d = await apiFetch(`get_device_detail&id=${id}`);
     if (!d.success) { toast(d.message, 'error'); return; }
     const r = d.device;
-    // r uses DB fields: equipment_id, equipment_name, type_id, condition_status,
-    //                   purchase_price, purchase_date, last_maintenance_date, description
+    // Đảm bảo rooms đã load trước khi populate dropdown
+    if (rooms.length === 0) await loadRooms();
     document.getElementById('fDevId').value      = r.equipment_id;
     document.getElementById('fDevTen').value     = r.equipment_name         || '';
     document.getElementById('fDevLoai').value    = r.type_id                || '';
@@ -274,6 +242,7 @@ async function openDevEdit(id) {
     document.getElementById('fDevNgayMua').value = r.purchase_date          || '';
     document.getElementById('fDevNgayBao').value = r.last_maintenance_date  || '';
     document.getElementById('fDevMoTa').value    = r.description            || '';
+    _populateRoomSelect(r.room_id || '');
     document.getElementById('devModalTitle').innerHTML = '<i class="fas fa-pen" style="color:#d4a017;margin-right:8px"></i>Sửa thiết bị';
     openModal('deviceModal');
 }
@@ -288,7 +257,8 @@ async function saveDevice() {
         gia_mua:          document.getElementById('fDevGia').value,
         ngay_mua:         document.getElementById('fDevNgayMua').value,
         ngay_bao_tri_gan: document.getElementById('fDevNgayBao').value,
-        mo_ta:            document.getElementById('fDevMoTa').value.trim()
+        mo_ta:            document.getElementById('fDevMoTa').value.trim(),
+        phong_tap_id:     document.getElementById('fDevRoom').value
     });
     const d = await apiPost(body);
     toast(d.message, d.success ? 'success' : 'error');
@@ -509,4 +479,178 @@ function toast(msg, type = 'info') {
     });
     document.getElementById('toastContainer').appendChild(el);
     setTimeout(() => el.remove(), 3800);
+}
+
+// ── IMPORT EXCEL ──────────────────────────────────────────────────
+let importData = []; // parsed rows ready to submit
+
+function openImportModal() {
+    clearImport();
+    document.getElementById('importResult').style.display = 'none';
+    document.getElementById('importProgress').style.display = 'none';
+    const submitBtn = document.getElementById('importSubmitBtn');
+    submitBtn.disabled = true; submitBtn.style.opacity = '.4'; submitBtn.style.cursor = 'not-allowed';
+    openModal('importModal');
+    // Drag & drop
+    const zone = document.getElementById('importDropzone');
+    zone.ondragover  = e => { e.preventDefault(); zone.classList.add('drag-over'); };
+    zone.ondragleave = () => zone.classList.remove('drag-over');
+    zone.ondrop      = e => { e.preventDefault(); zone.classList.remove('drag-over'); handleImportFile(e.dataTransfer.files[0]); };
+}
+
+function handleImportFile(file) {
+    if (!file) return;
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (!['xlsx','xls','csv'].includes(ext)) { toast('Chỉ chấp nhận .xlsx, .xls, .csv', 'error'); return; }
+    if (file.size > 5 * 1024 * 1024) { toast('File quá lớn (tối đa 5MB)', 'error'); return; }
+
+    const reader = new FileReader();
+    reader.onload = e => {
+        try {
+            const wb = XLSX.read(e.target.result, { type: 'array', cellDates: true });
+            const ws = wb.Sheets[wb.SheetNames[0]];
+            const json = XLSX.utils.sheet_to_json(ws, { defval: '' });
+            if (!json.length) { toast('File không có dữ liệu', 'error'); return; }
+            showImportPreview(file.name, json);
+        } catch(err) {
+            toast('Không đọc được file: ' + err.message, 'error');
+        }
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+function showImportPreview(filename, json) {
+    // Validate & normalize
+    const errors = [];
+    const validStatuses = ['Hoạt động','Hỏng','Đang bảo dưỡng','Ngừng sử dụng'];
+    const dateRe = /^\d{4}-\d{2}-\d{2}$/;
+
+    importData = json.map((row, i) => {
+        const r = {};
+        // Normalize keys (trim spaces, lowercase)
+        Object.keys(row).forEach(k => { r[k.trim()] = (row[k] === null || row[k] === undefined) ? '' : String(row[k]).trim(); });
+
+        if (!r['equipment_name']) { errors.push(`Dòng ${i+2}: thiếu <strong>equipment_name</strong>`); }
+        if (r['condition_status'] && !validStatuses.includes(r['condition_status'])) {
+            errors.push(`Dòng ${i+2}: condition_status "<em>${esc(r['condition_status'])}</em>" không hợp lệ`);
+        }
+        if (r['purchase_date'] && !dateRe.test(r['purchase_date'])) {
+            errors.push(`Dòng ${i+2}: purchase_date phải định dạng YYYY-MM-DD`);
+        }
+        if (r['last_maintenance_date'] && !dateRe.test(r['last_maintenance_date'])) {
+            errors.push(`Dòng ${i+2}: last_maintenance_date phải định dạng YYYY-MM-DD`);
+        }
+        return r;
+    });
+
+    // Show preview table (first 5 rows)
+    const cols = Object.keys(json[0]).map(k => k.trim());
+    const previewRows = importData.slice(0, 5);
+    document.getElementById('importPreviewHead').innerHTML =
+        `<tr style="background:rgba(212,160,23,.08)">${cols.map(c => `<th style="padding:8px 10px;font-size:10px;color:var(--tm);text-transform:uppercase;letter-spacing:.6px;white-space:nowrap">${esc(c)}</th>`).join('')}</tr>`;
+    document.getElementById('importPreviewBody').innerHTML = previewRows.map(row =>
+        `<tr>${cols.map(c => `<td style="padding:7px 10px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--ts)">${esc(row[c]||'')}</td>`).join('')}</tr>`
+    ).join('') + (importData.length > 5 ? `<tr><td colspan="${cols.length}" style="padding:8px 10px;color:var(--tm);font-size:11px;text-align:center">... và ${importData.length - 5} dòng nữa</td></tr>` : '');
+
+    document.getElementById('importFileLabel').innerHTML = `<i class="fas fa-file-excel" style="color:#22c55e"></i> ${esc(filename)}`;
+    document.getElementById('importRowCount').textContent = `${importData.length} thiết bị`;
+    document.getElementById('importPreview').style.display = 'block';
+    document.getElementById('importDropzone').style.display = 'none';
+
+    const errBox = document.getElementById('importErrors');
+    if (errors.length) {
+        errBox.style.display = 'block';
+        errBox.innerHTML = `<div class="import-err-title"><i class="fas fa-exclamation-triangle"></i> ${errors.length} lỗi phát hiện</div>`
+            + errors.slice(0,10).map(e => `<div class="import-err-item">• ${e}</div>`).join('')
+            + (errors.length > 10 ? `<div class="import-err-item" style="color:var(--tm)">... và ${errors.length-10} lỗi khác</div>` : '');
+        // Disable submit if critical errors
+        const criticalErrors = errors.filter(e => e.includes('equipment_name'));
+        if (criticalErrors.length) return;
+    } else {
+        errBox.style.display = 'none';
+    }
+
+    const submitBtn = document.getElementById('importSubmitBtn');
+    submitBtn.disabled = false; submitBtn.style.opacity = '1'; submitBtn.style.cursor = 'pointer';
+}
+
+function clearImport() {
+    importData = [];
+    document.getElementById('importPreview').style.display = 'none';
+    document.getElementById('importDropzone').style.display = 'block';
+    document.getElementById('importFileInput').value = '';
+    const submitBtn = document.getElementById('importSubmitBtn');
+    submitBtn.disabled = true; submitBtn.style.opacity = '.4'; submitBtn.style.cursor = 'not-allowed';
+}
+
+async function submitImport() {
+    if (!importData.length) return;
+    const submitBtn  = document.getElementById('importSubmitBtn');
+    const progressEl = document.getElementById('importProgress');
+    const barEl      = document.getElementById('importProgressBar');
+    const labelEl    = document.getElementById('importProgressLabel');
+    const resultEl   = document.getElementById('importResult');
+
+    submitBtn.disabled = true;
+    progressEl.style.display = 'block';
+    resultEl.style.display   = 'none';
+
+    let success = 0, failed = 0, failedNames = [];
+    const total = importData.length;
+
+    for (let i = 0; i < total; i++) {
+        const row = importData[i];
+        const pct = Math.round(((i + 1) / total) * 100);
+        barEl.style.width  = pct + '%';
+        labelEl.textContent = `Đang nhập ${i+1}/${total}...`;
+
+        const body = fd({
+            action:           'add_device',
+            ten_thiet_bi:     row['equipment_name']          || '',
+            loai_id:          '',   // resolved server-side by type_name
+            type_name_import: row['type_name']               || '',
+            room_name_import: row['room_name']               || '',
+            tinh_trang:       row['condition_status']        || 'Hoạt động',
+            gia_mua:          row['purchase_price']          || '',
+            ngay_mua:         row['purchase_date']           || '',
+            ngay_bao_tri_gan: row['last_maintenance_date']   || '',
+            mo_ta:            row['description']             || '',
+            phong_tap_id:     ''
+        });
+
+        try {
+            const d = await apiPost(body);
+            if (d.success) { success++; }
+            else           { failed++; failedNames.push(esc(row['equipment_name'] || `dòng ${i+2}`)); }
+        } catch {
+            failed++; failedNames.push(`dòng ${i+2}`);
+        }
+    }
+
+    barEl.style.width  = '100%';
+    labelEl.textContent = 'Hoàn tất!';
+    setTimeout(() => { progressEl.style.display = 'none'; }, 600);
+
+    resultEl.style.display = 'block';
+    resultEl.innerHTML = `
+        <div class="import-result-row">
+            <span class="import-result-ok"><i class="fas fa-check-circle"></i> ${success} thiết bị nhập thành công</span>
+            ${failed ? `<span class="import-result-err"><i class="fas fa-times-circle"></i> ${failed} thất bại</span>` : ''}
+        </div>
+        ${failedNames.length ? `<div class="import-result-fails">Thất bại: ${failedNames.slice(0,5).join(', ')}${failedNames.length>5?'...':''}</div>` : ''}
+    `;
+
+    if (success > 0) {
+        toast(`Đã nhập ${success}/${total} thiết bị thành công!`, 'success');
+        loadDevices(); loadStats();
+    }
+}
+
+function downloadTemplate() {
+    const headers = ['equipment_name','type_name','condition_status','room_name','purchase_price','purchase_date','last_maintenance_date','description'];
+    const example = ['Máy chạy bộ Technogym','Treadmill','Hoạt động','Phòng Cardio','25000000','2024-01-15','2025-06-01','Nhập từ Excel mẫu'];
+    const csv = [headers.join(','), example.join(',')].join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: 'import_thiet_bi_mau.csv' });
+    a.click();
 }

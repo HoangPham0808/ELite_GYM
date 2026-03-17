@@ -34,7 +34,7 @@ $js_position = json_encode($_position);
     <div class="tab-bar">
         <button class="tab-btn active" data-tab="devices"><i class="fas fa-dumbbell"></i> Thiết bị</button>
         <button class="tab-btn" data-tab="maintenance"><i class="fas fa-wrench"></i> Bảo trì</button>
-        <button class="tab-btn" data-tab="categories"><i class="fas fa-tags"></i> Loại thiết bị</button>
+
     </div>
     <div class="tab-content active" id="tab-devices">
         <div class="filter-bar">
@@ -49,6 +49,7 @@ $js_position = json_encode($_position);
                 <i class="fas fa-exclamation-triangle"></i> Cần bảo trì
             </button>
             <?php if ($is_admin): ?>
+            <button class="btn-import" onclick="openImportModal()"><i class="fas fa-file-excel"></i> Import Excel</button>
             <button class="btn-primary" onclick="openDeviceModal()"><i class="fas fa-plus"></i> Thêm thiết bị</button>
             <?php endif; ?>
         </div>
@@ -59,10 +60,10 @@ $js_position = json_encode($_position);
             </div>
             <div class="table-wrapper"><table>
                 <thead><tr>
-                    <th>#</th><th>Tên thiết bị</th><th>Loại</th><th>Trạng thái</th>
+                    <th>#</th><th>Tên thiết bị</th><th>Loại</th><th>Phòng tập</th><th>Trạng thái</th>
                     <th>Giá mua</th><th>Ngày mua</th><th>Bảo trì gần nhất</th><th>Hạn bảo trì</th><th>Thao tác</th>
                 </tr></thead>
-                <tbody id="devTbody"><tr><td colspan="9" class="loading-cell"><i class="fas fa-spinner fa-spin"></i></td></tr></tbody>
+                <tbody id="devTbody"><tr><td colspan="10" class="loading-cell"><i class="fas fa-spinner fa-spin"></i></td></tr></tbody>
             </table></div>
             <div class="pagination"><div class="pagination-info" id="devPagInfo">—</div><div class="pagination-controls" id="devPagCtrl"></div></div>
         </div>
@@ -89,23 +90,7 @@ $js_position = json_encode($_position);
             <div class="pagination"><div class="pagination-info" id="btPagInfo">—</div><div class="pagination-controls" id="btPagCtrl"></div></div>
         </div>
     </div>
-    <div class="tab-content" id="tab-categories">
-        <div class="filter-bar">
-            <div style="flex:1"></div>
-            <?php if ($is_admin): ?>
-            <button class="btn-primary" onclick="openCatModal()"><i class="fas fa-plus"></i> Thêm loại</button>
-            <?php endif; ?>
-        </div>
-        <div class="table-card">
-            <div class="table-header">
-                <h3><i class="fas fa-tags" style="color:#d4a017;margin-right:8px"></i>Danh sách loại thiết bị</h3>
-            </div>
-            <div class="table-wrapper"><table>
-                <thead><tr><th>#</th><th>Tên loại</th><th>Giới hạn bảo trì</th><th>Mô tả</th><th>Thao tác</th></tr></thead>
-                <tbody id="catTbody"><tr><td colspan="5" class="loading-cell"><i class="fas fa-spinner fa-spin"></i></td></tr></tbody>
-            </table></div>
-        </div>
-    </div>
+
 </div>
 
 <!-- MODAL THIẾT BỊ -->
@@ -130,7 +115,8 @@ $js_position = json_encode($_position);
                 </div>
                 <div class="form-group"><label>Giá mua (₫)</label><input type="number" id="fDevGia" class="form-control" placeholder="VD: 15000000" min="0"></div>
                 <div class="form-group"><label>Ngày mua</label><input type="date" id="fDevNgayMua" class="form-control"></div>
-                <div class="form-group full"><label>Ngày bảo trì gần nhất</label><input type="date" id="fDevNgayBao" class="form-control"></div>
+                <div class="form-group"><label>Ngày bảo trì gần nhất</label><input type="date" id="fDevNgayBao" class="form-control"></div>
+                <div class="form-group"><label>Phòng tập</label><select id="fDevRoom" class="form-control"><option value="">-- Chưa phân phòng --</option></select></div>
                 <div class="form-group full"><label>Mô tả</label><textarea id="fDevMoTa" class="form-control" rows="2" placeholder="Ghi chú..."></textarea></div>
             </div>
         </div>
@@ -167,32 +153,6 @@ $js_position = json_encode($_position);
         <div class="modal-footer">
             <button class="btn-secondary" onclick="closeModal('maintenanceModal')">Hủy</button>
             <button class="btn-primary" onclick="saveMaintenance()"><i class="fas fa-save"></i> Lưu</button>
-        </div>
-    </div>
-</div>
-
-<!-- MODAL LOẠI THIẾT BỊ -->
-<div class="modal-overlay" id="catModal">
-    <div class="modal" style="max-width:440px">
-        <div class="modal-header">
-            <h3 id="catModalTitle"><i class="fas fa-tag" style="color:#d4a017;margin-right:8px"></i>Thêm loại thiết bị</h3>
-            <button class="btn-close" onclick="closeModal('catModal')"><i class="fas fa-times"></i></button>
-        </div>
-        <div class="modal-body">
-            <input type="hidden" id="fCatId">
-            <div class="form-grid">
-                <div class="form-group full"><label>Tên loại <span class="req">*</span></label><input type="text" id="fCatTen" class="form-control" placeholder="VD: Máy chạy bộ"></div>
-                <div class="form-group full">
-                    <label>Giới hạn ngày giữa 2 lần bảo trì <span class="req">*</span></label>
-                    <input type="number" id="fCatHan" class="form-control" value="180" min="1">
-                    <small class="form-hint">Quá số ngày này kể từ lần bảo trì cuối → cảnh báo cần bảo trì</small>
-                </div>
-                <div class="form-group full"><label>Mô tả</label><textarea id="fCatMoTa" class="form-control" rows="2" placeholder="Mô tả loại thiết bị..."></textarea></div>
-            </div>
-        </div>
-        <div class="modal-footer">
-            <button class="btn-secondary" onclick="closeModal('catModal')">Hủy</button>
-            <button class="btn-primary" onclick="saveCat()"><i class="fas fa-save"></i> Lưu</button>
         </div>
     </div>
 </div>
@@ -254,6 +214,69 @@ $js_position = json_encode($_position);
     </div>
 </div>
 
+<!-- MODAL IMPORT EXCEL -->
+<div class="modal-overlay" id="importModal">
+    <div class="modal" style="max-width:660px">
+        <div class="modal-header">
+            <h3><i class="fas fa-file-excel" style="color:#22c55e;margin-right:8px"></i>Import thiết bị từ Excel</h3>
+            <button class="btn-close" onclick="closeModal('importModal')"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <!-- Hướng dẫn -->
+            <div class="import-guide">
+                <div class="import-guide-title"><i class="fas fa-info-circle"></i> Định dạng file Excel (.xlsx / .xls / .csv)</div>
+                <div class="import-cols-wrap">
+                    <div class="import-col-item req-col"><span class="col-badge req-badge">BẮT BUỘC</span><strong>equipment_name</strong><span>Tên thiết bị</span></div>
+                    <div class="import-col-item"><span class="col-badge">Tuỳ chọn</span><strong>type_name</strong><span>Loại (khớp tên loại)</span></div>
+                    <div class="import-col-item"><span class="col-badge">Tuỳ chọn</span><strong>condition_status</strong><span>Hoạt động / Hỏng / Đang bảo dưỡng</span></div>
+                    <div class="import-col-item"><span class="col-badge">Tuỳ chọn</span><strong>room_name</strong><span>Tên phòng (khớp tên phòng)</span></div>
+                    <div class="import-col-item"><span class="col-badge">Tuỳ chọn</span><strong>purchase_price</strong><span>Giá mua (số)</span></div>
+                    <div class="import-col-item"><span class="col-badge">Tuỳ chọn</span><strong>purchase_date</strong><span>Ngày mua (YYYY-MM-DD)</span></div>
+                    <div class="import-col-item"><span class="col-badge">Tuỳ chọn</span><strong>last_maintenance_date</strong><span>Ngày bảo trì gần nhất</span></div>
+                    <div class="import-col-item"><span class="col-badge">Tuỳ chọn</span><strong>description</strong><span>Mô tả</span></div>
+                </div>
+                <a class="import-template-link" onclick="downloadTemplate()"><i class="fas fa-download"></i> Tải file mẫu (.csv)</a>
+            </div>
+            <!-- Upload zone -->
+            <div class="import-dropzone" id="importDropzone" onclick="document.getElementById('importFileInput').click()">
+                <input type="file" id="importFileInput" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleImportFile(this.files[0])">
+                <div class="import-drop-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+                <div class="import-drop-text">Kéo thả file vào đây hoặc <span class="import-drop-link">chọn file</span></div>
+                <div class="import-drop-hint">.xlsx · .xls · .csv · tối đa 5MB</div>
+            </div>
+            <!-- Preview -->
+            <div id="importPreview" style="display:none">
+                <div class="import-preview-header">
+                    <span id="importFileLabel" class="import-file-label"></span>
+                    <span id="importRowCount" class="import-row-count"></span>
+                    <button class="import-clear-btn" onclick="clearImport()"><i class="fas fa-times"></i> Xóa</button>
+                </div>
+                <div class="table-wrapper" style="max-height:220px;overflow-y:auto;border-radius:8px;border:1px solid var(--border)">
+                    <table style="font-size:12px;min-width:100%">
+                        <thead id="importPreviewHead"></thead>
+                        <tbody id="importPreviewBody"></tbody>
+                    </table>
+                </div>
+                <!-- Validate errors -->
+                <div id="importErrors" style="display:none" class="import-errors"></div>
+            </div>
+            <!-- Progress -->
+            <div id="importProgress" style="display:none" class="import-progress-wrap">
+                <div class="import-progress-bar-track"><div class="import-progress-bar" id="importProgressBar"></div></div>
+                <div class="import-progress-label" id="importProgressLabel">Đang xử lý...</div>
+            </div>
+            <!-- Result -->
+            <div id="importResult" style="display:none" class="import-result"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-secondary" onclick="closeModal('importModal')">Đóng</button>
+            <button class="btn-primary" id="importSubmitBtn" onclick="submitImport()" disabled style="opacity:.4;cursor:not-allowed">
+                <i class="fas fa-upload"></i> Nhập dữ liệu
+            </button>
+        </div>
+    </div>
+</div>
+
 <div class="toast-container" id="toastContainer"></div>
 <script>
     const USER_ROLE     = <?= $js_role ?>;
@@ -262,6 +285,7 @@ $js_position = json_encode($_position);
     const IS_RECEPT     = <?= $is_recept ? 'true' : 'false' ?>;
     const IS_HLV        = <?= $is_hlv    ? 'true' : 'false' ?>;
 </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="Facilities_Management.js"></script>
 </body>
 </html>

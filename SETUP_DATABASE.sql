@@ -510,3 +510,47 @@ ALTER TABLE `Attendance`
     ADD COLUMN `checkin_distance` INT NULL DEFAULT NULL
     COMMENT 'Khoảng cách (mét) tới phòng tập lúc check in'
     AFTER `checkin_lng`;
+
+CREATE TABLE IF NOT EXISTS `PackageType` (
+    `type_id`     INT          NOT NULL AUTO_INCREMENT COMMENT 'Primary key',
+    `type_name`   VARCHAR(100) NOT NULL                COMMENT 'Package type name: Basic / Standard / Premium / VIP / Student',
+    `description` VARCHAR(500) NULL                    COMMENT 'Package type description',
+    `color_code`  VARCHAR(10)  NULL                    COMMENT 'UI color hex code, e.g. #d4a017',
+    `sort_order`  INT          NOT NULL DEFAULT 0       COMMENT 'Display order ascending',
+    `is_active`   TINYINT(1)   NOT NULL DEFAULT 1       COMMENT '1 = active | 0 = hidden',
+    PRIMARY KEY (`type_id`),
+    UNIQUE KEY `uq_package_type_name` (`type_name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  COMMENT='Package type categories for membership plans and gym rooms';
+
+INSERT INTO `PackageType` (`type_name`, `description`, `color_code`, `sort_order`) VALUES
+    ('Basic',    'Standard access to main gym area only',              '#6b7280', 1),
+    ('Standard', 'Access to main gym area and group classes',          '#3b82f6', 2),
+    ('Premium',  'Full access including all rooms and equipment',      '#d4a017', 3),
+    ('VIP',      'All-access with personal trainer sessions included', '#a855f7', 4),
+    ('Student',  'Discounted plan for students with valid ID',         '#22c55e', 5)
+ON DUPLICATE KEY UPDATE `type_name` = `type_name`;
+
+-- ========================
+-- MEMBERSHIPPLAN
+-- ========================
+
+ALTER TABLE `MembershipPlan`
+    ADD COLUMN `package_type_id` INT NULL DEFAULT NULL
+        COMMENT 'Package type of this plan (FK → PackageType)'
+    AFTER `plan_id`,
+    ADD CONSTRAINT `fk_plan_package_type`
+        FOREIGN KEY (`package_type_id`) REFERENCES `PackageType`(`type_id`)
+        ON UPDATE CASCADE ON DELETE SET NULL;
+
+-- ========================
+-- GYMROOM
+-- ========================
+
+ALTER TABLE `GymRoom`
+    ADD COLUMN `package_type_id` INT NULL DEFAULT NULL
+        COMMENT 'Minimum package type required to access this room (FK → PackageType)'
+    AFTER `description`,
+    ADD CONSTRAINT `fk_room_package_type`
+        FOREIGN KEY (`package_type_id`) REFERENCES `PackageType`(`type_id`)
+        ON UPDATE CASCADE ON DELETE SET NULL;

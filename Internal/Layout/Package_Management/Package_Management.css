@@ -1024,3 +1024,29 @@ thead th.sortable.desc .sort-icon::before { content: '↓'; opacity: 1; color: #
     border: 2px solid rgba(212,160,23,.3);
     flex-shrink: 0;
 }
+
+/* ── Loại gói tập trong modal ── */
+.form-hint {
+    font-size: 11px;
+    color: rgba(255,255,255,0.35);
+    margin-top: 4px;
+    display: block;
+}
+.pkg-type-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 9px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    border: 1px solid rgba(255,255,255,.1);
+    background: rgba(255,255,255,.05);
+    color: rgba(255,255,255,.7);
+}
+.pkg-type-dot {
+    width: 8px; height: 8px;
+    border-radius: 2px;
+    flex-shrink: 0;
+}

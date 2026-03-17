@@ -46,43 +46,18 @@ case 'get_categories':
     echo json_encode(['success' => true, 'data' => $rows]);
     break;
 
+// ── PHÒNG TẬP (GymRoom) ─────────────────────────────────────────────
+case 'get_rooms':
+    $res = $conn->query("SELECT room_id, room_name, status FROM GymRoom ORDER BY room_name");
+    if (!$res) { echo json_encode(['success' => false, 'message' => $conn->error]); break; }
+    $rows = $res->fetch_all(MYSQLI_ASSOC);
+    echo json_encode(['success' => true, 'data' => $rows]);
+    break;
+
 case 'add_category':
-    $ten = trim($_POST['ten_loai'] ?? '');
-    $mo  = trim($_POST['mo_ta'] ?? '') ?: null;
-    $han = max(1, (int)($_POST['han_bao_tri_ngay'] ?? 180));
-    if (!$ten) { echo json_encode(['success' => false, 'message' => 'Tên loại không được trống']); exit; }
-    $s = $conn->prepare("INSERT INTO EquipmentType (type_name, description, maintenance_interval) VALUES (?, ?, ?)");
-    $s->bind_param('ssi', $ten, $mo, $han);
-    echo json_encode($s->execute()
-        ? ['success' => true, 'message' => 'Thêm loại thành công', 'id' => $conn->insert_id]
-        : ['success' => false, 'message' => $conn->error]);
-    break;
-
 case 'update_category':
-    $id  = (int)($_POST['id'] ?? 0);
-    $ten = trim($_POST['ten_loai'] ?? '');
-    $mo  = trim($_POST['mo_ta'] ?? '') ?: null;
-    $han = max(1, (int)($_POST['han_bao_tri_ngay'] ?? 180));
-    if (!$id || !$ten) { echo json_encode(['success' => false, 'message' => 'Dữ liệu không hợp lệ']); exit; }
-    $s = $conn->prepare("UPDATE EquipmentType SET type_name=?, description=?, maintenance_interval=? WHERE type_id=?");
-    $s->bind_param('ssii', $ten, $mo, $han, $id);
-    echo json_encode($s->execute()
-        ? ['success' => true, 'message' => 'Cập nhật thành công']
-        : ['success' => false, 'message' => $conn->error]);
-    break;
-
 case 'delete_category':
-    $id  = (int)($_POST['id'] ?? 0);
-    $chk = $conn->query("SELECT COUNT(*) c FROM Equipment WHERE type_id = $id")->fetch_assoc()['c'];
-    if ($chk > 0) {
-        echo json_encode(['success' => false, 'message' => "Không thể xóa: có $chk thiết bị thuộc loại này"]);
-        exit;
-    }
-    $s = $conn->prepare("DELETE FROM EquipmentType WHERE type_id = ?");
-    $s->bind_param('i', $id);
-    echo json_encode($s->execute()
-        ? ['success' => true, 'message' => 'Đã xóa']
-        : ['success' => false, 'message' => $conn->error]);
+    echo json_encode(['success' => false, 'message' => 'Chức năng này đã bị vô hiệu hóa']);
     break;
 
 // ── THIẾT BỊ (Equipment) ────────────────────────────────────────────
@@ -113,9 +88,9 @@ case 'get_devices':
 
     // Returns: equipment_id, equipment_name, condition_status, type_id, type_name,
     //          purchase_price, purchase_date, last_maintenance_date, description,
-    //          maintenance_interval, days_remaining
+    //          maintenance_interval, days_remaining, room_id, room_name
     $ds = $conn->prepare("
-        SELECT e.*, et.type_name, et.maintenance_interval,
+        SELECT e.*, et.type_name, et.maintenance_interval, gr.room_name,
                DATEDIFF(
                    DATE_ADD(COALESCE(e.last_maintenance_date, e.purchase_date, CURDATE()),
                        INTERVAL COALESCE(et.maintenance_interval, 180) DAY),
@@ -123,6 +98,7 @@ case 'get_devices':
                ) AS days_remaining
         FROM Equipment e
         LEFT JOIN EquipmentType et ON et.type_id = e.type_id
+        LEFT JOIN GymRoom gr ON gr.room_id = e.room_id
         $ws
         ORDER BY e.equipment_id DESC
         LIMIT ? OFFSET ?
@@ -142,7 +118,7 @@ case 'get_devices':
 case 'get_device_detail':
     $id = (int)($_GET['id'] ?? 0);
     $s  = $conn->prepare("
-        SELECT e.*, et.type_name, et.maintenance_interval,
+        SELECT e.*, et.type_name, et.maintenance_interval, gr.room_name,
                DATEDIFF(
                    DATE_ADD(COALESCE(e.last_maintenance_date, e.purchase_date, CURDATE()),
                        INTERVAL COALESCE(et.maintenance_interval, 180) DAY),
@@ -150,6 +126,7 @@ case 'get_device_detail':
                ) AS days_remaining
         FROM Equipment e
         LEFT JOIN EquipmentType et ON et.type_id = e.type_id
+        LEFT JOIN GymRoom gr ON gr.room_id = e.room_id
         WHERE e.equipment_id = ?
     ");
     $s->bind_param('i', $id); $s->execute();
@@ -173,6 +150,22 @@ case 'update_device':
     $ngay_bao  = trim($_POST['ngay_bao_tri_gan'] ?? '') ?: null;
     $mo_ta     = trim($_POST['mo_ta'] ?? '') ?: null;
     $room_id   = (int)($_POST['phong_tap_id'] ?? 0) ?: null;
+
+    // Import: resolve type_id by type_name if not set
+    if (!$type_id && !empty($_POST['type_name_import'])) {
+        $tn = trim($_POST['type_name_import']);
+        $r  = $conn->query("SELECT type_id FROM EquipmentType WHERE type_name = '" . $conn->real_escape_string($tn) . "' LIMIT 1")->fetch_assoc();
+        if ($r) $type_id = (int)$r['type_id'];
+    }
+    // Import: resolve room_id by room_name if not set
+    if (!$room_id && !empty($_POST['room_name_import'])) {
+        $rn = trim($_POST['room_name_import']);
+        $r  = $conn->query("SELECT room_id FROM GymRoom WHERE room_name = '" . $conn->real_escape_string($rn) . "' LIMIT 1")->fetch_assoc();
+        if ($r) $room_id = (int)$r['room_id'];
+    }
+    // Validate condition_status
+    $validConditions = ['Hoạt động', 'Hỏng', 'Đang bảo dưỡng', 'Ngừng sử dụng'];
+    if (!in_array($condition, $validConditions)) $condition = 'Hoạt động';
 
     if (!$ten) { echo json_encode(['success' => false, 'message' => 'Tên thiết bị không được trống']); exit; }
 

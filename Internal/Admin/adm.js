@@ -12,6 +12,7 @@ const menuRoutes = {
     'customer.php':              '../layout/Customer_Management/Customer_Management.php',
     'management_staff.php':      '../layout/Employee_Management/Employee_Management.php',
     'management_branch.php':     '../layout/Gym_Management/Gym_Management.php',
+    'System.php':                '../Layout/Setting/System/System.php',
     'landing_image.php':         '../Layout/Setting/Image_landing/Image_landing.php',
     'GPS.php':                   '../Layout/Setting/GPS/GPS.php'
 };
@@ -19,19 +20,20 @@ const menuRoutes = {
 // Page meta: title, breadcrumb, icon, icon-bg-color
 const pageMeta = {
     'overview.php':              { title: 'TỔNG QUAN',               breadcrumb: 'Trang chủ / Tổng quan',        icon: 'fa-th-large',      color: 'rgba(59,130,246,0.25)',   iconColor: '#60a5fa' },
-    'customer.php':             { title: 'QUẢN LÝ KHÁCH HÀNG',      breadcrumb: 'Trang chủ / Khách hàng',       icon: 'fa-users',         color: 'rgba(90,50,180,0.25)',    iconColor: '#a78bfa' },
+    'customer.php':              { title: 'QUẢN LÝ KHÁCH HÀNG',      breadcrumb: 'Trang chủ / Khách hàng',       icon: 'fa-users',         color: 'rgba(90,50,180,0.25)',    iconColor: '#a78bfa' },
     'management_staff.php':      { title: 'QUẢN LÝ NHÂN VIÊN',       breadcrumb: 'Trang chủ / Nhân viên',        icon: 'fa-user-tie',      color: 'rgba(34,197,94,0.2)',     iconColor: '#4ade80' },
     'management_branch.php':     { title: 'QUẢN LÝ PHÒNG TẬP',       breadcrumb: 'Trang chủ / Phòng tập',        icon: 'fa-chess-board',   color: 'rgba(249,115,22,0.2)',    iconColor: '#fb923c' },
     'management_invoice.php':    { title: 'QUẢN LÝ HOÁ ĐƠN',         breadcrumb: 'Trang chủ / Hoá đơn',          icon: 'fa-receipt',       color: 'rgba(234,179,8,0.2)',     iconColor: '#facc15' },
     'management_package.php':    { title: 'QUẢN LÝ GÓI TẬP',         breadcrumb: 'Trang chủ / Gói tập',          icon: 'fa-times-circle',  color: 'rgba(239,68,68,0.2)',     iconColor: '#f87171' },
     'Schedule_Management.php':   { title: 'QUẢN LÝ LỊCH TẬP',        breadcrumb: 'Trang chủ / Lịch tập',         icon: 'fa-calendar-alt',  color: 'rgba(20,184,166,0.2)',    iconColor: '#2dd4bf' },
-    'facilities.php':            { title: 'CƠ SỞ VẬT CHẤT',           breadcrumb: 'Trang chủ / Cơ sở vật chất',  icon: 'fa-tools',         color: 'rgba(168,85,247,0.2)',    iconColor: '#c084fc' },
-    'promotion.php':             { title: 'QUẢN LÝ KHUYẾN MÃI',       breadcrumb: 'Trang chủ / Khuyến mãi',       icon: 'fa-tag',           color: 'rgba(236,72,153,0.2)',    iconColor: '#f472b6' },
-    'management_support.php':    { title: 'HỖ TRỢ NGƯỜI DÙNG',        breadcrumb: 'Trang chủ / Hỗ trợ',           icon: 'fa-headset',       color: 'rgba(14,165,233,0.2)',    iconColor: '#38bdf8' },
-    'Account_Management.php':                { title: 'QUẢN LÝ HỆ THỐNG',          breadcrumb: 'Trang chủ / Hệ thống',         icon: 'fa-cog',           color: 'rgba(100,116,139,0.25)', iconColor: '#94a3b8' },
-    'management_statistics.php': { title: 'BÁO CÁO THỐNG KÊ',         breadcrumb: 'Trang chủ / Báo cáo',          icon: 'fa-chart-bar',     color: 'rgba(234,179,8,0.2)',     iconColor: '#fbbf24' },
-    'landing_image.php':         { title: 'ẢNH SLIDESHOW TRANG CHỦ',   breadcrumb: 'Trang chủ / Cài đặt / Landing', icon: 'fa-images',        color: 'rgba(212,160,23,0.2)',    iconColor: '#d4a017' },
-    'GPS.php':                   { title: 'GPS',                       breadcrumb: 'Trang chủ / Cài đặt / GPS',     icon: 'fa-map-marker-alt', color: 'rgba(212,160,23,0.2)',    iconColor: '#d4a017' }
+    'facilities.php':            { title: 'CƠ SỞ VẬT CHẤT',          breadcrumb: 'Trang chủ / Cơ sở vật chất',  icon: 'fa-tools',         color: 'rgba(168,85,247,0.2)',    iconColor: '#c084fc' },
+    'promotion.php':             { title: 'QUẢN LÝ KHUYẾN MÃI',      breadcrumb: 'Trang chủ / Khuyến mãi',       icon: 'fa-tag',           color: 'rgba(236,72,153,0.2)',    iconColor: '#f472b6' },
+    'management_support.php':    { title: 'HỖ TRỢ NGƯỜI DÙNG',       breadcrumb: 'Trang chủ / Hỗ trợ',           icon: 'fa-headset',       color: 'rgba(14,165,233,0.2)',    iconColor: '#38bdf8' },
+    'Account_Management.php':    { title: 'QUẢN LÝ HỆ THỐNG',        breadcrumb: 'Trang chủ / Hệ thống',         icon: 'fa-cog',           color: 'rgba(100,116,139,0.25)', iconColor: '#94a3b8' },
+    'management_statistics.php': { title: 'BÁO CÁO THỐNG KÊ',        breadcrumb: 'Trang chủ / Báo cáo',          icon: 'fa-chart-bar',     color: 'rgba(234,179,8,0.2)',     iconColor: '#fbbf24' },
+    'System.php':                { title: 'Hệ thống',                breadcrumb: 'Trang chủ / Cài đặt / Hệ Thống', icon: 'fa-cogs',        color: 'rgba(212,160,23,0.2)',    iconColor: '#d4a017' },
+    'landing_image.php':         { title: 'ẢNH SLIDESHOW TRANG CHỦ', breadcrumb: 'Trang chủ / Cài đặt / Landing', icon: 'fa-images',        color: 'rgba(212,160,23,0.2)',    iconColor: '#d4a017' },
+    'GPS.php':                   { title: 'GPS',                     breadcrumb: 'Trang chủ / Cài đặt / GPS',     icon: 'fa-map-marker-alt', color: 'rgba(212,160,23,0.2)',    iconColor: '#d4a017' }
 };
 
 const contentWrapper = document.getElementById('content-wrapper');

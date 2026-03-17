@@ -9,6 +9,7 @@ let searchTimer = null;
 document.addEventListener('DOMContentLoaded', () => {
     loadStats();
     loadPackages();
+    loadPackageTypes();
 
     document.getElementById('searchInput').addEventListener('input', () => {
         clearTimeout(searchTimer);
@@ -18,6 +19,33 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('durationFilter').addEventListener('change', () => { currentPage = 1; loadPackages(); });
     document.getElementById('sortFilter').addEventListener('change', () => { currentPage = 1; loadPackages(); });
 });
+
+// ===== LOAD PACKAGE TYPES =====
+let packageTypes = [];
+
+async function loadPackageTypes() {
+    try {
+        const res  = await fetch(`${API_URL}?action=get_package_types`);
+        const data = await res.json();
+        if (!data.success) return;
+        packageTypes = data.data;
+        const sel = document.getElementById('fPackageType');
+        sel.innerHTML = '<option value="">— Chọn loại gói —</option>'
+            + data.data.map(t =>
+                `<option value="${t.type_id}" data-color="${escHtml(t.color_code||'#6b7280')}">${escHtml(t.type_name)}</option>`
+            ).join('');
+    } catch(e) { console.error('loadPackageTypes:', e); }
+}
+
+function getTypeBadgeHtml(typeId) {
+    if (!typeId) return '';
+    const t = packageTypes.find(x => String(x.type_id) === String(typeId));
+    if (!t) return '';
+    return `<span class="pkg-type-badge">
+        <span class="pkg-type-dot" style="background:${escHtml(t.color_code||'#6b7280')}"></span>
+        ${escHtml(t.type_name)}
+    </span>`;
+}
 
 // ===== LOAD STATS =====
 async function loadStats() {
@@ -108,7 +136,10 @@ function renderTable(packages) {
                     ${avatarHtml}
                     <div>
                         <div class="pkg-name-text">${escHtml(p.plan_name)}</div>
-                        <div class="pkg-id-text">#${p.plan_id}</div>
+                        <div style="display:flex;align-items:center;gap:6px;margin-top:2px">
+                            <span class="pkg-id-text">#${p.plan_id}</span>
+                            ${getTypeBadgeHtml(p.package_type_id)}
+                        </div>
                     </div>
                 </div>
             </td>
@@ -186,6 +217,7 @@ function openAddModal() {
     document.getElementById('fGia').value       = '';
     document.getElementById('fMoTa').value      = '';
     resetImagePreview();
+    document.getElementById('fPackageType').value = '';
     document.getElementById('packageModal').classList.add('active');
     setTimeout(() => document.getElementById('fTenGoi').focus(), 100);
 }
@@ -200,7 +232,8 @@ window.openEdit = function(encoded) {
     document.getElementById('fTenGoi').value    = pkg.plan_name || '';
     document.getElementById('fThoiHan').value   = pkg.duration_months || '';
     document.getElementById('fGia').value       = pkg.price || '';
-    document.getElementById('fMoTa').value      = pkg.description || '';
+    document.getElementById('fMoTa').value           = pkg.description || '';
+    document.getElementById('fPackageType').value     = pkg.package_type_id || '';
 
     // Load ảnh cũ vào preview
     if (pkg.image_url) {
@@ -239,6 +272,8 @@ async function savePackage() {
     body.append('duration_months', duration);
     body.append('price', price);
     body.append('description', description);
+    const packageTypeId = document.getElementById('fPackageType').value;
+    body.append('package_type_id', packageTypeId);
     body.append('remove_image', removeImg);
     if (imageFile) body.append('image_package', imageFile);
 

@@ -68,12 +68,7 @@ $active = array_sum(array_column($images, 'is_active'));
       <i class="fas fa-user-shield" style="color:var(--gold);margin-right:5px"></i>
       <?= $admin_name ?>
     </span>
-    <a href="../../Admin/adm.php"         class="tb-btn">
-      <i class="fas fa-th-large"></i> Dashboard
-    </a>
-    <a href="../../../../Home/index.php"  class="tb-btn">
-      <i class="fas fa-home"></i> Trang chủ
-    </a>
+    
   </div>
 </header>
 

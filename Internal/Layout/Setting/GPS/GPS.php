@@ -63,7 +63,6 @@ $loc_check  = $settings['location_check']    ?? '1';
   <span class="tb-title"><i class="fas fa-satellite-dish"></i> CÀI ĐẶT GPS CHẤM CÔNG</span>
   <div class="tb-right">
     <span class="tb-user"><i class="fas fa-user-shield"></i> <?= $admin_name ?></span>
-    <a href="../../Admin/adm.php" class="tb-btn"><i class="fas fa-th-large"></i> Dashboard</a>
   </div>
 </header>
 

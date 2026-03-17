@@ -41,6 +41,16 @@ switch ($action) {
     // ========================
     // LẤY DANH SÁCH GÓI TẬP
     // ========================
+    // ========================
+    // LẤY DANH SÁCH LOẠI GÓI TẬP
+    // ========================
+    case 'get_package_types':
+        $res   = $conn->query("SELECT type_id, type_name, color_code FROM PackageType WHERE is_active=1 ORDER BY sort_order ASC, type_id ASC");
+        $types = [];
+        if ($res) while ($r = $res->fetch_assoc()) $types[] = $r;
+        echo json_encode(['success' => true, 'data' => $types]);
+        break;
+
     case 'get_packages':
         $page     = max(1, intval($_GET['page'] ?? 1));
         $limit    = intval($_GET['limit'] ?? 15);
@@ -86,12 +96,16 @@ switch ($action) {
                 mp.price,
                 mp.description,
                 mp.image_url,
+                mp.package_type_id,
+                pt.type_name   AS package_type_name,
+                pt.color_code  AS package_type_color,
                 COUNT(DISTINCT mr.registration_id) AS total_subscribers,
                 COUNT(DISTINCT CASE WHEN mr.end_date >= CURDATE() THEN mr.registration_id END) AS active_subscribers
             FROM MembershipPlan mp
+            LEFT JOIN PackageType pt ON pt.type_id = mp.package_type_id
             LEFT JOIN MembershipRegistration mr ON mr.plan_id = mp.plan_id
             WHERE $whereStr
-            GROUP BY mp.plan_id, mp.plan_name, mp.duration_months, mp.price, mp.description, mp.image_url
+            GROUP BY mp.plan_id, mp.plan_name, mp.duration_months, mp.price, mp.description, mp.image_url, mp.package_type_id, pt.type_name, pt.color_code
             ORDER BY $orderBy
         ";
 
@@ -134,7 +148,8 @@ switch ($action) {
         $plan_name   = trim($_POST['plan_name'] ?? '');
         $duration    = intval($_POST['duration_months'] ?? 0);
         $price       = floatval($_POST['price'] ?? 0);
-        $description = trim($_POST['description'] ?? '');
+        $description     = trim($_POST['description'] ?? '');
+        $package_type_id = intval($_POST['package_type_id'] ?? 0) ?: null;
 
         if ($plan_name === '') {
             echo json_encode(['success' => false, 'message' => 'Plan name is required']); exit;
@@ -167,10 +182,10 @@ switch ($action) {
 
         $desc_val = $description ?: null;
         $stmt = $conn->prepare("
-            INSERT INTO MembershipPlan (plan_name, duration_months, price, description, image_url)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO MembershipPlan (plan_name, duration_months, price, description, image_url, package_type_id)
+            VALUES (?, ?, ?, ?, ?, ?)
         ");
-        $stmt->bind_param('sidss', $plan_name, $duration, $price, $desc_val, $image_url);
+        $stmt->bind_param('sidssi', $plan_name, $duration, $price, $desc_val, $image_url, $package_type_id);
 
         if ($stmt->execute()) {
             echo json_encode(['success' => true, 'message' => 'Thêm gói tập thành công', 'id' => $conn->insert_id]);
@@ -187,7 +202,8 @@ switch ($action) {
         $plan_name   = trim($_POST['plan_name'] ?? '');
         $duration    = intval($_POST['duration_months'] ?? 0);
         $price       = floatval($_POST['price'] ?? 0);
-        $description = trim($_POST['description'] ?? '');
+        $description     = trim($_POST['description'] ?? '');
+        $package_type_id = intval($_POST['package_type_id'] ?? 0) ?: null;
 
         if ($id === 0 || $plan_name === '') {
             echo json_encode(['success' => false, 'message' => 'Dữ liệu không hợp lệ']); exit;
@@ -234,10 +250,10 @@ switch ($action) {
         $desc_val = $description ?: null;
         $stmt = $conn->prepare("
             UPDATE MembershipPlan
-            SET plan_name=?, duration_months=?, price=?, description=?, image_url=?
+            SET plan_name=?, duration_months=?, price=?, description=?, image_url=?, package_type_id=?
             WHERE plan_id=?
         ");
-        $stmt->bind_param('sidssi', $plan_name, $duration, $price, $desc_val, $image_url, $id);
+        $stmt->bind_param('sidssii', $plan_name, $duration, $price, $desc_val, $image_url, $package_type_id, $id);
 
         if ($stmt->execute()) {
             echo json_encode(['success' => true, 'message' => 'Cập nhật gói tập thành công']);

@@ -15,10 +15,19 @@ $action = $_POST['action'] ?? $_GET['action'] ?? '';
 switch ($action) {
 
     // ========================
+    // LOẠI GÓI TẬP
+    // ========================
+    case 'get_package_types':
+        $res   = $conn->query("SELECT type_id, type_name, color_code FROM PackageType WHERE is_active=1 ORDER BY sort_order ASC, type_id ASC");
+        $types = [];
+        if ($res) while ($r = $res->fetch_assoc()) $types[] = $r;
+        echo json_encode(['success' => true, 'data' => $types]);
+        break;
+
+    // ========================
     // STATS
     // ========================
     case 'get_stats':
-        // DB table: GymRoom  columns: room_id, room_name, room_type, status, capacity, area, floor, open_time, description
         $total       = $conn->query("SELECT COUNT(*) c FROM GymRoom")->fetch_assoc()['c'];
         $active      = $conn->query("SELECT COUNT(*) c FROM GymRoom WHERE status='Hoạt động'")->fetch_assoc()['c'];
         $maintenance = $conn->query("SELECT COUNT(*) c FROM GymRoom WHERE status='Bảo trì'")->fetch_assoc()['c'];
@@ -44,8 +53,7 @@ switch ($action) {
         $limit  = (int)($_GET['limit']         ?? 12);
         $search = trim($_GET['search']          ?? '');
         $status = trim($_GET['status']          ?? '');
-        $type   = trim($_GET['type']            ?? '');
-        $sort   = $_GET['sort']                 ?? 'id_desc';
+$sort   = $_GET['sort']                 ?? 'id_desc';
         $offset = ($page - 1) * $limit;
 
         $where  = ['1=1'];
@@ -53,13 +61,13 @@ switch ($action) {
         $types  = '';
 
         if ($search !== '') {
-            $where[] = "(room_name LIKE ? OR room_type LIKE ? OR description LIKE ?)";
+            $where[] = "(room_name LIKE ? OR description LIKE ?)";
             $s = "%$search%";
-            $params[] = $s; $params[] = $s; $params[] = $s;
-            $types .= 'sss';
+            $params[] = $s; $params[] = $s;
+            $types .= 'ss';
         }
         if ($status !== '') { $where[] = "status = ?";    $params[] = $status; $types .= 's'; }
-        if ($type   !== '') { $where[] = "room_type = ?"; $params[] = $type;   $types .= 's'; }
+
 
         $whereStr = implode(' AND ', $where);
 
@@ -79,8 +87,12 @@ switch ($action) {
         // Data + equipment count
         $ds = $conn->prepare("
             SELECT gr.*,
+                   gr.package_type_id,
+                   pt.type_name  AS package_type_name,
+                   pt.color_code AS package_type_color,
                    (SELECT COUNT(*) FROM Equipment e WHERE e.room_id = gr.room_id) AS so_thiet_bi
             FROM GymRoom gr
+            LEFT JOIN PackageType pt ON pt.type_id = gr.package_type_id
             WHERE $whereStr
             ORDER BY $orderBy
             LIMIT ? OFFSET ?
@@ -108,7 +120,15 @@ switch ($action) {
         $id = (int)($_GET['id'] ?? 0);
         if (!$id) { echo json_encode(['success' => false, 'message' => 'ID không hợp lệ']); exit; }
 
-        $s = $conn->prepare("SELECT * FROM GymRoom WHERE room_id = ?");
+        $s = $conn->prepare("
+            SELECT gr.*,
+                   gr.package_type_id,
+                   pt.type_name  AS package_type_name,
+                   pt.color_code AS package_type_color
+            FROM GymRoom gr
+            LEFT JOIN PackageType pt ON pt.type_id = gr.package_type_id
+            WHERE gr.room_id = ?
+        ");
         $s->bind_param('i', $id); $s->execute();
         $room = $s->get_result()->fetch_assoc();
         if (!$room) { echo json_encode(['success' => false, 'message' => 'Không tìm thấy phòng tập']); exit; }
@@ -125,17 +145,17 @@ switch ($action) {
     // ========================
     case 'add_gym':
         $room_name   = trim($_POST['ten_phong']  ?? '');
-        $room_type   = trim($_POST['loai_phong'] ?? '');
         $status      = trim($_POST['trang_thai'] ?? 'Hoạt động');
         $capacity    = (int)($_POST['suc_chua']  ?? 0) ?: null;
         $area        = (float)($_POST['dien_tich'] ?? 0) ?: null;
         $floor_raw   = trim($_POST['tang']        ?? '');
         $floor       = $floor_raw !== '' ? (int)$floor_raw : null;
         $open_time   = trim($_POST['gio_mo']      ?? '') ?: null;
-        $description = trim($_POST['mo_ta']       ?? '') ?: null;
+        $description     = trim($_POST['mo_ta']         ?? '') ?: null;
+        $package_type_id = intval($_POST['package_type_id'] ?? 0) ?: null;
 
-        if (!$room_name || !$room_type) {
-            echo json_encode(['success' => false, 'message' => 'Tên phòng và loại phòng không được để trống']);
+        if (!$room_name) {
+            echo json_encode(['success' => false, 'message' => 'Tên phòng không được để trống']);
             exit;
         }
 
@@ -146,10 +166,10 @@ switch ($action) {
         }
 
         $s = $conn->prepare("
-            INSERT INTO GymRoom (room_name, room_type, status, capacity, area, floor, open_time, description)
+            INSERT INTO GymRoom (room_name, status, capacity, area, floor, open_time, description, package_type_id)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         ");
-        $s->bind_param('sssidiss', $room_name, $room_type, $status, $capacity, $area, $floor, $open_time, $description);
+        $s->bind_param('ssidissi', $room_name, $status, $capacity, $area, $floor, $open_time, $description, $package_type_id);
         echo json_encode($s->execute()
             ? ['success' => true, 'message' => 'Thêm phòng tập thành công', 'id' => $conn->insert_id]
             : ['success' => false, 'message' => $conn->error]);
@@ -161,16 +181,16 @@ switch ($action) {
     case 'update_gym':
         $id          = (int)($_POST['id']          ?? 0);
         $room_name   = trim($_POST['ten_phong']    ?? '');
-        $room_type   = trim($_POST['loai_phong']   ?? '');
         $status      = trim($_POST['trang_thai']   ?? 'Hoạt động');
         $capacity    = (int)($_POST['suc_chua']    ?? 0) ?: null;
         $area        = (float)($_POST['dien_tich'] ?? 0) ?: null;
         $floor_raw   = trim($_POST['tang']         ?? '');
         $floor       = $floor_raw !== '' ? (int)$floor_raw : null;
         $open_time   = trim($_POST['gio_mo']       ?? '') ?: null;
-        $description = trim($_POST['mo_ta']        ?? '') ?: null;
+        $description     = trim($_POST['mo_ta']         ?? '') ?: null;
+        $package_type_id = intval($_POST['package_type_id'] ?? 0) ?: null;
 
-        if (!$id || !$room_name || !$room_type) {
+        if (!$id || !$room_name) {
             echo json_encode(['success' => false, 'message' => 'Dữ liệu không hợp lệ']); exit;
         }
 
@@ -182,10 +202,10 @@ switch ($action) {
 
         $s = $conn->prepare("
             UPDATE GymRoom
-            SET room_name=?, room_type=?, status=?, capacity=?, area=?, floor=?, open_time=?, description=?
+            SET room_name=?, status=?, capacity=?, area=?, floor=?, open_time=?, description=?, package_type_id=?
             WHERE room_id=?
         ");
-        $s->bind_param('sssidissi', $room_name, $room_type, $status, $capacity, $area, $floor, $open_time, $description, $id);
+        $s->bind_param('ssidissii', $room_name, $status, $capacity, $area, $floor, $open_time, $description, $package_type_id, $id);
         echo json_encode($s->execute()
             ? ['success' => true, 'message' => 'Cập nhật phòng tập thành công']
             : ['success' => false, 'message' => $conn->error]);

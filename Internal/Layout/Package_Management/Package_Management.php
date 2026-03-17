@@ -120,6 +120,13 @@
                     <label>Tên gói tập <span class="required">*</span></label>
                     <input type="text" id="fTenGoi" class="form-control" placeholder="VD: Gói Cơ Bản 1 Tháng">
                 </div>
+                <div class="form-group full">
+                    <label>Loại gói tập</label>
+                    <select id="fPackageType" class="form-control">
+                        <option value="">— Chọn loại gói —</option>
+                    </select>
+                    <small class="form-hint">Phân loại gói tập theo cấp độ (Basic, Premium, VIP...)</small>
+                </div>
                 <div class="form-group">
                     <label>Thời hạn (tháng) <span class="required">*</span></label>
                     <input type="number" id="fThoiHan" class="form-control" placeholder="VD: 1, 3, 6, 12" min="1" max="60">

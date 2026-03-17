@@ -9,19 +9,48 @@ let searchTimer = null;
 document.addEventListener('DOMContentLoaded', () => {
     loadStats();
     loadGyms();
+    loadPackageTypes();
 
     document.getElementById('searchInput').addEventListener('input', () => {
         clearTimeout(searchTimer);
         searchTimer = setTimeout(() => { currentPage = 1; loadGyms(); }, 400);
     });
 
-    ['statusFilter','typeFilter','sortFilter'].forEach(id => {
+    ['statusFilter','sortFilter'].forEach(id => {
         document.getElementById(id).addEventListener('change', () => {
             currentPage = 1;
             loadGyms();
         });
     });
 });
+
+// ============ PACKAGE TYPES ============
+let packageTypes = [];
+
+async function loadPackageTypes() {
+    try {
+        const res  = await fetch(`${API_URL}?action=get_package_types`);
+        const data = await res.json();
+        if (!data.success) return;
+        packageTypes = data.data;
+        const sel = document.getElementById('fPackageType');
+        sel.innerHTML = '<option value="">— Tất cả loại gói (không giới hạn) —</option>'
+            + data.data.map(t =>
+                `<option value="${t.type_id}">${escHtml(t.type_name)}</option>`
+            ).join('');
+    } catch(e) { console.error('loadPackageTypes:', e); }
+}
+
+function getPackageTypeBadge(typeId, typeName, typeColor) {
+    if (!typeId) return '';
+    const color = typeColor || '#6b7280';
+    return `<span style="display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:20px;
+        font-size:11px;font-weight:700;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
+        color:rgba(255,255,255,.75);margin-top:3px">
+        <span style="width:7px;height:7px;border-radius:2px;background:${escHtml(color)};flex-shrink:0"></span>
+        ${escHtml(typeName || '')}
+    </span>`;
+}
 
 // ============ STATS ============
 async function loadStats() {
@@ -41,13 +70,11 @@ async function loadStats() {
 async function loadGyms() {
     const search = document.getElementById('searchInput').value.trim();
     const status = document.getElementById('statusFilter').value;
-    const type   = document.getElementById('typeFilter').value;
     const sort   = document.getElementById('sortFilter').value;
 
     const url = `${API_URL}?action=get_gyms&page=${currentPage}&limit=${LIMIT}`
               + `&search=${encodeURIComponent(search)}`
               + `&status=${encodeURIComponent(status)}`
-              + `&type=${encodeURIComponent(type)}`
               + `&sort=${encodeURIComponent(sort)}`;
 
     try {
@@ -71,10 +98,6 @@ function setView(v) {
 }
 
 // ============ HELPERS ============
-const roomIcons = {
-    'Cardio': '🏃', 'Yoga': '🧘', 'Tạ': '🏋️',
-    'Boxing': '🥊', 'CrossFit': '⚡', 'Bơi lội': '🏊', 'Phòng đa năng': '🏟️'
-};
 
 function getStatusInfo(s) {
     if (s === 'Hoạt động') return { cls: 'active',   label: '● Hoạt động' };
@@ -88,7 +111,6 @@ function escHtml(s) {
 }
 
 // ============ RENDER GRID ============
-// DB fields: room_id, room_name, room_type, status, capacity, area, floor, open_time, description, so_thiet_bi
 function renderGrid(data) {
     const grid = document.getElementById('gridView');
     if (!data.length) {
@@ -101,17 +123,18 @@ function renderGrid(data) {
     }
     grid.innerHTML = data.map(r => {
         const st   = getStatusInfo(r.status);
-        const icon = roomIcons[r.room_type] || '🏋️';
         return `
-        <div class="room-card" data-type="${escHtml(r.room_type)}" onclick="openDetail(${r.room_id})">
+        <div class="room-card" onclick="openDetail(${r.room_id})">
             <div class="room-card-header">
                 <div class="room-card-bg"></div>
-                <div class="room-card-icon">${icon}</div>
+                <div class="room-card-icon">🏋️</div>
                 <span class="room-status-badge ${st.cls}">${st.label}</span>
             </div>
             <div class="room-card-body">
                 <div class="room-card-name">${escHtml(r.room_name)}</div>
-                <div class="room-card-type">${escHtml(r.room_type)}</div>
+                <div class="room-card-type" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                    ${getPackageTypeBadge(r.package_type_id, r.package_type_name, r.package_type_color)}
+                </div>
                 <div class="room-card-stats">
                     <div class="room-stat-item">
                         <div class="room-stat-value">${r.capacity ?? '—'}</div>
@@ -154,25 +177,20 @@ function renderTable(data) {
         tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:40px;color:rgba(255,255,255,0.3)">Không có dữ liệu</td></tr>`;
         return;
     }
-    const avatarClass = {
-        'Cardio':'cardio','Yoga':'yoga','Tạ':'weights',
-        'Boxing':'boxing','CrossFit':'crossfit','Bơi lội':'swimming','Phòng đa năng':'multipurpose'
-    };
     tbody.innerHTML = data.map(r => {
         const st    = getStatusInfo(r.status);
-        const icon  = roomIcons[r.room_type] || '🏋️';
-        const avcls = avatarClass[r.room_type] || 'multipurpose';
+        const avcls = 'multipurpose';
         return `<tr>
             <td>
                 <div class="room-name-cell">
                     <div class="room-avatar ${avcls}">${icon}</div>
                     <div>
                         <div class="room-name">${escHtml(r.room_name)}</div>
-                        <div class="room-floor">${r.floor != null ? 'Tầng ' + r.floor : '—'}</div>
+                        <div class="room-floor">${r.floor != null ? "Tầng " + r.floor : "—"}</div>
                     </div>
                 </div>
             </td>
-            <td><span class="type-badge">${escHtml(r.room_type)}</span></td>
+            <td>${getPackageTypeBadge(r.package_type_id, r.package_type_name, r.package_type_color)}</td>
             <td>${r.capacity ?? '—'} người</td>
             <td>${r.area ? r.area + ' m²' : '—'}</td>
             <td><span class="status-badge ${st.cls}">${st.label}</span></td>
@@ -219,19 +237,18 @@ function openAddModal() {
     document.getElementById('gymId').value = '';
     document.getElementById('modalTitle').innerHTML = '<i class="fas fa-chess-board" style="color:#fb923c;margin-right:8px"></i>Thêm phòng tập mới';
     ['fTenPhong','fMoTa'].forEach(id => document.getElementById(id).value = '');
-    document.getElementById('fLoaiPhong').value = '';
-    document.getElementById('fTrangThai').value = 'Hoạt động';
-    document.getElementById('fSucChua').value   = '';
-    document.getElementById('fDienTich').value  = '';
-    document.getElementById('fTang').value      = '';
-    document.getElementById('fGioMo').value     = '06:00';
+    document.getElementById('fPackageType').value = '';
+    document.getElementById('fTrangThai').value  = 'Hoạt động';
+    document.getElementById('fSucChua').value    = '';
+    document.getElementById('fDienTich').value   = '';
+    document.getElementById('fTang').value       = '';
+    document.getElementById('fGioMo').value      = '06:00';
     document.getElementById('gymModal').classList.add('active');
 }
 
 function closeGymModal() { document.getElementById('gymModal').classList.remove('active'); }
 
 // ============ EDIT MODAL ============
-// DB returns: room_id, room_name, room_type, status, capacity, area, floor, open_time, description
 async function openEditModal(id) {
     try {
         const res = await fetch(`${API_URL}?action=get_detail&id=${id}`);
@@ -240,13 +257,13 @@ async function openEditModal(id) {
         const r = d.room;
         document.getElementById('gymId').value      = r.room_id;
         document.getElementById('fTenPhong').value  = r.room_name   || '';
-        document.getElementById('fLoaiPhong').value = r.room_type   || '';
         document.getElementById('fTrangThai').value = r.status      || 'Hoạt động';
         document.getElementById('fSucChua').value   = r.capacity    || '';
         document.getElementById('fDienTich').value  = r.area        || '';
         document.getElementById('fTang').value      = r.floor       ?? '';
         document.getElementById('fGioMo').value     = r.open_time   ? r.open_time.slice(0,5) : '06:00';
-        document.getElementById('fMoTa').value      = r.description || '';
+        document.getElementById('fMoTa').value          = r.description || '';
+        document.getElementById('fPackageType').value   = r.package_type_id || '';
         document.getElementById('modalTitle').innerHTML = '<i class="fas fa-pen" style="color:#fb923c;margin-right:8px"></i>Chỉnh sửa phòng tập';
         document.getElementById('gymModal').classList.add('active');
     } catch(e) { showToast('Lỗi kết nối', 'error'); }
@@ -256,22 +273,19 @@ async function openEditModal(id) {
 async function saveGym() {
     const id       = document.getElementById('gymId').value;
     const tenPhong = document.getElementById('fTenPhong').value.trim();
-    const loai     = document.getElementById('fLoaiPhong').value;
-
     if (!tenPhong) { showToast('Vui lòng nhập tên phòng tập', 'error'); return; }
-    if (!loai)     { showToast('Vui lòng chọn loại phòng', 'error'); return; }
 
     const body = new FormData();
     body.append('action',     id ? 'update_gym' : 'add_gym');
     if (id) body.append('id', id);
     body.append('ten_phong',  tenPhong);
-    body.append('loai_phong', loai);
     body.append('trang_thai', document.getElementById('fTrangThai').value);
     body.append('suc_chua',   document.getElementById('fSucChua').value);
     body.append('dien_tich',  document.getElementById('fDienTich').value);
     body.append('tang',       document.getElementById('fTang').value);
     body.append('gio_mo',     document.getElementById('fGioMo').value);
-    body.append('mo_ta',      document.getElementById('fMoTa').value.trim());
+    body.append('mo_ta',         document.getElementById('fMoTa').value.trim());
+    body.append('package_type_id', document.getElementById('fPackageType').value);
 
     try {
         const res = await fetch(API_URL, { method: 'POST', body });
@@ -310,8 +324,6 @@ async function openDetail(id) {
 function renderDetail(d) {
     const r    = d.room;
     const st   = getStatusInfo(r.status);
-    const icon = roomIcons[r.room_type] || '🏋️';
-
     // Equipment: DB fields equipment_name, condition_status
     const thietBiHtml = d.thiet_bi && d.thiet_bi.length
         ? `<div class="thiet-bi-list">` + d.thiet_bi.map(tb => `
@@ -326,10 +338,10 @@ function renderDetail(d) {
 
     document.getElementById('detailContent').innerHTML = `
         <div class="detail-room-header">
-            <div class="detail-room-icon">${icon}</div>
+            <div class="detail-room-icon">🏋️</div>
             <div>
                 <div class="detail-room-name">${escHtml(r.room_name)}</div>
-                <div class="detail-room-sub">${escHtml(r.room_type)} · <span class="status-badge ${st.cls}" style="font-size:12px">${st.label}</span></div>
+                <div class="detail-room-sub"><span class="status-badge ${st.cls}" style="font-size:12px">${st.label}</span> ${r.package_type_id ? getPackageTypeBadge(r.package_type_id, r.package_type_name, r.package_type_color) : ''}</div>
             </div>
         </div>
         <div class="detail-section">

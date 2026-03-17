@@ -62,16 +62,7 @@
             <option value="Bảo trì">Bảo trì</option>
             <option value="Đóng cửa">Đóng cửa</option>
         </select>
-        <select class="filter-select" id="typeFilter">
-            <option value="">Tất cả loại phòng</option>
-            <option value="Cardio">Cardio</option>
-            <option value="Yoga">Yoga</option>
-            <option value="Tạ">Phòng Tạ</option>
-            <option value="Boxing">Boxing</option>
-            <option value="CrossFit">CrossFit</option>
-            <option value="Bơi lội">Bơi lội</option>
-            <option value="Phòng đa năng">Đa năng</option>
-        </select>
+
         <select class="filter-select" id="sortFilter">
             <option value="id_desc">Mới nhất</option>
             <option value="id_asc">Cũ nhất</option>
@@ -116,7 +107,6 @@
                 <thead>
                     <tr>
                         <th>Phòng tập</th>
-                        <th>Loại phòng</th>
                         <th>Sức chứa</th>
                         <th>Diện tích</th>
                         <th>Trạng thái</th>
@@ -126,7 +116,7 @@
                 </thead>
                 <tbody id="gymTbody">
                     <tr>
-                        <td colspan="7" style="text-align:center;padding:40px;color:rgba(255,255,255,0.3)">
+                        <td colspan="6" style="text-align:center;padding:40px;color:rgba(255,255,255,0.3)">
                             <i class="fas fa-spinner fa-spin" style="font-size:24px"></i>
                         </td>
                     </tr>
@@ -157,19 +147,14 @@
                     <label>Tên phòng tập <span class="required">*</span></label>
                     <input type="text" id="fTenPhong" class="form-control" placeholder="VD: Phòng Yoga A1">
                 </div>
-                <div class="form-group">
-                    <label>Loại phòng <span class="required">*</span></label>
-                    <select id="fLoaiPhong" class="form-control">
-                        <option value="">-- Chọn loại --</option>
-                        <option value="Cardio">🏃 Cardio</option>
-                        <option value="Yoga">🧘 Yoga</option>
-                        <option value="Tạ">🏋️ Phòng Tạ</option>
-                        <option value="Boxing">🥊 Boxing</option>
-                        <option value="CrossFit">⚡ CrossFit</option>
-                        <option value="Bơi lội">🏊 Bơi lội</option>
-                        <option value="Phòng đa năng">🏟️ Đa năng</option>
+                <div class="form-group full">
+                    <label>Loại gói tập yêu cầu</label>
+                    <select id="fPackageType" class="form-control">
+                        <option value="">— Tất cả loại gói (không giới hạn) —</option>
                     </select>
+                    <small style="font-size:11px;color:rgba(255,255,255,.35);margin-top:4px;display:block">Chọn loại gói tập tối thiểu cần có để vào phòng này</small>
                 </div>
+
                 <div class="form-group">
                     <label>Trạng thái</label>
                     <select id="fTrangThai" class="form-control">

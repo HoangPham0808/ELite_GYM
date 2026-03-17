@@ -104,6 +104,12 @@ $initials    = mb_strtoupper(mb_substr($full_name, 0, 1));
                             </a>
                             <!-- Submenu -->
                             <ul class="nav-submenu">
+                                <li class="nav-item" data-page="System.php">
+                                    <a href="#System.php">
+                                        <i class="fas fa-cogs"></i>
+                                        <span>Hệ thống</span>
+                                    </a>
+                                </li>
                                 <li class="nav-item" data-page="landing_image.php">
                                     <a href="#landing_image.php">
                                         <i class="fas fa-images"></i>
