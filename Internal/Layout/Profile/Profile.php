@@ -19,7 +19,8 @@ $chuc_vu_display = match($chuc_vu) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Elite Gym – Hồ sơ cá nhân</title>
-    <link rel="stylesheet" href="Profile.css">
+    <link rel="stylesheet" href="/PHP/ELite_GYM/Internal/Layout/Profile/Profile.css">
+    <link rel="stylesheet" href="/PHP/ELite_GYM/Internal/Layout/Setting/GPS/GPS.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&family=Barlow+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
 </head>
@@ -186,10 +187,98 @@ $chuc_vu_display = match($chuc_vu) {
                 </form>
             </div>
 
-        </div>
+        <!-- ===== GPS CHECK-IN CARD ===== -->
+            <div class="card card-checkin">
+                <div class="card-header">
+                    <div class="card-header-icon" style="background:rgba(34,197,94,.1);border-color:rgba(34,197,94,.25);color:#22c55e">
+                        <i class="fas fa-map-marker-alt"></i>
+                    </div>
+                    <h3 class="card-title">Chấm công hôm nay</h3>
+                    <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-muted)">
+                        <i class="fas fa-building" style="color:var(--gold);font-size:11px"></i>
+                        <span id="gpsGymName">Elite Gym</span>
+                    </div>
+                </div>
+
+                <!-- Toast -->
+                <div id="gpsToast" class="gps-toast hidden"></div>
+
+                <!-- GPS Indicator -->
+                <div class="gps-indicator gps--loading" id="gpsIndicator">
+                    <div class="gps-dot" id="gpsDot"></div>
+                    <span id="gpsText">Đang khởi động GPS...</span>
+                    <span class="gps-dist-badge" id="gpsDistBadge" style="display:none"></span>
+                </div>
+
+                <!-- Status Row -->
+                <div class="gps-status-row">
+                    <div class="gps-status-box status--none" id="boxDate">
+                        <div class="gps-status-icon"><i class="fas fa-calendar-day"></i></div>
+                        <div class="gps-status-info">
+                            <div class="gps-status-label">Hôm nay</div>
+                            <div class="gps-status-val">—</div>
+                        </div>
+                    </div>
+                    <div class="gps-status-box status--none" id="boxStatus">
+                        <div class="gps-status-icon"><i class="fas fa-circle-question"></i></div>
+                        <div class="gps-status-info">
+                            <div class="gps-status-label">Trạng thái</div>
+                            <div class="gps-status-val">—</div>
+                        </div>
+                    </div>
+                    <div class="gps-status-box status--none" id="boxCheckIn">
+                        <div class="gps-status-icon"><i class="fas fa-sign-in-alt"></i></div>
+                        <div class="gps-status-info">
+                            <div class="gps-status-label">Giờ vào</div>
+                            <div class="gps-status-val">—</div>
+                        </div>
+                    </div>
+                    <div class="gps-status-box status--none" id="boxCheckOut">
+                        <div class="gps-status-icon"><i class="fas fa-sign-out-alt"></i></div>
+                        <div class="gps-status-info">
+                            <div class="gps-status-label">Giờ ra</div>
+                            <div class="gps-status-val">—</div>
+                        </div>
+                    </div>
+                    <div class="gps-status-box status--none" id="boxHours">
+                        <div class="gps-status-icon"><i class="fas fa-clock"></i></div>
+                        <div class="gps-status-info">
+                            <div class="gps-status-label">Giờ làm</div>
+                            <div class="gps-status-val">—</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="gps-actions">
+                    <button class="gps-btn gps-btn--checkin" id="btnCheckIn" onclick="doCheckIn()">
+                        <i class="fas fa-map-marker-alt"></i> Check In
+                    </button>
+                    <button class="gps-btn gps-btn--checkout" id="btnCheckOut" onclick="doCheckOut()" disabled>
+                        <i class="fas fa-sign-out-alt"></i> Check Out
+                    </button>
+                </div>
+
+                <div class="gps-divider"></div>
+
+                <!-- History -->
+                <div class="gps-history-wrap">
+                    <div class="gps-history-title">
+                        <i class="fas fa-history"></i> Lịch sử chấm công gần đây
+                    </div>
+                    <div class="gps-history-list" id="gpsHistoryList">
+                        <div style="padding:16px;text-align:center;color:rgba(255,255,255,.3)">
+                            <i class="fas fa-spinner fa-spin"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- /cards-grid -->
+
     </main>
 </div>
 
-<script src="Profile.js"></script>
+<script src="/PHP/ELite_GYM/Internal/Layout/Profile/Profile.js"></script>
 </body>
 </html>

@@ -107,7 +107,13 @@ $initials    = mb_strtoupper(mb_substr($full_name, 0, 1));
                                 <li class="nav-item" data-page="landing_image.php">
                                     <a href="#landing_image.php">
                                         <i class="fas fa-images"></i>
-                                        <span>Ảnh Landing</span>
+                                        <span>Slider</span>
+                                    </a>
+                                </li>
+                                 <li class="nav-item" data-page="GPS.php">
+                                    <a href="#GPS.php">
+                                        <i class="fas fa-map-marker-alt"></i>
+                                        <span>GPS</span>
                                     </a>
                                 </li>
                             </ul>

@@ -572,3 +572,19 @@ select.form-input option { background: #1c1c1c; }
     .topbar { padding: 0 20px; }
     .form-row { grid-template-columns: 1fr; }
 }
+
+/* ===== CHECKIN CARD — full width below other cards ===== */
+.cards-grid {
+    grid-template-columns: 300px 1fr;
+    grid-template-rows: auto auto auto;
+}
+.card-checkin {
+    grid-column: 1 / -1;
+    grid-row: 3;
+}
+@media (max-width: 1024px) {
+    .card-checkin { grid-row: auto; }
+}
+
+/* ===== UTILITY ===== */
+.hidden { display: none !important; }

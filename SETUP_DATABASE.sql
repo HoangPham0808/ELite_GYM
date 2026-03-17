@@ -482,3 +482,31 @@ ALTER TABLE `MembershipPlan`
 
 -- Tạo thư mục upload nếu chưa có (thực hiện thủ công trên server):
 -- C:\wamp64\www\PHP\ELite_GYM\upload\package\
+CREATE TABLE IF NOT EXISTS `gym_settings` (
+    `setting_key`   VARCHAR(100)  NOT NULL,
+    `setting_value` TEXT          NULL,
+    `updated_at`    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    `updated_by`    INT           NULL,
+    PRIMARY KEY (`setting_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+ 
+-- Dữ liệu mặc định
+INSERT INTO `gym_settings` (`setting_key`, `setting_value`) VALUES
+    ('gym_lat',            '21.0285'),
+    ('gym_lng',            '105.8542'),
+    ('gym_radius_m',       '100'),
+    ('gym_location_name',  'Elite Gym — Chưa cài đặt'),
+    ('location_check',     '1')
+ON DUPLICATE KEY UPDATE `setting_key` = `setting_key`;
+ALTER TABLE `Attendance`
+    ADD COLUMN `checkin_lat` DOUBLE NULL DEFAULT NULL
+    COMMENT 'Vĩ độ GPS lúc check in'
+    AFTER `check_out`;
+ALTER TABLE `Attendance`
+    ADD COLUMN `checkin_lng` DOUBLE NULL DEFAULT NULL
+    COMMENT 'Kinh độ GPS lúc check in'
+    AFTER `checkin_lat`;
+ALTER TABLE `Attendance`
+    ADD COLUMN `checkin_distance` INT NULL DEFAULT NULL
+    COMMENT 'Khoảng cách (mét) tới phòng tập lúc check in'
+    AFTER `checkin_lng`;
