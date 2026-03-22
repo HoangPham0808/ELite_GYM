@@ -64,10 +64,16 @@ $initials      = mb_strtoupper(mb_substr($ho_ten, 0, 1));
                                 <span class="badge" id="customerBadge" style="display:none"></span>
                             </a>
                         </li>
-                         <li class="nav-item" data-page="facilities.php">
+                        <li class="nav-item" data-page="facilities.php">
                             <a href="#facilities.php">
                                 <i class="fas fa-tools"></i>
                                 <span>Cơ sở vật chất</span>
+                            </a>
+                        </li>
+                        <li class="nav-item" data-page="profile.php">
+                            <a href="#profile.php">
+                                <i class="fas fa-user-circle"></i>
+                                <span>Hồ sơ cá nhân</span>
                             </a>
                         </li>
                     </ul>

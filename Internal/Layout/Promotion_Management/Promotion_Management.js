@@ -123,10 +123,10 @@ function renderTable(rows) {
             <td>${statusBadge(r.status || 'Active')}</td>
             <td>
                 <div class="action-btns">
-                    <button class="btn-icon" onclick="openEditModal(${r.promotion_id})" title="Sửa">
+                    <button class="btn-icon edit" onclick="openEditModal(${r.promotion_id})" title="Sửa khuyến mãi">
                         <i class="fas fa-pen"></i>
                     </button>
-                    <button class="btn-icon delete" onclick="confirmDelete(${r.promotion_id}, '${esc(r.promotion_name)}')" title="Xóa">
+                    <button class="btn-icon delete" onclick="confirmDelete(${r.promotion_id}, '${esc(r.promotion_name)}')" title="Xóa khuyến mãi">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>

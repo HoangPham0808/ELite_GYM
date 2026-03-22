@@ -323,6 +323,7 @@ tbody tr:last-child td { border-bottom: none; }
     transition: all 0.15s;
 }
 .btn-icon:hover         { background: var(--pink-dim); color: var(--pink); border-color: rgba(244,114,182,0.3); }
+.btn-icon.edit:hover    { background: rgba(212,160,23,0.15); color: var(--gold); border-color: rgba(212,160,23,0.3); }
 .btn-icon.delete:hover  { background: rgba(248,113,113,0.12); color: #f87171; border-color: rgba(248,113,113,0.3); }
 
 /* ===== PAGINATION ===== */
@@ -430,12 +431,19 @@ label {
     outline: none;
     width: 100%;
     transition: border-color 0.2s, background 0.2s;
+    color-scheme: dark;
 }
 .form-control:focus {
     border-color: var(--pink);
     background: rgba(244,114,182,0.06);
 }
 .form-control::placeholder { color: var(--text-muted); }
+select.form-control option,
+.filter-select option {
+    background: #1e1e1e;
+    color: #ffffff;
+    font-size: 14px;
+}
 
 textarea.form-control { resize: vertical; min-height: 80px; }
 

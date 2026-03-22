@@ -152,15 +152,17 @@ switch ($action) {
     // THÊM
     // ========================
     case 'add_promo':
-        $promotion_name          = trim($_POST['promotion_name'] ?? '');
+        $promotion_name      = trim($_POST['promotion_name']      ?? '');
         $discount_percent    = floatval($_POST['discount_percent'] ?? 0);
-        $status   = trim($_POST['status'] ?? 'Active');
-        $min_order_value= floatval($_POST['min_order_value'] ?? 0);
-        $max_discount_amount  = $_POST['max_discount_amount'] !== '' ? floatval($_POST['max_discount_amount']) : null;
-        $max_usage     = $_POST['max_usage'] !== '' ? intval($_POST['max_usage']) : null;
-        $start_date      = trim($_POST['start_date'] ?? '');
-        $end_date      = trim($_POST['end_date'] ?? '');
-        $description        = trim($_POST['description'] ?? '') ?: null;
+        $status              = trim($_POST['status']              ?? 'Active');
+        $min_order_value     = floatval($_POST['min_order_value'] ?? 0);
+        $max_discount_raw    = trim($_POST['max_discount_amount'] ?? '');
+        $max_discount_amount = ($max_discount_raw !== '') ? floatval($max_discount_raw) : null;
+        $max_usage_raw       = trim($_POST['max_usage']           ?? '');
+        $max_usage           = ($max_usage_raw !== '') ? intval($max_usage_raw) : null;
+        $start_date          = trim($_POST['start_date']          ?? '');
+        $end_date            = trim($_POST['end_date']            ?? '');
+        $description         = trim($_POST['description']        ?? '') ?: null;
 
         if ($promotion_name === '' || $discount_percent <= 0 || !$start_date || !$end_date) {
             echo json_encode(['success' => false, 'message' => 'Invalid data']);
@@ -173,17 +175,24 @@ switch ($action) {
 
         // Tự động cập nhật trạng thái theo ngày (đã xử lý tự động ở đầu file)
 
-        $stmt = $conn->prepare("
-            INSERT INTO Promotion
-                (promotion_name, discount_percent, status, min_order_value, max_discount_amount, max_usage, start_date, end_date, description)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ");
-        $stmt->bind_param('sdsddiiss', $ten, $discount_percent, $status, $min_order_value, $max_discount_amount, $max_usage, $start_date, $end_date, $description);
+        $pn   = $conn->real_escape_string($promotion_name);
+        $dp   = floatval($discount_percent);
+        $st   = $conn->real_escape_string($status);
+        $mov  = floatval($min_order_value);
+        $mda  = ($max_discount_amount !== null) ? floatval($max_discount_amount) : 'NULL';
+        $mu   = ($max_usage !== null) ? intval($max_usage) : 'NULL';
+        $sd   = $conn->real_escape_string($start_date);
+        $ed   = $conn->real_escape_string($end_date);
+        $desc = ($description !== null) ? "'" . $conn->real_escape_string($description) . "'" : 'NULL';
 
-        if ($stmt->execute()) {
-            echo json_encode(['success' => true, 'message' => 'Promotion added successfully', 'id' => $conn->insert_id]);
+        $sql = "INSERT INTO Promotion
+                    (promotion_name, discount_percent, status, min_order_value, max_discount_amount, max_usage, start_date, end_date, description)
+                VALUES ('$pn', $dp, '$st', $mov, $mda, $mu, '$sd', '$ed', $desc)";
+
+        if ($conn->query($sql)) {
+            echo json_encode(['success' => true, 'message' => 'Thêm khuyến mãi thành công', 'id' => $conn->insert_id]);
         } else {
-            echo json_encode(['success' => false, 'message' => 'Error: ' . $conn->error]);
+            echo json_encode(['success' => false, 'message' => 'Lỗi: ' . $conn->error]);
         }
         break;
 
@@ -191,16 +200,18 @@ switch ($action) {
     // CẬP NHẬT
     // ========================
     case 'update_promo':
-        $id           = intval($_POST['id'] ?? 0);
-        $promotion_name          = trim($_POST['promotion_name'] ?? '');
+        $id                  = intval($_POST['id']                ?? 0);
+        $promotion_name      = trim($_POST['promotion_name']      ?? '');
         $discount_percent    = floatval($_POST['discount_percent'] ?? 0);
-        $status   = trim($_POST['status'] ?? 'Active');
-        $min_order_value= floatval($_POST['min_order_value'] ?? 0);
-        $max_discount_amount  = $_POST['max_discount_amount'] !== '' ? floatval($_POST['max_discount_amount']) : null;
-        $max_usage     = $_POST['max_usage'] !== '' ? intval($_POST['max_usage']) : null;
-        $start_date      = trim($_POST['start_date'] ?? '');
-        $end_date      = trim($_POST['end_date'] ?? '');
-        $description        = trim($_POST['description'] ?? '') ?: null;
+        $status              = trim($_POST['status']              ?? 'Active');
+        $min_order_value     = floatval($_POST['min_order_value'] ?? 0);
+        $max_discount_raw    = trim($_POST['max_discount_amount'] ?? '');
+        $max_discount_amount = ($max_discount_raw !== '') ? floatval($max_discount_raw) : null;
+        $max_usage_raw       = trim($_POST['max_usage']           ?? '');
+        $max_usage           = ($max_usage_raw !== '') ? intval($max_usage_raw) : null;
+        $start_date          = trim($_POST['start_date']          ?? '');
+        $end_date            = trim($_POST['end_date']            ?? '');
+        $description         = trim($_POST['description']        ?? '') ?: null;
 
         if ($id === 0 || $promotion_name === '' || $discount_percent <= 0 || !$start_date || !$end_date) {
             echo json_encode(['success' => false, 'message' => 'Invalid data']);
@@ -213,19 +224,32 @@ switch ($action) {
 
         // Tự động cập nhật trạng thái theo ngày (đã xử lý tự động ở đầu file)
 
-        $stmt = $conn->prepare("
-            UPDATE Promotion
-            SET promotion_name=?, discount_percent=?, status=?,
-                min_order_value=?, max_discount_amount=?, max_usage=?,
-                start_date=?, end_date=?, description=?
-            WHERE promotion_id=?
-        ");
-        $stmt->bind_param('sdsddiissi', $ten, $discount_percent, $status, $min_order_value, $max_discount_amount, $max_usage, $start_date, $end_date, $description, $id);
+        $pn   = $conn->real_escape_string($promotion_name);
+        $dp   = floatval($discount_percent);
+        $st   = $conn->real_escape_string($status);
+        $mov  = floatval($min_order_value);
+        $mda  = ($max_discount_amount !== null) ? floatval($max_discount_amount) : 'NULL';
+        $mu   = ($max_usage !== null) ? intval($max_usage) : 'NULL';
+        $sd   = $conn->real_escape_string($start_date);
+        $ed   = $conn->real_escape_string($end_date);
+        $desc = ($description !== null) ? "'" . $conn->real_escape_string($description) . "'" : 'NULL';
 
-        if ($stmt->execute()) {
-            echo json_encode(['success' => true, 'message' => 'Promotion updated successfully']);
+        $sql = "UPDATE Promotion SET
+                    promotion_name     = '$pn',
+                    discount_percent   = $dp,
+                    status             = '$st',
+                    min_order_value    = $mov,
+                    max_discount_amount= $mda,
+                    max_usage          = $mu,
+                    start_date         = '$sd',
+                    end_date           = '$ed',
+                    description        = $desc
+                WHERE promotion_id = $id";
+
+        if ($conn->query($sql)) {
+            echo json_encode(['success' => true, 'message' => 'Cập nhật khuyến mãi thành công']);
         } else {
-            echo json_encode(['success' => false, 'message' => 'Error: ' . $conn->error]);
+            echo json_encode(['success' => false, 'message' => 'Lỗi: ' . $conn->error]);
         }
         break;
 

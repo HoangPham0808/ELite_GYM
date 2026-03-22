@@ -339,6 +339,11 @@ label { font-size: 13px; font-weight: 600; color: var(--text-secondary); }
 .form-control:focus { border-color: var(--gold); background: rgba(212,160,23,0.05); }
 .form-control::placeholder { color: var(--text-muted); }
 textarea.form-control { resize: vertical; min-height: 68px; }
+select.form-control option {
+    background: #1e1e1e;
+    color: #ffffff;
+    font-size: 14px;
+}
 
 /* Autocomplete */
 .autocomplete-wrap { position: relative; }

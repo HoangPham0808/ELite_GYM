@@ -55,11 +55,6 @@ function statusBadge(s, id) {
     const [cls, label] = map[s] || ['status-pending', s || 'Chờ thanh toán'];
     return `<div class="status-wrap">
         <span class="inv-status ${cls}">${label}</span>
-        <select class="status-select" onchange="quickUpdateStatus(${id}, this.value)" title="Đổi trạng thái">
-            <option value="Paid"      ${s==='Paid'      ?'selected':''}>✅ Đã thanh toán</option>
-            <option value="Pending"   ${s==='Pending'   ?'selected':''}>⏳ Chờ thanh toán</option>
-            <option value="Cancelled" ${s==='Cancelled' ?'selected':''}>❌ Đã hủy</option>
-        </select>
     </div>`;
 }
 
@@ -191,14 +186,27 @@ function renderPagination(total, page, totalPages) {
 }
 
 // ===== LOAD PACKAGES =====
-async function loadPackages() {
+async function loadPackages(packageTypeId) {
     try {
-        const res = await fetch(`${API}?action=get_packages`);
+        const url = packageTypeId
+            ? `${API}?action=get_packages&package_type_id=${packageTypeId}`
+            : `${API}?action=get_packages`;
+        const res = await fetch(url);
         const d = await res.json();
         if (!d.success) return;
         packages = d.data;
         const sel = document.getElementById('fPackage');
-        sel.innerHTML = '<option value="">-- Chọn gói tập --</option>' +
+
+        if (packageTypeId && d.data.length === 0) {
+            sel.innerHTML = '<option value="">-- Không có gói phù hợp --</option>';
+            return;
+        }
+
+        const filterNote = packageTypeId && window._activePackageTypeName
+            ? ` [${window._activePackageTypeName}]`
+            : '';
+
+        sel.innerHTML = `<option value="">-- Chọn gói tập${filterNote} --</option>` +
             packages.map(p => `<option value="${p.plan_id}" data-gia="${p.price}" data-ten="${esc(p.plan_name)}" data-thang="${p.duration_months}">
                 ${esc(p.plan_name)} (${p.duration_months} tháng) — ${fmtMoney(p.price)}
             </option>`).join('');
@@ -228,36 +236,57 @@ async function searchCustomers(q) {
             const d = await res.json();
             if (!d.success || !d.data.length) { dropdown.style.display = 'none'; return; }
 
-            dropdown.innerHTML = d.data.map(c => `
-                <div class="dropdown-item" onclick="selectCustomer(${c.customer_id}, '${esc(c.full_name)}', '${esc(c.phone || '')}', '${esc(c.email || '')}')">
-                    <span class="di-name">${esc(c.full_name)}</span>
+            dropdown.innerHTML = d.data.map(c => {
+                const pkBadge = c.active_package_type_name
+                    ? `<span style="font-size:10px;background:rgba(212,160,23,0.2);color:#d4a017;padding:1px 6px;border-radius:10px;margin-left:4px">${esc(c.active_package_type_name)}</span>`
+                    : '';
+                return `<div class="dropdown-item" onclick="selectCustomer(${c.customer_id}, '${esc(c.full_name)}', '${esc(c.phone || '')}', '${esc(c.email || '')}', ${c.active_package_type_id || 'null'}, '${esc(c.active_package_type_name || '')}')">
+                    <span class="di-name">${esc(c.full_name)}${pkBadge}</span>
                     <span class="di-phone">${esc(c.phone || '')}</span>
-                </div>`).join('');
+                </div>`;
+            }).join('');
             dropdown.style.display = 'block';
         } catch(e) {}
     }, 250);
 }
 
-function selectCustomer(id, name, phone, email) {
+function selectCustomer(id, name, phone, email, activePackageTypeId, activePackageTypeName) {
     document.getElementById('fCustomerId').value = id;
     document.getElementById('fCustomerSearch').value = name;
     document.getElementById('customerDropdown').style.display = 'none';
 
+    // Lưu package_type hiện tại để lọc gói tập
+    window._activePackageTypeId   = activePackageTypeId   || null;
+    window._activePackageTypeName = activePackageTypeName || null;
+
     const box = document.getElementById('selectedCustomer');
     box.style.display = 'flex';
+
+    const pkBadge = activePackageTypeName
+        ? `<span style="font-size:11px;background:rgba(212,160,23,0.15);color:#d4a017;padding:2px 8px;border-radius:10px;margin-left:6px;border:1px solid rgba(212,160,23,0.3)">
+               <i class="fas fa-lock" style="font-size:9px;margin-right:3px"></i>Chỉ mua thêm: ${esc(activePackageTypeName)}
+           </span>`
+        : '';
+
     box.innerHTML = `
         <div class="sel-cust-avatar">${name.charAt(0).toUpperCase()}</div>
-        <div>
-            <div class="sel-cust-name">${esc(name)}</div>
+        <div style="flex:1">
+            <div class="sel-cust-name">${esc(name)}${pkBadge}</div>
             <div class="sel-cust-sub">${esc(phone)} ${email ? '• ' + esc(email) : ''}</div>
         </div>
         <button class="sel-cust-clear" onclick="clearCustomer()"><i class="fas fa-times"></i></button>`;
+
+    // Reload packages với filter
+    loadPackages(activePackageTypeId);
 }
 
 function clearCustomer() {
     document.getElementById('fCustomerId').value = '';
     document.getElementById('fCustomerSearch').value = '';
     document.getElementById('selectedCustomer').style.display = 'none';
+    window._activePackageTypeId   = null;
+    window._activePackageTypeName = null;
+    loadPackages(null); // reset về tất cả gói
 }
 
 document.addEventListener('click', e => {
@@ -554,15 +583,68 @@ async function openDetail(id) {
                     <i class="fas fa-clock" style="color:#fbbf24"></i>
                     <span>Hóa đơn <strong>chưa thanh toán</strong> — Số tiền: <strong style="color:#d4a017">${fmtMoney(inv.final_amount)}</strong></span>
                 </div>
-                <button class="btn-pay" onclick="openPaymentModal(${inv.invoice_id})">
-                    <i class="fas fa-qrcode"></i> Thanh toán ngay
-                </button>
+                <div style="display:flex;gap:8px">
+                    ${USER_ROLE === 'Admin' ? `<button class="btn-secondary" onclick="openEditInvoiceModal(${inv.invoice_id}, '${inv.invoice_date}', '${esc(inv.note||'')}', '${inv.status}')">
+                        <i class="fas fa-pen"></i> Sửa
+                    </button>` : ''}
+                    <button class="btn-pay" onclick="openPaymentModal(${inv.invoice_id})">
+                        <i class="fas fa-qrcode"></i> Thanh toán ngay
+                    </button>
+                </div>
             </div>` : inv.status === 'Paid' ? `
-            <div class="payment-done-banner">
-                <i class="fas fa-check-circle"></i>
-                <span>Đã thanh toán thành công</span>
-            </div>` : ''}`;
+            <div class="payment-done-banner" style="display:flex;justify-content:space-between;align-items:center">
+                <div><i class="fas fa-check-circle"></i> <span>Đã thanh toán thành công</span></div>
+                ${USER_ROLE === 'Admin' ? `<button class="btn-secondary" onclick="openEditInvoiceModal(${inv.invoice_id}, '${inv.invoice_date}', '${esc(inv.note||'')}', '${inv.status}')">
+                    <i class="fas fa-pen"></i> Sửa
+                </button>` : ''}
+            </div>` : `
+            <div style="display:flex;justify-content:flex-end;margin-top:12px">
+                ${USER_ROLE === 'Admin' ? `<button class="btn-secondary" onclick="openEditInvoiceModal(${inv.invoice_id}, '${inv.invoice_date}', '${esc(inv.note||'')}', '${inv.status}')">
+                    <i class="fas fa-pen"></i> Sửa hóa đơn
+                </button>` : ''}
+            </div>`}`;
     } catch(e) { showToast('Lỗi tải chi tiết', 'error'); }
+}
+
+// ===== EDIT INVOICE MODAL (Admin only) =====
+function openEditInvoiceModal(id, date, note, status) {
+    document.getElementById('editInvId').value     = id;
+    document.getElementById('editInvDate').value   = date;
+    document.getElementById('editInvNote').value   = note;
+    document.getElementById('editInvStatus').value = status;
+    document.getElementById('editInvoiceModal').classList.add('active');
+}
+
+function closeEditInvoiceModal() {
+    document.getElementById('editInvoiceModal').classList.remove('active');
+}
+
+async function saveEditInvoice() {
+    const id     = document.getElementById('editInvId').value;
+    const date   = document.getElementById('editInvDate').value;
+    const note   = document.getElementById('editInvNote').value.trim();
+    const status = document.getElementById('editInvStatus').value;
+
+    const body = new FormData();
+    body.append('action',       'update_invoice');
+    body.append('id',           id);
+    body.append('invoice_date', date);
+    body.append('note',         note);
+    body.append('status',       status);
+
+    try {
+        const res = await fetch(API, { method: 'POST', body });
+        const d   = await res.json();
+        if (d.success) {
+            showToast(d.message, 'success');
+            closeEditInvoiceModal();
+            closeDetailModal();
+            loadInvoices(currentPage);
+            loadStats();
+        } else {
+            showToast(d.message, 'error');
+        }
+    } catch(e) { showToast('Lỗi kết nối', 'error'); }
 }
 
 // ===== PAYMENT QR MODAL =====

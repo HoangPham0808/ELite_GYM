@@ -357,9 +357,6 @@ $_username  = $_SESSION['username'] ?? '';
                     <div class="pay-method-row">
                         <select id="payMethod" class="form-control">
                             <option value="Chuyển khoản">🏦 Chuyển khoản ngân hàng</option>
-                            <option value="Tiền mặt">💵 Tiền mặt</option>
-                            <option value="QR Pay">📱 QR Pay</option>
-                            <option value="Ví điện tử">💳 Ví điện tử (Momo/ZaloPay)</option>
                         </select>
                     </div>
                     <input type="hidden" id="payConfirmId">
@@ -374,6 +371,43 @@ $_username  = $_SESSION['username'] ?? '';
 
 <!-- TOAST -->
 <div class="toast-container" id="toastContainer"></div>
+
+<!-- ===== MODAL SỬA HÓA ĐƠN (Admin only) ===== -->
+<div class="modal-overlay" id="editInvoiceModal">
+    <div class="modal" style="max-width:480px">
+        <div class="modal-header">
+            <h3><i class="fas fa-pen" style="color:#d4a017;margin-right:8px"></i>Sửa hóa đơn</h3>
+            <button class="btn-close" onclick="closeEditInvoiceModal()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="editInvId">
+            <div class="form-grid">
+                <div class="form-group full">
+                    <label>Ngày lập hóa đơn</label>
+                    <input type="date" id="editInvDate" class="form-control">
+                </div>
+                <div class="form-group full">
+                    <label>Trạng thái</label>
+                    <select id="editInvStatus" class="form-control">
+                        <option value="Paid">✅ Đã thanh toán</option>
+                        <option value="Pending">⏳ Chờ thanh toán</option>
+                        <option value="Cancelled">❌ Đã hủy</option>
+                    </select>
+                </div>
+                <div class="form-group full">
+                    <label>Ghi chú</label>
+                    <textarea id="editInvNote" class="form-control" rows="3" placeholder="Ghi chú..."></textarea>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-secondary" onclick="closeEditInvoiceModal()">Hủy</button>
+            <button class="btn-primary" onclick="saveEditInvoice()">
+                <i class="fas fa-save"></i> Lưu thay đổi
+            </button>
+        </div>
+    </div>
+</div>
 
 <script>
 function copyText(el) {

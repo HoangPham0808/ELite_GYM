@@ -127,10 +127,11 @@ tbody tr:last-child td{border-bottom:none}
 label{font-size:12px;font-weight:600;color:var(--ts)}
 .req{color:var(--red)}
 .form-hint{font-size:11px;color:var(--tm);margin-top:2px}
-.form-control{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:9px;color:var(--tp);font-family:'Barlow',sans-serif;font-size:14px;padding:10px 13px;outline:none;width:100%;transition:border-color .2s,background .2s}
+.form-control{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:9px;color:var(--tp);font-family:'Barlow',sans-serif;font-size:14px;padding:10px 13px;outline:none;width:100%;transition:border-color .2s,background .2s;color-scheme:dark}
 .form-control:focus{border-color:var(--gold);background:rgba(212,160,23,.05)}
 .form-control::placeholder{color:var(--tm)}
 textarea.form-control{resize:vertical;min-height:68px}
+select.form-control option,.filter-select option{background:#1e1e1e;color:#ffffff;font-size:14px}
 .btn-secondary{height:40px;padding:0 18px;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:9px;color:var(--ts);font-family:'Barlow',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s}
 .btn-secondary:hover{border-color:rgba(255,255,255,.2);color:var(--tp)}
 .btn-danger{height:40px;padding:0 18px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);border-radius:9px;color:#ef4444;font-family:'Barlow',sans-serif;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:7px;transition:all .15s}

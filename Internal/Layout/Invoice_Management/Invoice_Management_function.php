@@ -265,23 +265,59 @@ switch ($action) {
     case 'get_customers':
         $q = trim($_GET['q'] ?? '');
         $stmt = $conn->prepare("
-            SELECT customer_id, full_name, phone, email
-            FROM Customer
-            WHERE full_name LIKE ? OR phone LIKE ?
+            SELECT c.customer_id, c.full_name, c.phone, c.email
+            FROM Customer c
+            WHERE c.full_name LIKE ? OR c.phone LIKE ?
             LIMIT 10
         ");
         $s = "%$q%";
         $stmt->bind_param('ss', $s, $s);
         $stmt->execute();
-        $data = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-        echo json_encode(['success' => true, 'data' => $data]);
+        $customers = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+        // Với mỗi khách hàng, lấy package_type_id đang còn hiệu lực
+        $today = date('Y-m-d');
+        foreach ($customers as &$cust) {
+            $cid = intval($cust['customer_id']);
+            $pkRes = $conn->query("
+                SELECT DISTINCT mp.package_type_id, pt.type_name
+                FROM MembershipRegistration mr
+                JOIN MembershipPlan mp ON mp.plan_id = mr.plan_id
+                LEFT JOIN PackageType pt ON pt.type_id = mp.package_type_id
+                WHERE mr.customer_id = $cid
+                  AND mr.end_date >= '$today'
+                  AND mp.package_type_id IS NOT NULL
+                LIMIT 1
+            ");
+            $pk = $pkRes ? $pkRes->fetch_assoc() : null;
+            $cust['active_package_type_id']   = $pk ? intval($pk['package_type_id']) : null;
+            $cust['active_package_type_name'] = $pk ? $pk['type_name'] : null;
+        }
+        unset($cust);
+
+        echo json_encode(['success' => true, 'data' => $customers]);
         break;
 
     // ========================
-    // LẤY GÓI TẬP (cho dropdown)
+    // LẤY GÓI TẬP (cho dropdown) — lọc theo package_type nếu có
     // ========================
     case 'get_packages':
-        $stmt = $conn->prepare("SELECT plan_id, plan_name, duration_months, price FROM MembershipPlan ORDER BY price ASC");
+        $filter_type = intval($_GET['package_type_id'] ?? 0);
+        if ($filter_type > 0) {
+            $stmt = $conn->prepare("
+                SELECT plan_id, plan_name, duration_months, price, package_type_id
+                FROM MembershipPlan
+                WHERE package_type_id = ?
+                ORDER BY price ASC
+            ");
+            $stmt->bind_param('i', $filter_type);
+        } else {
+            $stmt = $conn->prepare("
+                SELECT plan_id, plan_name, duration_months, price, package_type_id
+                FROM MembershipPlan
+                ORDER BY price ASC
+            ");
+        }
         $stmt->execute();
         $data = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         echo json_encode(['success' => true, 'data' => $data]);
@@ -613,6 +649,39 @@ switch ($action) {
         }
         $row = $conn->query("SELECT status FROM Invoice WHERE invoice_id = $id")->fetch_assoc();
         echo json_encode(['status' => $row['status'] ?? 'Pending']);
+        break;
+
+    // ========================
+    // SỬA HÓA ĐƠN (chỉ Admin)
+    // ========================
+    case 'update_invoice':
+        if (($_SESSION['role'] ?? '') !== 'Admin') {
+            echo json_encode(['success' => false, 'message' => 'Chỉ Admin mới được sửa hóa đơn']); exit;
+        }
+        $id           = intval($_POST['id'] ?? 0);
+        $invoice_date = trim($_POST['invoice_date'] ?? '');
+        $note         = trim($_POST['note'] ?? '') ?: null;
+        $status       = trim($_POST['status'] ?? '');
+        $old_status   = '';
+
+        if ($id === 0) { echo json_encode(['success' => false, 'message' => 'ID không hợp lệ']); exit; }
+
+        $curRow = $conn->query("SELECT status FROM Invoice WHERE invoice_id = $id")->fetch_assoc();
+        $old_status = $curRow['status'] ?? '';
+
+        $stmt = $conn->prepare("
+            UPDATE Invoice SET invoice_date=?, note=?, status=? WHERE invoice_id=?
+        ");
+        $stmt->bind_param('sssi', $invoice_date, $note, $status, $id);
+        if ($stmt->execute()) {
+            // Nếu chuyển sang Paid lần đầu → đăng ký gói tập
+            if ($status === 'Paid' && $old_status !== 'Paid') {
+                registerPackagesForInvoice($conn, $id);
+            }
+            echo json_encode(['success' => true, 'message' => 'Cập nhật hóa đơn thành công']);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Lỗi: ' . $conn->error]);
+        }
         break;
 
     default:

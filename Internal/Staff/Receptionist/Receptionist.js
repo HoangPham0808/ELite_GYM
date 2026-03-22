@@ -1,16 +1,20 @@
 // ============ ROUTING ============
 const menuRoutes = {
-    'management_invoice.php':  '/PHP/ELITE_GYM/Internal/Layout/Invoice_Management/Invoice_Management.php',
-    'management_package.php':  '/PHP/ELITE_GYM/Internal/Layout/Package_Management/Package_Management.php',
-    'promotion.php':           '/PHP/ELITE_GYM/Internal/Layout/Promoion_Management/Promoion_Management.php',
-    'customer.php':            '/PHP/ELITE_GYM/Internal/Layout/Customer_Management/Customer_Management.php'
+    'management_invoice.php':  '/PHP/ELite_GYM/Internal/Layout/Invoice_Management/Invoice_Management.php',
+    'management_package.php':  '/PHP/ELite_GYM/Internal/Layout/Package_Management/Package_Management.php',
+    'promotion.php':           '/PHP/ELite_GYM/Internal/Layout/Promotion_Management/Promotion_Management.php',
+    'customer.php':            '/PHP/ELite_GYM/Internal/Layout/Customer_Management/Customer_Management.php',
+    'facilities.php':          '/PHP/ELite_GYM/Internal/Layout/Facilities_Management/Facilities_Management.php',
+    'profile.php':             '/PHP/ELite_GYM/Internal/Layout/Profile/Profile.php'
 };
 
 const pageMeta = {
-    'management_invoice.php':  { title: 'QUẢN LÝ HOÁ ĐƠN',    breadcrumb: 'Trang chủ / Hoá đơn',    icon: 'fa-receipt',   color: 'rgba(234,179,8,0.2)',    iconColor: '#facc15' },
-    'management_package.php':  { title: 'QUẢN LÝ GÓI TẬP',    breadcrumb: 'Trang chủ / Gói tập',    icon: 'fa-box-open',  color: 'rgba(239,68,68,0.2)',    iconColor: '#f87171' },
-    'promotion.php':           { title: 'QUẢN LÝ KHUYẾN MÃI',  breadcrumb: 'Trang chủ / Khuyến mãi', icon: 'fa-tag',       color: 'rgba(236,72,153,0.2)',   iconColor: '#f472b6' },
-    'customer.php':            { title: 'QUẢN LÝ KHÁCH HÀNG',  breadcrumb: 'Trang chủ / Khách hàng', icon: 'fa-users',     color: 'rgba(90,50,180,0.25)',   iconColor: '#a78bfa' }
+    'management_invoice.php':  { title: 'QUẢN LÝ HOÁ ĐƠN',    breadcrumb: 'Trang chủ / Hoá đơn',    icon: 'fa-receipt',      color: 'rgba(234,179,8,0.2)',    iconColor: '#facc15' },
+    'management_package.php':  { title: 'QUẢN LÝ GÓI TẬP',    breadcrumb: 'Trang chủ / Gói tập',    icon: 'fa-box-open',     color: 'rgba(239,68,68,0.2)',    iconColor: '#f87171' },
+    'promotion.php':           { title: 'QUẢN LÝ KHUYẾN MÃI',  breadcrumb: 'Trang chủ / Khuyến mãi', icon: 'fa-tag',          color: 'rgba(236,72,153,0.2)',   iconColor: '#f472b6' },
+    'customer.php':            { title: 'QUẢN LÝ KHÁCH HÀNG',  breadcrumb: 'Trang chủ / Khách hàng', icon: 'fa-users',        color: 'rgba(90,50,180,0.25)',   iconColor: '#a78bfa' },
+    'facilities.php':          { title: 'CƠ SỞ VẬT CHẤT',      breadcrumb: 'Trang chủ / Cơ sở vật chất', icon: 'fa-tools',   color: 'rgba(251,146,60,0.2)',   iconColor: '#fb923c' },
+    'profile.php':             { title: 'HỒ SƠ CÁ NHÂN',       breadcrumb: 'Trang chủ / Hồ sơ',      icon: 'fa-user-circle', color: 'rgba(96,165,250,0.2)',   iconColor: '#60a5fa' }
 };
 
 const contentWrapper = document.getElementById('content-wrapper');
