@@ -3,7 +3,6 @@ ob_start();
 session_start();
 
 // Vị trí: Home/Schedule/Schedule.php
-// → lên 2 cấp: ../../ để đến DATN/
 if (!isset($_SESSION['account_id']) || ($_SESSION['role'] ?? '') !== 'Customer') {
     header("Location: ../../Internal/Index/Login/Login.php");
     exit;
@@ -75,23 +74,29 @@ $past_my     = array_filter($all_my, fn($c) => strtotime($c['class_time']) <  $n
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous"/>
+<link rel="preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+      crossorigin="anonymous" referrerpolicy="no-referrer" id="fa-cdn" media="print" onload="this.media='all'"/>
+<noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous"/></noscript>
 <link rel="stylesheet" href="../Landing.css"/>
 <link rel="stylesheet" href="Schedule.css"/>
 </head>
 <body>
+
 <div class="cursor-glow" id="cursorGlow"></div>
 
+<!-- ══ NAVBAR — giống index.php customer nav ══ -->
 <header class="nav scrolled" id="nav">
   <div class="nav-inner">
     <a href="../index.php" class="nav-logo">
       <svg class="hex-logo" viewBox="0 0 44 44">
-        <polygon points="22,2 40,12 40,32 22,42 4,32 4,12" fill="none" stroke="#d4a017" stroke-width="1.8"/>
-        <text x="50%" y="56%" dominant-baseline="middle" text-anchor="middle" fill="#d4a017" font-size="12" font-weight="800" font-family="Barlow Condensed">EG</text>
+        <polygon points="22,2 40,12 40,32 22,42 4,32 4,12" fill="none" stroke="#cc0000" stroke-width="1.8"/>
+        <text x="50%" y="56%" dominant-baseline="middle" text-anchor="middle" fill="#cc0000" font-size="12" font-weight="800" font-family="Barlow Condensed">EG</text>
       </svg>
       <div class="nav-brand"><span class="nb-main">ELITE</span><span class="nb-sub">GYM</span></div>
     </a>
     <nav class="nav-links">
+      <a href="../index.php">Trang chủ</a>
       <a href="../index.php#schedule">Gói tập</a>
       <a href="Schedule.php" class="nav-active">Lớp tập</a>
       <a href="../index.php#checkin">Hướng dẫn</a>
@@ -116,6 +121,7 @@ $past_my     = array_filter($all_my, fn($c) => strtotime($c['class_time']) <  $n
     <button class="hamburger" id="hamburger"><span></span><span></span><span></span></button>
   </div>
   <div class="mobile-menu" id="mobileMenu">
+    <a href="../index.php">Trang chủ</a>
     <a href="../index.php#schedule">Gói tập</a>
     <a href="Schedule.php">Lớp tập</a>
     <a href="../index.php#checkin">Hướng dẫn</a>
@@ -125,26 +131,26 @@ $past_my     = array_filter($all_my, fn($c) => strtotime($c['class_time']) <  $n
   </div>
 </header>
 
-<!-- HERO -->
+<!-- ══ HERO ══ -->
 <section class="sch-hero">
   <div class="sch-hero-bg"><div class="sch-hex-grid"></div><div class="sch-radial"></div></div>
   <div class="wrap sch-hero-inner">
     <div class="sch-hero-text">
-      <div class="eyebrow"><span></span>Lịch lớp tập</div>
+      <div class="sch-eyebrow"><span></span>Lịch lớp tập</div>
       <h1 class="sch-title">KHÁM PHÁ <span>LỚP TẬP</span><br>CỦA BẠN</h1>
       <p class="sch-subtitle">Xem lịch các buổi tập, theo dõi lớp đã đăng ký và lên kế hoạch tuần tập luyện hiệu quả.</p>
     </div>
     <div class="sch-hero-stats">
-      <div class="sch-stat"><div class="sch-stat-n"><?= count($all_my) ?></div><div class="sch-stat-l">Lớp đã đăng ký</div></div>
+      <div class="sch-stat"><div class="sch-stat-n"><?= count($all_my) ?></div><div class="sch-stat-l">Đã đăng ký</div></div>
       <div class="sch-stat-sep"></div>
-      <div class="sch-stat"><div class="sch-stat-n"><?= count($upcoming_my) ?></div><div class="sch-stat-l">Lớp sắp tới</div></div>
+      <div class="sch-stat"><div class="sch-stat-n"><?= count($upcoming_my) ?></div><div class="sch-stat-l">Sắp tới</div></div>
       <div class="sch-stat-sep"></div>
-      <div class="sch-stat"><div class="sch-stat-n"><?= count($classes) ?></div><div class="sch-stat-l">Lớp tuần này</div></div>
+      <div class="sch-stat"><div class="sch-stat-n"><?= count($classes) ?></div><div class="sch-stat-l">Tuần này</div></div>
     </div>
   </div>
 </section>
 
-<!-- TABS -->
+<!-- ══ TABS ══ -->
 <div class="sch-tabs-wrap">
   <div class="wrap">
     <div class="sch-tabs">
@@ -154,16 +160,19 @@ $past_my     = array_filter($all_my, fn($c) => strtotime($c['class_time']) <  $n
   </div>
 </div>
 
-<!-- PANEL: LỊCH TUẦN -->
+<!-- ══ PANEL: LỊCH TUẦN ══ -->
 <div class="sch-panel active" id="panel-week">
   <div class="wrap">
     <div class="sch-week-nav">
       <a href="?week=<?= $week_offset - 1 ?>" class="sch-week-btn"><i class="fas fa-chevron-left"></i></a>
       <div class="sch-week-label">
         <span class="sch-week-range"><?= $week_start->format('d/m') ?> — <?= $week_end->format('d/m/Y') ?></span>
-        <?php if ($week_offset === 0): ?><span class="sch-week-tag">Tuần này</span>
-        <?php elseif ($week_offset === 1): ?><span class="sch-week-tag" style="background:rgba(96,165,250,.15);color:#60a5fa;border-color:rgba(96,165,250,.3)">Tuần tới</span>
-        <?php elseif ($week_offset < 0): ?><span class="sch-week-tag" style="background:rgba(255,255,255,.05);color:rgba(255,255,255,.4);border-color:rgba(255,255,255,.1)">Tuần trước</span>
+        <?php if ($week_offset === 0): ?>
+          <span class="sch-week-tag">Tuần này</span>
+        <?php elseif ($week_offset === 1): ?>
+          <span class="sch-week-tag" style="background:rgba(96,165,250,.12);color:#60a5fa;border-color:rgba(96,165,250,.3)">Tuần tới</span>
+        <?php elseif ($week_offset < 0): ?>
+          <span class="sch-week-tag" style="background:rgba(255,255,255,.05);color:rgba(255,255,255,.4);border-color:rgba(255,255,255,.1)">Tuần trước</span>
         <?php endif; ?>
       </div>
       <a href="?week=<?= $week_offset + 1 ?>" class="sch-week-btn"><i class="fas fa-chevron-right"></i></a>
@@ -222,21 +231,21 @@ $past_my     = array_filter($all_my, fn($c) => strtotime($c['class_time']) <  $n
   </div>
 </div>
 
-<!-- PANEL: LỚP CỦA TÔI -->
+<!-- ══ PANEL: LỚP CỦA TÔI ══ -->
 <div class="sch-panel" id="panel-my">
   <div class="wrap">
     <?php if (empty($all_my)): ?>
     <div class="sch-empty">
       <div class="sch-empty-icon"><i class="fas fa-calendar-xmark"></i></div>
       <h3>Chưa có lớp nào</h3>
-      <p>Bạn chưa đăng ký lớp tập nào. Liên hệ lễ tân để được tư vấn và đặt lịch với HLV phù hợp.</p>
-      <a href="../index.php" class="btn-gold" style="display:inline-flex;margin-top:8px"><i class="fas fa-arrow-left"></i> Về trang chủ</a>
+      <p>Bạn chưa đăng ký lớp tập nào. Hãy xem lịch tuần và đăng ký lớp phù hợp.</p>
+      <a href="#" onclick="document.querySelector('[data-tab=week]').click();return false;" class="btn-gold" style="display:inline-flex;margin-top:8px"><i class="fas fa-calendar-week"></i> Xem lịch tuần</a>
     </div>
     <?php else: ?>
 
     <?php if (!empty($upcoming_my)): ?>
     <div class="sch-list-section">
-      <div class="sch-list-head"><i class="fas fa-bolt" style="color:var(--gold)"></i> Lớp sắp tới <span class="sch-list-count"><?= count($upcoming_my) ?></span></div>
+      <div class="sch-list-head"><i class="fas fa-bolt" style="color:var(--red)"></i> Lớp sắp tới <span class="sch-list-count"><?= count($upcoming_my) ?></span></div>
       <div class="sch-list-grid">
         <?php foreach ($upcoming_my as $c):
           $dt = new DateTime($c['class_time']);
@@ -294,7 +303,7 @@ $past_my     = array_filter($all_my, fn($c) => strtotime($c['class_time']) <  $n
                 <span><i class="fas fa-calendar"></i> <?= $dt->format('d/m/Y') ?></span>
                 <span><i class="fas fa-clock"></i> <?= $dt->format('H:i') ?></span>
               </div>
-              <div class="sch-list-reg-badge" style="background:rgba(255,255,255,.05);color:rgba(255,255,255,.35);border-color:rgba(255,255,255,.08)"><i class="fas fa-check"></i> Đã hoàn thành</div>
+              <div class="sch-list-reg-badge" style="background:rgba(255,255,255,.05);color:rgba(255,255,255,.35);border:1px solid rgba(255,255,255,.08)"><i class="fas fa-check"></i> Đã hoàn thành</div>
             </div>
           </div>
         </div>
@@ -307,20 +316,23 @@ $past_my     = array_filter($all_my, fn($c) => strtotime($c['class_time']) <  $n
     <div class="sch-contact-cta">
       <i class="fas fa-headset"></i>
       <div>
-        <div style="font-weight:700;font-size:.95rem;margin-bottom:4px">Muốn đăng ký thêm lớp?</div>
-        <div style="font-size:.83rem;color:var(--text-2)">Liên hệ lễ tân hoặc nhân viên phòng tập để được tư vấn và đặt lịch.</div>
+        <div style="font-weight:700;font-size:.95rem;margin-bottom:4px;color:#fff">Muốn đăng ký thêm lớp?</div>
+        <div style="font-size:.83rem;color:rgba(255,255,255,.4)">Liên hệ lễ tân hoặc nhân viên phòng tập để được tư vấn và đặt lịch.</div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- FOOTER -->
+<!-- ══ FOOTER — giống index.php ══ -->
 <footer class="footer">
   <div class="wrap">
     <div class="footer-grid">
       <div class="fg-brand">
         <a href="../index.php" class="nav-logo" style="margin-bottom:14px;display:inline-flex">
-          <svg class="hex-logo" viewBox="0 0 44 44"><polygon points="22,2 40,12 40,32 22,42 4,32 4,12" fill="none" stroke="#d4a017" stroke-width="1.8"/><text x="50%" y="56%" dominant-baseline="middle" text-anchor="middle" fill="#d4a017" font-size="12" font-weight="800" font-family="Barlow Condensed">EG</text></svg>
+          <svg class="hex-logo" viewBox="0 0 44 44">
+            <polygon points="22,2 40,12 40,32 22,42 4,32 4,12" fill="none" stroke="#cc0000" stroke-width="1.8"/>
+            <text x="50%" y="56%" dominant-baseline="middle" text-anchor="middle" fill="#cc0000" font-size="12" font-weight="800" font-family="Barlow Condensed">EG</text>
+          </svg>
           <div class="nav-brand"><span class="nb-main">ELITE</span><span class="nb-sub">GYM</span></div>
         </a>
         <p>Phòng tập thể hình cao cấp — lớp tập đa dạng, HLV chuyên nghiệp, thiết bị hiện đại.</p>
@@ -334,39 +346,65 @@ $past_my     = array_filter($all_my, fn($c) => strtotime($c['class_time']) <  $n
         <h4>Tài khoản</h4>
         <a href="../Profile/Profile.php">Hồ sơ của tôi</a>
         <a href="../Profile/Profile.php?tab=plans">Gói tập</a>
+        <a href="../Profile/Profile.php?tab=checkin">Check-in</a>
         <a href="../../Internal/Index/Login/logout.php" style="color:#f87171">Đăng xuất</a>
       </div>
       <div class="fg-col">
         <h4>Thông tin</h4>
+        <a href="../index.php">Trang chủ</a>
         <a href="../index.php#schedule">Gói tập</a>
         <a href="Schedule.php">Lớp tập</a>
         <a href="../index.php#reviews">Đánh giá</a>
+        <a href="#">Liên hệ</a>
       </div>
     </div>
     <div class="footer-btm"><span>© 2026 <strong>Elite Gym</strong>. All rights reserved.</span></div>
   </div>
 </footer>
 
-<!-- Toast notification -->
+<!-- Toast -->
 <div class="sch-toast" id="schToast">
   <i class="fas fa-check-circle" id="schToastIcon"></i>
   <span id="schToastMsg"></span>
 </div>
 
 <script>
-const navUserBtn=document.getElementById('navUserBtn'),navDropdown=document.getElementById('navDropdown');
-if(navUserBtn&&navDropdown){
-  navUserBtn.addEventListener('click',e=>{e.stopPropagation();navDropdown.classList.toggle('open');navUserBtn.classList.toggle('active');});
-  document.addEventListener('click',()=>{navDropdown.classList.remove('open');navUserBtn.classList.remove('active');});
+// Nav dropdown
+const navUserBtn  = document.getElementById('navUserBtn');
+const navDropdown = document.getElementById('navDropdown');
+if (navUserBtn && navDropdown) {
+  navUserBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    navDropdown.classList.toggle('open');
+    navUserBtn.classList.toggle('active');
+  });
+  document.addEventListener('click', () => {
+    navDropdown.classList.remove('open');
+    navUserBtn.classList.remove('active');
+  });
 }
-const hamburger=document.getElementById('hamburger'),mobileMenu=document.getElementById('mobileMenu');
-if(hamburger&&mobileMenu){
-  hamburger.addEventListener('click',()=>{
+
+// Hamburger — giống Landing.js
+const hamburger  = document.getElementById('hamburger');
+const mobileMenu = document.getElementById('mobileMenu');
+if (hamburger && mobileMenu) {
+  hamburger.addEventListener('click', () => {
     mobileMenu.classList.toggle('open');
-    const spans=hamburger.querySelectorAll('span'),isOpen=mobileMenu.classList.contains('open');
-    spans[0].style.transform=isOpen?'rotate(45deg) translate(5px,5px)':'';
-    spans[1].style.opacity=isOpen?'0':'';
-    spans[2].style.transform=isOpen?'rotate(-45deg) translate(5px,-5px)':'';
+    const spans = hamburger.querySelectorAll('span');
+    const isOpen = mobileMenu.classList.contains('open');
+    if (isOpen) {
+      spans[0].style.transform = 'rotate(45deg) translate(5px, 5px)';
+      spans[1].style.opacity = '0';
+      spans[2].style.transform = 'rotate(-45deg) translate(5px, -5px)';
+    } else {
+      spans.forEach(s => { s.style.transform = ''; s.style.opacity = ''; });
+    }
+  });
+  mobileMenu.querySelectorAll('a').forEach(a => {
+    a.addEventListener('click', () => {
+      mobileMenu.classList.remove('open');
+      hamburger.querySelectorAll('span').forEach(s => { s.style.transform = ''; s.style.opacity = ''; });
+    });
   });
 }
 </script>

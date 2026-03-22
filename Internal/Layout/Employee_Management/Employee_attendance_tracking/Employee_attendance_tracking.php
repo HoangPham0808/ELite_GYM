@@ -93,7 +93,6 @@
                         <th>Trạng thái</th>
                         <th>Giờ vào</th>
                         <th>Giờ ra</th>
-                        <th>Số giờ làm</th>
                         <th>Ghi chú</th>
                         <th>Thao tác</th>
                     </tr>

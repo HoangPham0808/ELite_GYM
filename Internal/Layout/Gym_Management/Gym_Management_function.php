@@ -150,7 +150,8 @@ $sort   = $_GET['sort']                 ?? 'id_desc';
         $area        = (float)($_POST['dien_tich'] ?? 0) ?: null;
         $floor_raw   = trim($_POST['tang']        ?? '');
         $floor       = $floor_raw !== '' ? (int)$floor_raw : null;
-        $open_time   = trim($_POST['gio_mo']      ?? '') ?: null;
+        $open_time   = trim($_POST['gio_mo']       ?? '') ?: null;
+        $close_time  = trim($_POST['gio_dong']     ?? '') ?: null;
         $description     = trim($_POST['mo_ta']         ?? '') ?: null;
         $package_type_id = intval($_POST['package_type_id'] ?? 0) ?: null;
 
@@ -166,10 +167,10 @@ $sort   = $_GET['sort']                 ?? 'id_desc';
         }
 
         $s = $conn->prepare("
-            INSERT INTO GymRoom (room_name, status, capacity, area, floor, open_time, description, package_type_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO GymRoom (room_name, status, capacity, area, floor, open_time, close_time, description, package_type_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
-        $s->bind_param('ssidissi', $room_name, $status, $capacity, $area, $floor, $open_time, $description, $package_type_id);
+        $s->bind_param('ssidisssi', $room_name, $status, $capacity, $area, $floor, $open_time, $close_time, $description, $package_type_id);
         echo json_encode($s->execute()
             ? ['success' => true, 'message' => 'Thêm phòng tập thành công', 'id' => $conn->insert_id]
             : ['success' => false, 'message' => $conn->error]);
@@ -187,6 +188,7 @@ $sort   = $_GET['sort']                 ?? 'id_desc';
         $floor_raw   = trim($_POST['tang']         ?? '');
         $floor       = $floor_raw !== '' ? (int)$floor_raw : null;
         $open_time   = trim($_POST['gio_mo']       ?? '') ?: null;
+        $close_time  = trim($_POST['gio_dong']     ?? '') ?: null;
         $description     = trim($_POST['mo_ta']         ?? '') ?: null;
         $package_type_id = intval($_POST['package_type_id'] ?? 0) ?: null;
 
@@ -202,10 +204,10 @@ $sort   = $_GET['sort']                 ?? 'id_desc';
 
         $s = $conn->prepare("
             UPDATE GymRoom
-            SET room_name=?, status=?, capacity=?, area=?, floor=?, open_time=?, description=?, package_type_id=?
+            SET room_name=?, status=?, capacity=?, area=?, floor=?, open_time=?, close_time=?, description=?, package_type_id=?
             WHERE room_id=?
         ");
-        $s->bind_param('ssidissii', $room_name, $status, $capacity, $area, $floor, $open_time, $description, $package_type_id, $id);
+        $s->bind_param('ssidisssii', $room_name, $status, $capacity, $area, $floor, $open_time, $close_time, $description, $package_type_id, $id);
         echo json_encode($s->execute()
             ? ['success' => true, 'message' => 'Cập nhật phòng tập thành công']
             : ['success' => false, 'message' => $conn->error]);

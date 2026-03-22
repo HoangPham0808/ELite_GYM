@@ -70,13 +70,13 @@ async function loadAttendance() {
 function setTableLoading(state) {
     if (state) {
         document.getElementById('attendanceTbody').innerHTML =
-            `<tr><td colspan="7" style="text-align:center;padding:40px;color:rgba(255,255,255,0.3)">
+            `<tr><td colspan="6" style="text-align:center;padding:40px;color:rgba(255,255,255,0.3)">
                 <i class="fas fa-spinner fa-spin" style="font-size:24px"></i>
              </td></tr>`;
     } else {
         const tbody = document.getElementById('attendanceTbody');
         if (tbody.querySelector('.fa-spinner')) {
-            tbody.innerHTML = `<tr><td colspan="7">
+            tbody.innerHTML = `<tr><td colspan="6">
                 <div class="empty-state">
                     <i class="fas fa-exclamation-circle"></i>
                     <p>Khong the tai du lieu. Vui long thu lai.</p>
@@ -91,7 +91,7 @@ function renderTable(rows) {
     const tbody = document.getElementById('attendanceTbody');
 
     if (!rows.length) {
-        tbody.innerHTML = `<tr><td colspan="7">
+        tbody.innerHTML = `<tr><td colspan="6">
             <div class="empty-state">
                 <i class="fas fa-clipboard-check"></i>
                 <p>Khong tim thay nhan vien nao</p>
@@ -126,17 +126,6 @@ function renderTable(rows) {
             ? `<span class="time-cell"><i class="fas fa-sign-out-alt"></i> ${r.check_out.substring(0,5)}</span>`
             : `<span class="time-dash">&#8212;</span>`;
 
-        // Hours
-        let hoursBadge = `<span class="hours-badge none">&#8212;</span>`;
-        if (r.check_in && r.check_out) {
-            const mins = calcMinutes(r.check_in, r.check_out);
-            if (mins > 0) {
-                const h = Math.floor(mins / 60), m = mins % 60;
-                const label = m > 0 ? `${h}h${String(m).padStart(2,'0')}` : `${h}h`;
-                hoursBadge = `<span class="hours-badge ${mins >= 480 ? 'good' : 'short'}">${label}</span>`;
-            }
-        }
-
         // Action buttons
         const editBtn = `<button class="btn-action-sm" title="${hasChamCong ? 'Sua cham cong' : 'Cham cong'}"
             onclick="openAttModal(${r.employee_id}, '${escHtml(r.full_name)}', '${r.gender || ''}', '${hasChamCong ? r.attendance_id : ''}', ${hasChamCong ? `'${r.status}','${r.check_in||''}','${r.check_out||''}'` : "null,null,null"})">
@@ -150,7 +139,6 @@ function renderTable(rows) {
             </button>`
             : '';
 
-        // FIX 3: support both 'note' and 'notes' column names
         const noteText = r.note || r.notes || '';
 
         return `<tr>
@@ -166,7 +154,6 @@ function renderTable(rows) {
             <td>${badge}</td>
             <td>${gioVao}</td>
             <td>${gioRa}</td>
-            <td>${hoursBadge}</td>
             <td style="font-size:12px;color:rgba(255,255,255,0.4);max-width:160px">
                 ${noteText ? escHtml(noteText) : '&#8212;'}
             </td>

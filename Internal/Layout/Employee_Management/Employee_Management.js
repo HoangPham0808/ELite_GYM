@@ -6,9 +6,8 @@ let deleteTargetId = null;
 let searchTimer = null;
 
 // State for salary modal
-let salaryHourlyWage = 0;   // lương/giờ của employees
-let salaryTotalHours  = 0;   // tổng giờ làm đã fetch
-let salaryBaseCalc = 0;  // = tongGio × luongGio
+let salaryMonthlySalary = 0;  // lương tháng cố định
+let salaryBaseCalc = 0;       // = monthly_salary (base)
 
 // ===== DOM READY =====
 document.addEventListener('DOMContentLoaded', () => {
@@ -110,8 +109,8 @@ function renderTable(employees) {
             ? `<span class="gender-badge other"><i class="fas fa-genderless"></i> Khác</span>`
             : `<span style="color:rgba(255,255,255,0.25)">—</span>`;
 
-        const luongGio = emp.hourly_wage && parseFloat(emp.hourly_wage) > 0
-            ? `<span style="color:#d4a017;font-weight:600">${formatMoneyShort(emp.hourly_wage)}</span>`
+        const luongThang = emp.monthly_salary && parseFloat(emp.monthly_salary) > 0
+            ? `<span style="color:#d4a017;font-weight:600">${formatMoneyShort(emp.monthly_salary)}/tháng</span>`
             : `<span style="color:rgba(255,255,255,0.25)">—</span>`;
 
         const chucVuBadge = emp.position === 'Receptionist'
@@ -136,7 +135,7 @@ function renderTable(employees) {
             <td>${emp.phone ? escHtml(emp.phone) : '<span style="color:rgba(255,255,255,0.25)">—</span>'}</td>
             <td style="color:rgba(255,255,255,0.6);font-size:13px">${emp.email ? escHtml(emp.email) : '<span style="color:rgba(255,255,255,0.25)">—</span>'}</td>
             <td style="color:rgba(255,255,255,0.6)">${formatDate(emp.hire_date)}</td>
-            <td>${luongGio}</td>
+            <td>${luongThang}</td>
             <td>
                 <div class="action-group">
                     <button class="btn-action-sm" title="Xem chi tiết" onclick="openDetail(${emp.employee_id})">
@@ -235,7 +234,7 @@ window.openEdit = function(encoded) {
     document.getElementById('fTenDangNhap').value     = emp.username || '';
     document.getElementById('fMatKhau').value         = '';
     document.getElementById('fDiaChi').value          = emp.address || '';
-    document.getElementById('fLuongCoBanEmp').value   = emp.hourly_wage || '';
+    document.getElementById('fLuongCoBanEmp').value   = emp.monthly_salary || '';
 
     // Chế độ sửa: tài khoản không bắt buộc
     document.getElementById('accountRequiredBadge').style.display = 'none';
@@ -296,7 +295,7 @@ async function saveEmployee() {
     body.append('username', tenDangNhap);
     body.append('password', matKhau);
     body.append('address', diaChi);
-    body.append('hourly_wage', luongCoBan || 0);
+    body.append('monthly_salary', luongCoBan || 0);
 
     try {
         const res  = await fetch(API_URL, { method: 'POST', body });
@@ -396,8 +395,7 @@ function renderDetail(d) {
             <thead><tr><th>Month</th><th>Hours</th><th>Base</th><th>Allowance</th><th>Bonus</th><th>Deduction</th><th>Net Salary</th></tr></thead>
             <tbody>${d.salaries.map(s => `<tr>
                 <td>${s.month}/${s.year}</td>
-                <td style="color:rgba(255,255,255,0.6)">${s.total_hours ? parseFloat(s.total_hours).toFixed(1) + 'h' : '—'}</td>
-                <td>${formatMoneyShort(s.base_salary)}</td>
+                <td style="color:rgba(255,255,255,0.6)">${s.base_salary ? formatMoneyShort(s.base_salary) : '—'}</td>
                 <td>${formatMoneyShort(s.allowance)}</td>
                 <td style="color:#34d399">${formatMoneyShort(s.bonus)}</td>
                 <td style="color:#f87171">${formatMoneyShort(s.deduction)}</td>
@@ -448,8 +446,8 @@ function renderDetail(d) {
                     <span>${calcSeniority(emp.hire_date)}</span>
                 </div>
                 <div class="detail-item">
-                    <label>Hourly Wage</label>
-                    <span style="color:#d4a017;font-weight:600">${emp.hourly_wage && parseFloat(emp.hourly_wage) > 0 ? formatMoney(emp.hourly_wage) + '/giờ' : '—'}</span>
+                    <label>Lương tháng</label>
+                    <span style="color:#d4a017;font-weight:600">${emp.monthly_salary && parseFloat(emp.monthly_salary) > 0 ? formatMoney(emp.monthly_salary) + '/tháng' : '—'}</span>
                 </div>
                 <div class="detail-item" style="grid-column:1/-1">
                     <label>Address</label>
@@ -472,9 +470,8 @@ function closeDetailModal() {
 // ===== SALARY MODAL =====
 function openSalaryModal(empId, empName, gioiTinh) {
     // Reset state
-    salaryHourlyWage   = 0;
-    salaryTotalHours    = 0;
-    salaryBaseCalc  = 0;
+    salaryMonthlySalary = 0;
+    salaryBaseCalc      = 0;
 
     document.getElementById('salaryEmpId').value = empId;
 
@@ -512,11 +509,11 @@ function closeSalaryModal() {
     document.getElementById('salaryModal').classList.remove('active');
 }
 
-// ===== FETCH HOURS WORKED =====
+// ===== FETCH & TÍNH LƯƠNG THÁNG =====
 async function fetchHoursWorked() {
     const empId = document.getElementById('salaryEmpId').value;
     const month = document.getElementById('fSalaryMonth').value;
-    const year   = document.getElementById('fSalaryYear').value;
+    const year  = document.getElementById('fSalaryYear').value;
 
     const btn = document.querySelector('.btn-calc');
     btn.disabled = true;
@@ -526,50 +523,78 @@ async function fetchHoursWorked() {
         const res = await fetch(`${API_URL}?action=get_hours_worked&employee_id=${empId}&month=${month}&year=${year}`);
         const d   = await res.json();
 
-        if (!d.success) {
-            showToast(d.message || 'Lỗi tính giờ', 'error');
-            return;
-        }
+        if (!d.success) { showToast(d.message || 'Lỗi tải dữ liệu', 'error'); return; }
 
-        salaryHourlyWage  = d.hourly_wage || 0;
-        salaryTotalHours   = d.total_hours  || 0;
-        salaryBaseCalc = salaryHourlyWage * salaryTotalHours;
+        salaryMonthlySalary = d.monthly_salary || 0;
+        salaryBaseCalc      = d.tong_luong     || 0;
 
-        // Hiển thị bước 2
-        document.getElementById('rsNgayCham').textContent  = d.days_present + ' days';
-        document.getElementById('rsTongGio').textContent   = salaryTotalHours.toFixed(1) + ' hours';
-        document.getElementById('rsLuongGio').textContent  = salaryHourlyWage > 0 ? formatMoneyShort(salaryHourlyWage) + '/h' : '—';
+        // Bước 2: Kết quả
+        document.getElementById('rsNgayCham').textContent  = d.days_present + ' ngày';
+        document.getElementById('rsTongGio').textContent   =
+            (d.tong_gio_hc > 0 ? d.tong_gio_hc.toFixed(1) + 'h HC' : '') +
+            (d.tong_gio_tc > 0 ? ' + ' + d.tong_gio_tc.toFixed(1) + 'h TC' : '') || '—';
+        document.getElementById('rsLuongGio').textContent  =
+            d.luong_gio > 0 ? formatMoneyShort(d.luong_gio) + '/h' : '—';
         document.getElementById('rsLuongTinh').textContent = formatMoneyShort(salaryBaseCalc);
 
-        // Ghi chú nếu thiếu giờ vào/ra
-        const missing = d.days_present - d.days_with_time;
+        // Ghi chú chi tiết
         const noteEl = document.getElementById('hoursNote');
-        if (missing > 0) {
-            noteEl.innerHTML = `<i class="fas fa-exclamation-triangle" style="color:#facc15"></i> 
-                ${missing} ngày chưa có giờ vào/ra nên không tính được giờ. 
-                Vào <a href="Employee_attendance_tracking/Employee_attendance_tracking.php" style="color:#d4a017">trang chấm công</a> để bổ sung.`;
+        if (salaryMonthlySalary === 0) {
+            noteEl.innerHTML = `<i class="fas fa-info-circle" style="color:#60a5fa"></i>
+                Nhân viên chưa có lương tháng. Vui lòng cập nhật trong thông tin nhân viên.`;
             noteEl.style.display = 'block';
         } else {
-            noteEl.style.display = 'none';
-        }
+            // Hiển thị bảng chi tiết ngày làm
+            let noteHtml = `
+                <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:6px">
+                    <i class="fas fa-info-circle" style="color:#d4a017;margin-right:4px"></i>
+                    Lương/giờ HC = ${formatMoney(salaryMonthlySalary)} ÷ ${d.working_days} ngày ÷ 8h
+                    = <strong style="color:#d4a017">${formatMoney(d.luong_gio)}/h</strong>
+                    ${d.days_late > 0 ? ` | <span style="color:#f87171">Đi muộn ${d.days_late} ngày (−50.000₫/ngày)</span>` : ''}
+                    ${d.days_sunday > 0 ? ` | <span style="color:#a78bfa">Làm CN ${d.days_sunday} ngày (×2)</span>` : ''}
+                </div>`;
 
-        if (salaryHourlyWage === 0) {
-            noteEl.innerHTML = `<i class="fas fa-info-circle" style="color:#60a5fa"></i> 
-                Nhân viên chưa có lương/giờ. Vui lòng cập nhật lương cơ bản trong thông tin employees.`;
+            if (d.detail_days && d.detail_days.length > 0) {
+                noteHtml += `<table style="width:100%;border-collapse:collapse;font-size:12px">
+                    <thead>
+                        <tr style="color:rgba(255,255,255,0.4)">
+                            <th style="text-align:left;padding:4px 6px">Ngày</th>
+                            <th style="text-align:center;padding:4px 6px">Giờ làm</th>
+                            <th style="text-align:center;padding:4px 6px">Loại</th>
+                            <th style="text-align:right;padding:4px 6px">Lương ngày</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+                d.detail_days.forEach(day => {
+                    const dt = day.date.split('-');
+                    const label = `${dt[2]}/${dt[1]}`;
+                    const tags = [];
+                    if (day.is_sunday) tags.push(`<span style="color:#a78bfa">CN×2</span>`);
+                    if (day.hours > 8)  tags.push(`<span style="color:#34d399">TC×1.5</span>`);
+                    if (day.is_late)    tags.push(`<span style="color:#f87171">Muộn−50k</span>`);
+                    noteHtml += `<tr style="border-top:1px solid rgba(255,255,255,0.06)">
+                        <td style="padding:4px 6px;color:rgba(255,255,255,0.7)">${label}</td>
+                        <td style="text-align:center;padding:4px 6px;color:rgba(255,255,255,0.6)">${day.hours}h</td>
+                        <td style="text-align:center;padding:4px 6px">${tags.join(' ') || '<span style="color:rgba(255,255,255,0.3)">HC</span>'}</td>
+                        <td style="text-align:right;padding:4px 6px;color:#d4a017;font-weight:600">${formatMoney(day.salary)}</td>
+                    </tr>`;
+                });
+                noteHtml += `</tbody></table>`;
+            }
+            noteEl.innerHTML = noteHtml;
             noteEl.style.display = 'block';
         }
 
         document.getElementById('salaryStepResult').style.display = '';
         document.getElementById('salaryStepAdjust').style.display = '';
         document.getElementById('btnKetToan').style.display       = '';
-
         updateSalaryPreview();
 
     } catch(e) {
         showToast('Lỗi kết nối server', 'error');
     } finally {
         btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-calculator"></i> Tính giờ làm từ chấm công';
+        btn.innerHTML = '<i class="fas fa-calculator"></i> Tính lương từ chấm công';
     }
 }
 
@@ -589,30 +614,29 @@ function updateSalaryPreview() {
 
 // ===== SAVE SALARY =====
 async function saveSalary() {
-    const empId  = document.getElementById('salaryEmpId').value;
-    const month  = document.getElementById('fSalaryMonth').value;
-    const year    = document.getElementById('fSalaryYear').value;
+    const empId     = document.getElementById('salaryEmpId').value;
+    const month     = document.getElementById('fSalaryMonth').value;
+    const year      = document.getElementById('fSalaryYear').value;
     const allowance = parseFloat(document.getElementById('fPhuCap').value)  || 0;
-    const bonus = parseFloat(document.getElementById('fThuong').value)  || 0;
-    const deduction= parseFloat(document.getElementById('fKhauTru').value) || 0;
+    const bonus     = parseFloat(document.getElementById('fThuong').value)  || 0;
+    const deduction = parseFloat(document.getElementById('fKhauTru').value) || 0;
     const netSalary = Math.max(0, salaryBaseCalc + allowance + bonus - deduction);
 
-    if (salaryHourlyWage === 0 && salaryTotalHours === 0) {
-        showToast('Vui lòng tính giờ làm trước', 'warning');
+    if (salaryMonthlySalary === 0) {
+        showToast('Vui lòng tải lương tháng trước', 'warning');
         return;
     }
 
     const body = new FormData();
-    body.append('action', 'save_salary');
+    body.append('action',      'save_salary');
     body.append('employee_id', empId);
-    body.append('month', month);
-    body.append('year', year);
-    body.append('base_salary', salaryBaseCalc);   // lương tính được (giờ × đơn giá)
-    body.append('allowance', allowance);
-    body.append('bonus', bonus);
-    body.append('deduction', deduction);
-    body.append('net_salary', netSalary);
-    body.append('total_hours', salaryTotalHours);
+    body.append('month',       month);
+    body.append('year',        year);
+    body.append('base_salary', salaryBaseCalc);
+    body.append('allowance',   allowance);
+    body.append('bonus',       bonus);
+    body.append('deduction',   deduction);
+    body.append('net_salary',  netSalary);
 
     try {
         const res  = await fetch(API_URL, { method: 'POST', body });

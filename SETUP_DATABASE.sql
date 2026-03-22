@@ -554,3 +554,34 @@ ALTER TABLE `GymRoom`
     ADD CONSTRAINT `fk_room_package_type`
         FOREIGN KEY (`package_type_id`) REFERENCES `PackageType`(`type_id`)
         ON UPDATE CASCADE ON DELETE SET NULL;
+        -- ============================================================
+-- CẬP NHẬT: Lương tháng + Giờ đóng cửa phòng tập
+-- Chạy trong phpMyAdmin → database "datn" → tab SQL
+-- ============================================================
+
+-- ========================
+-- 1. EMPLOYEE: đổi lương giờ → lương tháng
+-- ========================
+ALTER TABLE `Employee`
+    CHANGE COLUMN `hourly_wage` `monthly_salary` DECIMAL(12,2) NOT NULL DEFAULT 0
+        COMMENT 'Lương cơ bản cố định theo tháng (VNĐ)';
+
+-- ========================
+-- 2. GYMROOM: thêm giờ đóng cửa
+--    (open_time đã có sẵn, thêm close_time ngay sau)
+-- ========================
+ALTER TABLE `GymRoom`
+    ADD COLUMN `close_time` TIME NULL DEFAULT NULL
+        COMMENT 'Giờ đóng cửa phòng tập'
+    AFTER `open_time`;
+
+-- ========================
+-- 3. PAYROLL: xóa total_hours (không tính theo giờ nữa)
+-- ========================
+ALTER TABLE `Payroll`
+    DROP COLUMN `total_hours`;
+
+-- Kiểm tra kết quả:
+-- DESCRIBE Employee;
+-- DESCRIBE GymRoom;
+-- DESCRIBE Payroll;

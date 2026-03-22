@@ -1,15 +1,4 @@
 /* ══════════════════════════════════
-   CURSOR GLOW
-══════════════════════════════════ */
-const cursorGlow = document.getElementById('cursorGlow');
-if (cursorGlow) {
-  document.addEventListener('mousemove', e => {
-    cursorGlow.style.left = e.clientX + 'px';
-    cursorGlow.style.top  = e.clientY + 'px';
-  });
-}
-
-/* ══════════════════════════════════
    NAVBAR SCROLL
 ══════════════════════════════════ */
 const nav = document.getElementById('nav');
@@ -46,58 +35,11 @@ if (hamburger && mobileMenu) {
 }
 
 /* ══════════════════════════════════
-   COUNTER ANIMATION
+   COUNTERS — show final value immediately
 ══════════════════════════════════ */
-function animateCount(el) {
-  const target   = parseInt(el.dataset.target) || 0;
-  if (!target) return;
-  const duration = 1600;
-  const start    = performance.now();
-
-  (function tick(now) {
-    const t = Math.min((now - start) / duration, 1);
-    const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
-    el.textContent = Math.round(target * eased);
-    if (t < 1) requestAnimationFrame(tick);
-    else el.textContent = target;
-  })(start);
-}
-
-/* ══════════════════════════════════
-   INTERSECTION OBSERVER
-══════════════════════════════════ */
-// Counters
-new IntersectionObserver((entries, obs) => {
-  entries.forEach(e => {
-    if (e.isIntersecting) { animateCount(e.target); obs.unobserve(e.target); }
-  });
-}, { threshold: 0.5 })
-.observe(...(document.querySelectorAll('.hs-n').length
-  ? [document.querySelectorAll('.hs-n')[0]]
-  : [document.createElement('div')]));
-
-// All counters
 document.querySelectorAll('.hs-n').forEach(el => {
-  new IntersectionObserver((entries, obs) => {
-    entries.forEach(e => {
-      if (e.isIntersecting) { animateCount(e.target); obs.unobserve(e.target); }
-    });
-  }, { threshold: 0.5 }).observe(el);
-});
-
-// Scroll reveal
-const revealObs = new IntersectionObserver((entries) => {
-  entries.forEach(e => {
-    if (e.isIntersecting) {
-      e.target.classList.add('visible');
-      revealObs.unobserve(e.target);
-    }
-  });
-}, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
-
-document.querySelectorAll('.reveal').forEach((el, i) => {
-  el.style.transitionDelay = (i % 5) * 0.08 + 's';
-  revealObs.observe(el);
+  const t = parseInt(el.dataset.target) || 0;
+  if (t) el.textContent = t;
 });
 
 /* ══════════════════════════════════
@@ -115,19 +57,3 @@ document.querySelectorAll('a[href^="#"]').forEach(a => {
   });
 });
 
-/* ══════════════════════════════════
-   PLAN CARD TILT (subtle)
-══════════════════════════════════ */
-document.querySelectorAll('.plan').forEach(card => {
-  card.addEventListener('mousemove', e => {
-    const rect = card.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width  - 0.5;
-    const y = (e.clientY - rect.top)  / rect.height - 0.5;
-    card.style.transform = `translateY(-4px) rotateX(${-y * 4}deg) rotateY(${x * 4}deg)`;
-  });
-  card.addEventListener('mouseleave', () => {
-    card.style.transform = '';
-    card.style.transition = 'transform .4s ease';
-    setTimeout(() => card.style.transition = '', 400);
-  });
-});

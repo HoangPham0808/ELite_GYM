@@ -152,6 +152,10 @@ function renderGrid(data) {
                         <div class="room-stat-value">${r.open_time ? r.open_time.slice(0,5) : '—'}</div>
                         <div class="room-stat-label">Giờ mở</div>
                     </div>
+                    <div class="room-stat-item">
+                        <div class="room-stat-value">${r.close_time ? r.close_time.slice(0,5) : '—'}</div>
+                        <div class="room-stat-label">Giờ đóng</div>
+                    </div>
                 </div>
                 <div class="room-card-desc">${escHtml(r.description || 'Chưa có mô tả')}</div>
                 <div class="room-card-footer" onclick="event.stopPropagation()">
@@ -261,7 +265,8 @@ async function openEditModal(id) {
         document.getElementById('fSucChua').value   = r.capacity    || '';
         document.getElementById('fDienTich').value  = r.area        || '';
         document.getElementById('fTang').value      = r.floor       ?? '';
-        document.getElementById('fGioMo').value     = r.open_time   ? r.open_time.slice(0,5) : '06:00';
+        document.getElementById('fGioMo').value     = r.open_time   ? r.open_time.slice(0,5)   : '06:00';
+        document.getElementById('fGioDong').value   = r.close_time  ? r.close_time.slice(0,5)  : '22:00';
         document.getElementById('fMoTa').value          = r.description || '';
         document.getElementById('fPackageType').value   = r.package_type_id || '';
         document.getElementById('modalTitle').innerHTML = '<i class="fas fa-pen" style="color:#fb923c;margin-right:8px"></i>Chỉnh sửa phòng tập';
@@ -284,6 +289,7 @@ async function saveGym() {
     body.append('dien_tich',  document.getElementById('fDienTich').value);
     body.append('tang',       document.getElementById('fTang').value);
     body.append('gio_mo',     document.getElementById('fGioMo').value);
+    body.append('gio_dong',   document.getElementById('fGioDong').value);
     body.append('mo_ta',         document.getElementById('fMoTa').value.trim());
     body.append('package_type_id', document.getElementById('fPackageType').value);
 
@@ -362,6 +368,10 @@ function renderDetail(d) {
                 <div class="detail-item">
                     <div class="detail-item-label">Giờ mở cửa</div>
                     <div class="detail-item-value">${r.open_time ? r.open_time.slice(0,5) : '—'}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-item-label">Giờ đóng cửa</div>
+                    <div class="detail-item-value">${r.close_time ? r.close_time.slice(0,5) : '—'}</div>
                 </div>
                 <div class="detail-item" style="grid-column:1/-1">
                     <div class="detail-item-label">Mô tả</div>

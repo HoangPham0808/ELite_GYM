@@ -88,7 +88,7 @@
                         <th>Số điện thoại</th>
                         <th>Email</th>
                         <th>Ngày vào làm</th>
-                        <th>Lương/giờ</th>
+                        <th>Lương/tháng</th>
                         <th>Thao tác</th>
                     </tr>
                 </thead>
@@ -157,8 +157,8 @@
                     <input type="date" id="fNgayVaoLam" class="form-control">
                 </div>
                 <div class="form-group">
-                    <label>Lương cơ bản (₫/giờ)</label>
-                    <input type="number" id="fLuongCoBanEmp" class="form-control" placeholder="VD: 50000" min="0">
+                    <label>Lương cơ bản (₫/tháng)</label>
+                    <input type="number" id="fLuongCoBanEmp" class="form-control" placeholder="VD: 8000000" min="0">
                 </div>
                 <div class="form-group full">
                     <label>Địa chỉ</label>
@@ -256,14 +256,14 @@
                     </div>
                 </div>
                 <button class="btn-calc" onclick="fetchHoursWorked()">
-                    <i class="fas fa-calculator"></i> Tính giờ làm từ chấm công
+                    <i class="fas fa-calculator"></i> Tính lương từ chấm công
                 </button>
             </div>
 
             <!-- BƯỚC 2: Kết quả tính công (hiện sau khi fetch) -->
             <div class="salary-step" id="salaryStepResult" style="display:none">
                 <div class="salary-step-label">
-                    <span class="step-badge">2</span> Kết quả chấm công tháng này
+                    <span class="step-badge">2</span> Kết quả tính lương tháng này
                 </div>
                 <div class="hours-summary">
                     <div class="hours-card">
@@ -272,11 +272,11 @@
                     </div>
                     <div class="hours-card">
                         <div class="hours-value" id="rsTongGio">—</div>
-                        <div class="hours-label">Tổng giờ làm</div>
+                        <div class="hours-label">Giờ HC + Tăng ca</div>
                     </div>
                     <div class="hours-card gold">
                         <div class="hours-value" id="rsLuongGio">—</div>
-                        <div class="hours-label">Lương/giờ</div>
+                        <div class="hours-label">Lương/giờ HC</div>
                     </div>
                     <div class="hours-card green">
                         <div class="hours-value" id="rsLuongTinh">—</div>

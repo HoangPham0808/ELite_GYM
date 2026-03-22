@@ -87,7 +87,7 @@ switch ($action) {
                 e.email,
                 e.address,
                 e.hire_date,
-                e.hourly_wage,
+                e.monthly_salary,
                 a.username,
                 a.is_active AS acc_is_active
             FROM Employee e
@@ -138,7 +138,7 @@ switch ($action) {
         $hire_date    = trim($_POST['hire_date']    ?? '') ?: null;
         $username     = trim($_POST['username']     ?? '');
         $password_raw = trim($_POST['password']     ?? '');
-        $hourly_wage  = floatval($_POST['hourly_wage'] ?? 0);
+        $monthly_salary  = floatval($_POST['monthly_salary'] ?? 0);
 
         if ($full_name === '') {
             echo json_encode(['success' => false, 'message' => 'Full name is required']); exit;
@@ -183,12 +183,12 @@ switch ($action) {
             $account_id = $conn->insert_id;
 
             $stmt = $conn->prepare("
-                INSERT INTO Employee (full_name, date_of_birth, gender, position, phone, email, address, hire_date, account_id, hourly_wage)
+                INSERT INTO Employee (full_name, date_of_birth, gender, position, phone, email, address, hire_date, account_id, monthly_salary)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
             $stmt->bind_param('ssssssssid',
                 $full_name, $date_of_birth, $gender, $position,
-                $phone, $email, $address, $hire_date, $account_id, $hourly_wage
+                $phone, $email, $address, $hire_date, $account_id, $monthly_salary
             );
             if (!$stmt->execute()) throw new Exception('Employee creation failed: ' . $conn->error);
             $emp_id = $conn->insert_id;
@@ -219,7 +219,7 @@ switch ($action) {
         $email         = trim($_POST['email']           ?? '') ?: null;
         $address       = trim($_POST['address']         ?? '') ?: null;
         $hire_date     = trim($_POST['hire_date']       ?? '') ?: null;
-        $hourly_wage   = floatval($_POST['hourly_wage'] ?? 0);
+        $monthly_salary   = floatval($_POST['monthly_salary'] ?? 0);
 
         if ($id === 0 || $full_name === '') {
             echo json_encode(['success' => false, 'message' => 'Invalid data']); exit;
@@ -243,12 +243,12 @@ switch ($action) {
 
         $stmt = $conn->prepare("
             UPDATE Employee
-            SET full_name=?, date_of_birth=?, gender=?, position=?, phone=?, email=?, address=?, hire_date=?, hourly_wage=?
+            SET full_name=?, date_of_birth=?, gender=?, position=?, phone=?, email=?, address=?, hire_date=?, monthly_salary=?
             WHERE employee_id=?
         ");
         $stmt->bind_param('ssssssssdi',
             $full_name, $date_of_birth, $gender, $position,
-            $phone, $email, $address, $hire_date, $hourly_wage, $id
+            $phone, $email, $address, $hire_date, $monthly_salary, $id
         );
 
         echo json_encode($stmt->execute()
@@ -317,7 +317,7 @@ switch ($action) {
         }
 
         $stmt = $conn->prepare("
-            SELECT month, year, base_salary, allowance, bonus, deduction, net_salary, total_hours
+            SELECT month, year, base_salary, allowance, bonus, deduction, net_salary
             FROM Payroll
             WHERE employee_id = ?
             ORDER BY year DESC, month DESC
@@ -334,7 +334,13 @@ switch ($action) {
         break;
 
     // ========================
-    // GET HOURS WORKED (for salary modal)
+    // TÍNH LƯƠNG CHI TIẾT THEO THÁNG
+    // Công thức:
+    //   luongGio = monthly_salary / (số ngày không CN trong tháng) / 8
+    //   Hành chính (≤8h):  số_giờ × luongGio
+    //   Tăng ca (>8h):     8h × luongGio + (extra_h × luongGio × 1.5)
+    //   Chủ nhật:          số_giờ × luongGio × 2
+    //   Đi muộn (Late):    trừ 50.000đ/ngày
     // ========================
     case 'get_hours_worked':
         $employee_id = intval($_GET['employee_id'] ?? 0);
@@ -345,6 +351,26 @@ switch ($action) {
             echo json_encode(['success' => false, 'message' => 'Invalid parameters']); exit;
         }
 
+        // Lấy lương tháng cố định
+        $nv = $conn->query("SELECT full_name, monthly_salary FROM Employee WHERE employee_id = $employee_id")->fetch_assoc();
+        if (!$nv) { echo json_encode(['success' => false, 'message' => 'Employee not found']); exit; }
+
+        $monthly_salary = floatval($nv['monthly_salary'] ?? 0);
+
+        // Đếm số ngày không phải Chủ nhật trong tháng
+        $days_in_month   = cal_days_in_month(CAL_GREGORIAN, $month, $year);
+        $working_days    = 0;
+        for ($d = 1; $d <= $days_in_month; $d++) {
+            $dow = date('N', mktime(0,0,0,$month,$d,$year)); // 7 = Sunday
+            if ($dow != 7) $working_days++;
+        }
+
+        // Lương 1 giờ hành chính
+        $luong_gio = ($working_days > 0 && $monthly_salary > 0)
+            ? $monthly_salary / $working_days / 8
+            : 0;
+
+        // Lấy toàn bộ chấm công trong tháng
         $stmt = $conn->prepare("
             SELECT work_date, check_in, check_out, status
             FROM Attendance
@@ -352,45 +378,85 @@ switch ($action) {
               AND MONTH(work_date) = ?
               AND YEAR(work_date)  = ?
               AND status IN ('Present', 'Late')
-              AND check_in  IS NOT NULL
-              AND check_out IS NOT NULL
         ");
         $stmt->bind_param('iii', $employee_id, $month, $year);
         $stmt->execute();
         $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
-        $stmt2 = $conn->prepare("
-            SELECT COUNT(*) AS days_present
-            FROM Attendance
-            WHERE employee_id = ?
-              AND MONTH(work_date) = ?
-              AND YEAR(work_date)  = ?
-              AND status IN ('Present', 'Late')
-        ");
-        $stmt2->bind_param('iii', $employee_id, $month, $year);
-        $stmt2->execute();
-        $days_present = $stmt2->get_result()->fetch_assoc()['days_present'];
+        $tong_luong      = 0;
+        $days_present    = 0;
+        $days_late       = 0;
+        $days_sunday     = 0;
+        $tong_gio_hc     = 0;
+        $tong_gio_tc     = 0;
+        $detail_days     = [];
 
-        $total_minutes = 0;
         foreach ($rows as $row) {
-            [$hv, $mv] = explode(':', $row['check_in']);
-            [$hr, $mr] = explode(':', $row['check_out']);
-            $in  = intval($hv) * 60 + intval($mv);
-            $out = intval($hr) * 60 + intval($mr);
-            if ($out > $in) $total_minutes += ($out - $in);
+            $days_present++;
+            $is_late    = ($row['status'] === 'Late');
+            $is_sunday  = (date('N', strtotime($row['work_date'])) == 7);
+            $check_in   = $row['check_in'];
+            $check_out  = $row['check_out'];
+
+            // Tính số phút làm thực tế
+            $minutes_worked = 0;
+            if ($check_in && $check_out) {
+                [$hi, $mi] = explode(':', $check_in);
+                [$ho, $mo] = explode(':', $check_out);
+                $minutes_worked = max(0, (intval($ho)*60+intval($mo)) - (intval($hi)*60+intval($mi)));
+            }
+            $hours_worked = $minutes_worked / 60;
+
+            // Tính lương ngày
+            $luong_ngay = 0;
+            if ($is_sunday) {
+                // Chủ nhật: x2 lương giờ hành chính
+                $luong_ngay = $hours_worked * $luong_gio * 2;
+                $days_sunday++;
+            } elseif ($hours_worked > 8) {
+                // Có tăng ca
+                $gio_tc     = $hours_worked - 8;
+                $luong_ngay = 8 * $luong_gio + $gio_tc * $luong_gio * 1.5;
+                $tong_gio_hc += 8;
+                $tong_gio_tc += $gio_tc;
+            } else {
+                $luong_ngay  = $hours_worked * $luong_gio;
+                $tong_gio_hc += $hours_worked;
+            }
+
+            // Đi muộn: trừ 50.000đ
+            $tru_muon = 0;
+            if ($is_late) {
+                $tru_muon = 50000;
+                $luong_ngay = max(0, $luong_ngay - $tru_muon);
+                $days_late++;
+            }
+
+            $tong_luong += $luong_ngay;
+
+            $detail_days[] = [
+                'date'     => $row['work_date'],
+                'is_sunday'=> $is_sunday,
+                'is_late'  => $is_late,
+                'hours'    => round($hours_worked, 2),
+                'salary'   => round($luong_ngay),
+                'late_deduct' => $tru_muon,
+            ];
         }
-
-        $total_hours = round($total_minutes / 60, 2);
-
-        $nv = $conn->query("SELECT full_name, hourly_wage FROM Employee WHERE employee_id = $employee_id")->fetch_assoc();
 
         echo json_encode([
             'success'        => true,
-            'full_name'      => $nv['full_name']   ?? '',
-            'hourly_wage'    => floatval($nv['hourly_wage'] ?? 0),
-            'total_hours'    => $total_hours,
-            'days_present'   => intval($days_present),
-            'days_with_time' => count($rows),
+            'full_name'      => $nv['full_name'],
+            'monthly_salary' => $monthly_salary,
+            'luong_gio'      => round($luong_gio, 2),
+            'working_days'   => $working_days,
+            'days_present'   => $days_present,
+            'days_late'      => $days_late,
+            'days_sunday'    => $days_sunday,
+            'tong_gio_hc'    => round($tong_gio_hc, 2),
+            'tong_gio_tc'    => round($tong_gio_tc, 2),
+            'tong_luong'     => round($tong_luong),
+            'detail_days'    => $detail_days,
         ]);
         break;
 
@@ -406,7 +472,6 @@ switch ($action) {
         $bonus        = floatval($_POST['bonus']        ?? 0);
         $deduction    = floatval($_POST['deduction']    ?? 0);
         $net_salary   = floatval($_POST['net_salary']   ?? 0);
-        $total_hours  = floatval($_POST['total_hours']  ?? 0);
 
         if ($employee_id === 0 || $month < 1 || $month > 12 || $year < 2000) {
             echo json_encode(['success' => false, 'message' => 'Invalid data']); exit;
@@ -416,19 +481,18 @@ switch ($action) {
         }
 
         $stmt = $conn->prepare("
-            INSERT INTO Payroll (employee_id, month, year, base_salary, allowance, bonus, deduction, net_salary, total_hours)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO Payroll (employee_id, month, year, base_salary, allowance, bonus, deduction, net_salary)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 base_salary  = VALUES(base_salary),
                 allowance    = VALUES(allowance),
                 bonus        = VALUES(bonus),
                 deduction    = VALUES(deduction),
-                net_salary   = VALUES(net_salary),
-                total_hours  = VALUES(total_hours)
+                net_salary   = VALUES(net_salary)
         ");
-        $stmt->bind_param('iiidddddd',
+        $stmt->bind_param('iiiddddd',
             $employee_id, $month, $year,
-            $base_salary, $allowance, $bonus, $deduction, $net_salary, $total_hours
+            $base_salary, $allowance, $bonus, $deduction, $net_salary
         );
 
         echo json_encode($stmt->execute()

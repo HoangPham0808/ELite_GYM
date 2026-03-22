@@ -568,6 +568,7 @@ async function openDetail(id) {
 // ===== PAYMENT QR MODAL =====
 let paymentTimer = null;
 let paymentCountdown = 300;
+let pollTimer = null; // auto-polling kiểm tra thanh toán
 
 async function openPaymentModal(id) {
     document.getElementById('paymentModal').classList.add('active');
@@ -575,6 +576,7 @@ async function openPaymentModal(id) {
         '<div class="qr-loading"><i class="fas fa-spinner fa-spin"></i><span>Đang tạo mã QR...</span></div>';
     document.getElementById('payMethod').value = 'Chuyển khoản';
     clearInterval(paymentTimer);
+    clearInterval(pollTimer);
 
     try {
         const res = await fetch(`${API}?action=get_payment_info&id=${id}`);
@@ -606,10 +608,38 @@ async function openPaymentModal(id) {
             updateCountdown();
             if (paymentCountdown <= 0) {
                 clearInterval(paymentTimer);
+                clearInterval(pollTimer);
                 document.getElementById('qrSection').innerHTML =
                     '<div class="qr-error"><i class="fas fa-clock"></i><span>QR hết hạn. Nhấn làm mới để tạo lại.</span></div>';
             }
         }, 1000);
+
+        // ===== AUTO POLLING: kiểm tra mỗi 5 giây =====
+        pollTimer = setInterval(async () => {
+            try {
+                const pr = await fetch(`${API}?action=check_payment_status&id=${inv.invoice_id}`);
+                const pd = await pr.json();
+                if (pd.status === 'Paid') {
+                    clearInterval(pollTimer);
+                    clearInterval(paymentTimer);
+                    // Hiện banner thành công trong QR section
+                    document.getElementById('qrSection').innerHTML = `
+                        <div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:32px 16px;">
+                            <i class="fas fa-check-circle" style="font-size:56px;color:#22c55e"></i>
+                            <span style="font-size:18px;font-weight:700;color:#22c55e">Thanh toán thành công!</span>
+                            <span style="color:var(--text-muted);font-size:14px">${fmtMoney(amount)} đã được xác nhận</span>
+                        </div>`;
+                    showToast('✅ Thanh toán tự động xác nhận thành công!', 'success');
+                    setTimeout(() => {
+                        closePaymentModal();
+                        closeDetailModal();
+                        loadInvoices(currentPage);
+                        loadStats();
+                    }, 2000);
+                }
+            } catch(e) { /* bỏ qua lỗi mạng tạm thời */ }
+        }, 5000);
+
     } catch(e) { showToast('Lỗi tạo QR', 'error'); }
 }
 
@@ -625,6 +655,7 @@ function updateCountdown() {
 function closePaymentModal() {
     document.getElementById('paymentModal').classList.remove('active');
     clearInterval(paymentTimer);
+    clearInterval(pollTimer);
 }
 
 function refreshQR() {

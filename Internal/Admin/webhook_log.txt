@@ -1,0 +1,26 @@
+[2026-03-22 07:43:58] === Webhook called ===
+[2026-03-22 07:43:58] Method: POST
+[2026-03-22 07:43:58] Raw body: {"gateway":"MBBank","transactionDate":"2026-03-22 14:43:00","accountNumber":"0981015808","subAccount":null,"code":null,"content":"SHOPEEPAY CHUYEN TIEN 2035623483934683136 Scan QR ELITEGYM HD11 Hong Phm Vn","transferType":"in","description":"BankAPINotify SHOPEEPAY CHUYEN TIEN 2035623483934683136 Scan QR ELITEGYM HD11 Hong Phm Vn","transferAmount":2000,"referenceCode":"FT26082008338747","accumulated":0,"id":46376319}
+[2026-03-22 07:43:58] transferType: in
+[2026-03-22 07:43:58] Content: SHOPEEPAY CHUYEN TIEN 2035623483934683136 Scan QR ELITEGYM HD11 Hong Phm Vn | Amount: 2000
+[2026-03-22 07:43:58] Invoice ID extracted: #11
+[2026-03-22 07:44:34] === Webhook called ===
+[2026-03-22 07:44:34] Method: POST
+[2026-03-22 07:44:34] Raw body: {"gateway":"MBBank","transactionDate":"2026-03-22 14:43:00","accountNumber":"0981015808","subAccount":null,"code":null,"content":"SHOPEEPAY CHUYEN TIEN 2035623483934683136 Scan QR ELITEGYM HD11 Hong Phm Vn","transferType":"in","description":"BankAPINotify SHOPEEPAY CHUYEN TIEN 2035623483934683136 Scan QR ELITEGYM HD11 Hong Phm Vn","transferAmount":2000,"referenceCode":"FT26082008338747","accumulated":0,"id":46376319}
+[2026-03-22 07:44:34] transferType: in
+[2026-03-22 07:44:34] Content: SHOPEEPAY CHUYEN TIEN 2035623483934683136 Scan QR ELITEGYM HD11 Hong Phm Vn | Amount: 2000
+[2026-03-22 07:44:34] Invoice ID extracted: #11
+[2026-03-22 07:47:58] === Webhook called ===
+[2026-03-22 07:47:58] Method: POST
+[2026-03-22 07:47:58] Raw body: {"gateway":"MBBank","transactionDate":"2026-03-22 14:47:00","accountNumber":"0981015808","subAccount":null,"code":null,"content":"SHOPEEPAY CHUYEN TIEN 2035624492721422336 Scan QR ELITEGYM HD12 Hong Phm Vn","transferType":"in","description":"BankAPINotify SHOPEEPAY CHUYEN TIEN 2035624492721422336 Scan QR ELITEGYM HD12 Hong Phm Vn","transferAmount":2000,"referenceCode":"FT26082857051070","accumulated":0,"id":46376760}
+[2026-03-22 07:47:58] transferType: in
+[2026-03-22 07:47:58] Content: SHOPEEPAY CHUYEN TIEN 2035624492721422336 Scan QR ELITEGYM HD12 Hong Phm Vn | Amount: 2000
+[2026-03-22 07:47:58] Invoice ID extracted: #12
+[2026-03-22 07:47:58] Trying DB path: C:\wamp64\www\PHP\ELite_GYM\Internal\Admin/../../../Database/db.php | not found
+[2026-03-22 07:47:58] Trying DB path: C:\wamp64\www\PHP\ELite_GYM\Internal\Admin/../../Database/db.php | FOUND
+[2026-03-22 07:47:58] Using DB: C:\wamp64\www\PHP\ELite_GYM\Internal\Admin/../../Database/db.php
+[2026-03-22 07:47:58] DB connected OK
+[2026-03-22 07:47:58] Invoice #12 found. Status: Pending | Amount in DB: 2000.00
+[2026-03-22 07:47:58] Invoice #12 updated to Paid successfully!
+[2026-03-22 07:47:58] Packages registered for invoice #12
+[2026-03-22 07:47:58] === Done ===

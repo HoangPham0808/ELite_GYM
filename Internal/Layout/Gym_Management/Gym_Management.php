@@ -179,6 +179,10 @@
                     <label>Giờ mở cửa</label>
                     <input type="time" id="fGioMo" class="form-control" value="06:00">
                 </div>
+                <div class="form-group">
+                    <label>Giờ đóng cửa</label>
+                    <input type="time" id="fGioDong" class="form-control" value="22:00">
+                </div>
                 <div class="form-group full">
                     <label>Mô tả</label>
                     <textarea id="fMoTa" class="form-control" rows="3" placeholder="Mô tả tiện ích, trang thiết bị của phòng..."></textarea>

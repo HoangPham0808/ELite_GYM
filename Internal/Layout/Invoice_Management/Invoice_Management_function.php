@@ -602,6 +602,19 @@ switch ($action) {
         }
         break;
 
+    // ========================
+    // KIỂM TRA TRẠNG THÁI (POLLING TỰ ĐỘNG)
+    // ========================
+    case 'check_payment_status':
+        $id = intval($_GET['id'] ?? 0);
+        if ($id === 0) {
+            echo json_encode(['status' => 'Pending']);
+            exit;
+        }
+        $row = $conn->query("SELECT status FROM Invoice WHERE invoice_id = $id")->fetch_assoc();
+        echo json_encode(['status' => $row['status'] ?? 'Pending']);
+        break;
+
     default:
         echo json_encode(['success' => false, 'message' => 'Action không hợp lệ']);
 }
