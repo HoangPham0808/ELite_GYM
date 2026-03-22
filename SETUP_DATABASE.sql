@@ -44,27 +44,25 @@ CREATE TABLE Account (
     last_login          DATETIME      NULL COMMENT 'Last login timestamp'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- ========================
--- LOGIN HISTORY
--- ========================
 
-CREATE TABLE LoginHistory (
-    login_history_id INT AUTO_INCREMENT PRIMARY KEY,
-    account_id       INT          NOT NULL,
-    login_time       DATETIME     DEFAULT CURRENT_TIMESTAMP,
-    ip_address       VARCHAR(45)  NULL,
-    user_agent       VARCHAR(300) NULL,
-    result           ENUM('Success','Failed') DEFAULT 'Success',
-    note             VARCHAR(200) NULL,
-    INDEX idx_lh_account   (account_id),
-    INDEX idx_lh_logintime (login_time),
-    INDEX idx_lh_result    (result),
-    FOREIGN KEY (account_id) REFERENCES Account(account_id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- ========================
--- EMPLOYEE
--- ========================
+CREATE TABLE IF NOT EXISTS GymCheckIn (
+    checkin_id    INT AUTO_INCREMENT PRIMARY KEY,
+    customer_id   INT NOT NULL,
+    type          ENUM('checkin', 'checkout') NOT NULL DEFAULT 'checkin',
+    check_time    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    recorded_by   INT DEFAULT NULL,         -- account_id của Staff/Admin thực hiện
+    note          VARCHAR(255) DEFAULT NULL,
+
+    INDEX idx_customer (customer_id),
+    INDEX idx_date     (check_time),
+    INDEX idx_type     (type),
+
+    CONSTRAINT fk_checkin_customer
+        FOREIGN KEY (customer_id) REFERENCES Customer(customer_id)
+        ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 
 CREATE TABLE Employee (
     employee_id   INT AUTO_INCREMENT PRIMARY KEY,

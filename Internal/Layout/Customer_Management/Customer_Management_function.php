@@ -1,6 +1,8 @@
 <?php
 require_once '../../../Database/db.php';
 header('Content-Type: application/json');
+// Bypass ngrok browser warning page
+header('ngrok-skip-browser-warning: true');
 
 $action = $_POST['action'] ?? $_GET['action'] ?? '';
 
@@ -247,7 +249,7 @@ switch ($action) {
         $checks = [
             "SELECT COUNT(*) as c FROM Invoice             WHERE customer_id = $id",
             "SELECT COUNT(*) as c FROM MembershipRegistration WHERE customer_id = $id",
-            "SELECT COUNT(*) as c FROM CheckInHistory      WHERE customer_id = $id",
+            "SELECT COUNT(*) as c FROM GymCheckIn          WHERE customer_id = $id",
         ];
         foreach ($checks as $chk) {
             if ($conn->query($chk)->fetch_assoc()['c'] > 0) {
@@ -302,8 +304,8 @@ switch ($action) {
 
         // Check-in stats
         $stmt = $conn->prepare("
-            SELECT COUNT(*) AS total_checkin, MAX(check_in) AS last_checkin
-            FROM CheckInHistory WHERE customer_id = ?
+            SELECT COUNT(*) AS total_checkin, MAX(check_time) AS last_checkin
+            FROM GymCheckIn WHERE customer_id = ? AND type = 'checkin'
         ");
         $stmt->bind_param('i', $id); $stmt->execute();
         $checkin = $stmt->get_result()->fetch_assoc();

@@ -1,5 +1,6 @@
 <?php
 // Cấu hình kết nối database
+date_default_timezone_set('Asia/Ho_Chi_Minh'); // Múi giờ Việt Nam UTC+7
 $servername = "localhost";
 $username = "root";
 $password = "";

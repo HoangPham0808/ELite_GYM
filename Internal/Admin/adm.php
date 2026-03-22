@@ -67,7 +67,7 @@ $initials    = mb_strtoupper(mb_substr($full_name, 0, 1));
                         <li class="nav-item active" data-page="customer.php">
                             <a href="#customer.php">
                                 <i class="fas fa-users"></i><span>Quản lý khách hàng</span>
-                                <span class="badge" id="customerBadge" style="display:none"></span>
+                                
                             </a>
                         </li>
                         <li class="nav-item" data-page="Schedule_Management.php">

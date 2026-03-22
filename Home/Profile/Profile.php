@@ -43,11 +43,28 @@ $today = date('Y-m-d');
 foreach ($memberships as $m) { if ($m['end_date'] >= $today) { $active_plan = $m; break; } }
 
 // ── Check-in ──────────────────────────────────────────────────
-$checkins = $conn->query("
-    SELECT check_in, check_out FROM CheckInHistory
-    WHERE customer_id = $cid ORDER BY check_in DESC LIMIT 10
+// GymCheckIn lưu mỗi lượt checkin/checkout thành 1 row riêng
+// → ghép cặp: mỗi checkin + checkout gần nhất cùng ngày sau đó
+$checkins_raw = $conn->query("
+    SELECT
+        gin.check_time  AS check_in,
+        (SELECT MIN(gout.check_time)
+         FROM GymCheckIn gout
+         WHERE gout.customer_id = gin.customer_id
+           AND gout.type        = 'checkout'
+           AND gout.check_time  > gin.check_time
+           AND DATE(gout.check_time) = DATE(gin.check_time)
+        ) AS check_out
+    FROM GymCheckIn gin
+    WHERE gin.customer_id = $cid
+      AND gin.type = 'checkin'
+    ORDER BY gin.check_time DESC
+    LIMIT 10
 ")->fetch_all(MYSQLI_ASSOC);
-$total_checkins = $conn->query("SELECT COUNT(*) AS c FROM CheckInHistory WHERE customer_id=$cid")->fetch_assoc()['c'] ?? 0;
+
+// Đổi tên key để HTML cũ dùng $ci['check_in'] / $ci['check_out'] vẫn chạy đúng
+$checkins = $checkins_raw;
+$total_checkins = $conn->query("SELECT COUNT(*) AS c FROM GymCheckIn WHERE customer_id=$cid AND type='checkin'")->fetch_assoc()['c'] ?? 0;
 
 // ── Classes ───────────────────────────────────────────────────
 $classes = $conn->query("
@@ -625,20 +642,34 @@ if ($pw_step === 2 && !empty($_SESSION['chpw_email'])) {
 
 
 <script src="Profile.js"></script>
-<!-- ── qrcodejs nhúng trực tiếp, không cần CDN ── -->
-<script src="qrcode.min.js"></script>
+<!-- ── QRious — cùng thư viện với hệ thống check-in ── -->
+<script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
 <script>
 (function () {
-  const qrData = 'EFG:<?= $account_id ?>:<?= $cid ?>';
-  new QRCode(document.getElementById('qrCanvas'), {
-    text:         qrData,
-    width:        140,
-    height:       140,
-    typeNumber:   0,
-    colorDark:    '#000000',
-    colorLight:   '#ffffff',
-    correctLevel: QRCode.CorrectLevel.L
+  const qrData  = 'ELITEGYM_CID_<?= $cid ?>';
+  const wrap    = document.getElementById('qrCanvas');
+
+  // Tạo canvas thay thế div
+  const canvas  = document.createElement('canvas');
+  wrap.innerHTML = '';
+  wrap.appendChild(canvas);
+
+  new QRious({
+    element:    canvas,
+    value:      qrData,
+    size:       240,          // Lớn hơn → dễ quét hơn
+    level:      'H',          // Error correction cao nhất (H > Q > M > L)
+    background: '#ffffff',
+    foreground: '#000000',
+    padding:    12,           // Quiet zone đủ rộng
   });
+
+  // Đảm bảo hiển thị đúng kích thước
+  canvas.style.width  = '100%';
+  canvas.style.height = 'auto';
+  canvas.style.maxWidth = '200px';
+  canvas.style.display  = 'block';
+  canvas.style.imageRendering = 'pixelated'; // Sắc nét trên màn Retina
 })();
 </script>
 </body>

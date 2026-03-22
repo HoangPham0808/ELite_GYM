@@ -205,3 +205,64 @@ window.addEventListener('hashchange', () => {
         window.location.hash = 'overview.php';
     }
 });
+
+// ============ MOBILE SIDEBAR TOGGLE ============
+(function() {
+    // Inject hamburger button vào topbar-left
+    const topbarLeft = document.querySelector('.topbar-left');
+    if (topbarLeft) {
+        const btn = document.createElement('button');
+        btn.className = 'btn-hamburger';
+        btn.id = 'btnHamburger';
+        btn.innerHTML = '<i class="fas fa-bars"></i>';
+        btn.setAttribute('aria-label', 'Toggle menu');
+        topbarLeft.insertBefore(btn, topbarLeft.firstChild);
+    }
+
+    // Inject overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'sidebar-overlay';
+    overlay.id = 'sidebarOverlay';
+    document.body.appendChild(overlay);
+
+    const sidebar  = document.querySelector('.sidebar');
+    const hamburger = document.getElementById('btnHamburger');
+
+    function openSidebar() {
+        sidebar.classList.add('open');
+        overlay.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeSidebar() {
+        sidebar.classList.remove('open');
+        overlay.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+
+    function isMobile() { return window.innerWidth <= 900; }
+
+    if (hamburger) {
+        hamburger.addEventListener('click', () => {
+            if (sidebar.classList.contains('open')) closeSidebar();
+            else openSidebar();
+        });
+    }
+
+    // Click overlay → đóng sidebar
+    overlay.addEventListener('click', closeSidebar);
+
+    // Click nav item trên mobile → đóng sidebar sau khi load
+    document.querySelectorAll('.nav-item a').forEach(link => {
+        link.addEventListener('click', () => {
+            if (isMobile()) {
+                setTimeout(closeSidebar, 150);
+            }
+        });
+    });
+
+    // Resize → reset nếu chuyển sang desktop
+    window.addEventListener('resize', () => {
+        if (!isMobile()) closeSidebar();
+    });
+})();

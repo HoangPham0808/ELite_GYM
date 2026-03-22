@@ -93,7 +93,7 @@ function renderTable(customers) {
         const ngayDK = c.registered_at ? formatDate(c.registered_at) : '—';
         const phone  = c.phone || '—';
 
-        return `<tr>
+        return `<tr data-cid="${c.customer_id}">
             <td>
                 <div class="customer-info">
                     <div class="customer-avatar">${initials}</div>
@@ -113,6 +113,7 @@ function renderTable(customers) {
                 <div class="action-group">
                     <button class="btn-action" title="Xem chi tiết" onclick="openDetail(${c.customer_id})"><i class="fas fa-eye"></i></button>
                     <button class="btn-action" title="Chỉnh sửa" onclick="openEdit(${c.customer_id}, '${escJson(c)}')"><i class="fas fa-pen"></i></button>
+                    <button class="btn-action btn-show-qr" title="Xem mã QR" onclick="showQRCode(${c.customer_id}, '${escHtml(c.full_name)}', '${escHtml(c.phone || '')}')"><i class="fas fa-qrcode"></i></button>
                     <button class="btn-action delete" title="Xóa" onclick="confirmDelete(${c.customer_id}, '${escHtml(c.full_name)}')"><i class="fas fa-trash"></i></button>
                 </div>
             </td>

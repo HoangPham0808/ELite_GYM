@@ -15,8 +15,8 @@ $new_members = $result->fetch_assoc()['new_members'];
 // ========================
 // STATS: Hoạt động hôm nay (check-in)
 // ========================
-$result = $conn->query("SELECT COUNT(*) as active_today FROM CheckInHistory 
-    WHERE DATE(check_in) = CURDATE()");
+$result = $conn->query("SELECT COUNT(*) as active_today FROM GymCheckIn 
+    WHERE type = 'checkin' AND DATE(check_time) = CURDATE()");
 $active_today = $result->fetch_assoc()['active_today'];
 
 // ========================
@@ -69,11 +69,12 @@ $sql = "
     (SELECT 
         c.full_name          AS name,
         'Check-in phòng tập' AS action,
-        ci.check_in          AS event_time,
+        gi.check_time        AS event_time,
         'info'               AS type
-    FROM CheckInHistory ci
-    JOIN Customer c ON c.customer_id = ci.customer_id
-    ORDER BY ci.check_in DESC LIMIT 3)
+    FROM GymCheckIn gi
+    JOIN Customer c ON c.customer_id = gi.customer_id
+    WHERE gi.type = 'checkin'
+    ORDER BY gi.check_time DESC LIMIT 3)
     
     UNION ALL
     
@@ -194,8 +195,8 @@ for ($i = 6; $i >= 0; $i--) {
             <div class="stat-card card-blue">
                 <div class="stat-icon"><i class="fas fa-users"></i></div>
                 <div class="stat-content">
-                    <div class="stat-label">Tổng thành viên</div>
                     <div class="stat-value"><?php echo number_format($stats['total_members']); ?></div>
+                    <div class="stat-label">Tổng thành viên</div>
                     <div class="stat-change positive">
                         <i class="fas fa-arrow-up"></i> +<?php echo $stats['new_members']; ?> tháng này
                     </div>
@@ -205,8 +206,8 @@ for ($i = 6; $i >= 0; $i--) {
             <div class="stat-card card-green">
                 <div class="stat-icon"><i class="fas fa-user-check"></i></div>
                 <div class="stat-content">
-                    <div class="stat-label">Check-in hôm nay</div>
                     <div class="stat-value"><?php echo $stats['active_today']; ?></div>
+                    <div class="stat-label">Check-in hôm nay</div>
                     <div class="stat-change positive">
                         <i class="fas fa-chart-line"></i> Lượt vào hôm nay
                     </div>
@@ -216,8 +217,8 @@ for ($i = 6; $i >= 0; $i--) {
             <div class="stat-card card-gold">
                 <div class="stat-icon"><i class="fas fa-coins"></i></div>
                 <div class="stat-content">
-                    <div class="stat-label">Doanh thu tháng</div>
                     <div class="stat-value"><?php echo number_format($stats['revenue_month'] / 1000000, 1); ?>M</div>
+                    <div class="stat-label">Doanh thu tháng</div>
                     <div class="stat-change <?php echo $stats['revenue_change'] >= 0 ? 'positive' : 'negative'; ?>">
                         <i class="fas fa-arrow-<?php echo $stats['revenue_change'] >= 0 ? 'up' : 'down'; ?>"></i>
                         <?php echo ($stats['revenue_change'] >= 0 ? '+' : '') . $stats['revenue_change']; ?>% so tháng trước
@@ -228,8 +229,8 @@ for ($i = 6; $i >= 0; $i--) {
             <div class="stat-card card-red">
                 <div class="stat-icon"><i class="fas fa-clock"></i></div>
                 <div class="stat-content">
-                    <div class="stat-label">Hóa đơn chờ xử lý</div>
                     <div class="stat-value"><?php echo $stats['pending_invoices']; ?></div>
+                    <div class="stat-label">Hóa đơn chờ xử lý</div>
                     <div class="stat-change negative">
                         <i class="fas fa-exclamation-circle"></i> <?php echo $stats['expiring_soon']; ?> gói sắp hết hạn
                     </div>

@@ -1,3 +1,4 @@
+<?php header('ngrok-skip-browser-warning: true'); ?>
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -5,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quản lý khách hàng - Elite Gym</title>
     <link rel="stylesheet" href="Customer_Management.css">
+    <link rel="stylesheet" href="QZ_Check/QR_CheckIn.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 <body>
@@ -214,5 +216,10 @@
 <div class="toast-container" id="toastContainer"></div>
 
 <script src="Customer_Management.js"></script>
+<!-- jsQR: đọc QR từ camera -->
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<!-- QRious: tạo ảnh QR code -->
+<script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
+<script src="QZ_Check/QR_CheckIn.js"></script>
 </body>
 </html>

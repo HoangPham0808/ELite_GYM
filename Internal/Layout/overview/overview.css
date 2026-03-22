@@ -5,82 +5,66 @@
     margin: 0 auto;
 }
 
-/* ===== STATS GRID ===== */
+/* ===== STATS STRIP (khớp Customer_Management) ===== */
 .stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 24px;
-    margin-bottom: 32px;
+    display: flex;
+    gap: 16px;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
 }
 
 .stat-card {
+    flex: 1;
+    min-width: 200px;
     background: #1a1a1a;
-    border-radius: 16px;
-    padding: 26px;
-    display: flex;
-    gap: 20px;
     border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 12px;
+    padding: 18px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    transition: all 0.25s ease;
     position: relative;
     overflow: hidden;
-    transition: all 0.3s ease;
 }
 
 .stat-card::before {
     content: '';
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
+    top: 0; left: 0; right: 0;
+    height: 2px;
     opacity: 0;
-    transition: opacity 0.3s ease;
+    transition: opacity 0.25s ease;
 }
 
 .stat-card:hover {
-    transform: translateY(-4px);
+    transform: translateY(-2px);
     border-color: rgba(255,255,255,0.12);
-    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.35);
 }
 
-.stat-card:hover::before {
-    opacity: 1;
-}
+.stat-card:hover::before { opacity: 1; }
 
-.card-blue::before { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+.card-blue::before  { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
 .card-green::before { background: linear-gradient(90deg, #10b981, #34d399); }
-.card-gold::before { background: linear-gradient(90deg, #d4a017, #f0c040); }
-.card-red::before { background: linear-gradient(90deg, #ef4444, #f87171); }
+.card-gold::before  { background: linear-gradient(90deg, #d4a017, #f0c040); }
+.card-red::before   { background: linear-gradient(90deg, #ef4444, #f87171); }
 
 .stat-icon {
-    width: 64px;
-    height: 64px;
-    border-radius: 14px;
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 28px;
+    font-size: 18px;
     flex-shrink: 0;
 }
 
-.card-blue .stat-icon {
-    background: rgba(59, 130, 246, 0.15);
-    color: #60a5fa;
-}
-
-.card-green .stat-icon {
-    background: rgba(16, 185, 129, 0.15);
-    color: #34d399;
-}
-
-.card-gold .stat-icon {
-    background: rgba(212, 160, 23, 0.15);
-    color: #d4a017;
-}
-
-.card-red .stat-icon {
-    background: rgba(239, 68, 68, 0.15);
-    color: #f87171;
-}
+.card-blue  .stat-icon { background: rgba(59,130,246,0.15);  color: #60a5fa; }
+.card-green .stat-icon { background: rgba(16,185,129,0.15);  color: #34d399; }
+.card-gold  .stat-icon { background: rgba(212,160,23,0.15);  color: #d4a017; }
+.card-red   .stat-icon { background: rgba(239,68,68,0.15);   color: #f87171; }
 
 .stat-content {
     flex: 1;
@@ -89,43 +73,34 @@
     justify-content: center;
 }
 
-.stat-label {
-    font-size: 13px;
-    font-weight: 500;
-    color: rgba(255,255,255,0.5);
-    letter-spacing: 0.5px;
-    margin-bottom: 6px;
-    text-transform: uppercase;
+.stat-value {
+    font-size: 26px;
+    font-weight: 800;
+    color: #fff;
+    font-family: 'Barlow Condensed', sans-serif;
+    line-height: 1.1;
+    margin-bottom: 3px;
 }
 
-.stat-value {
-    font-size: 36px;
-    font-weight: 800;
-    color: #ffffff;
-    line-height: 1.1;
-    margin-bottom: 8px;
-    font-family: 'Barlow Condensed', sans-serif;
+.stat-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.45);
+    letter-spacing: 0.3px;
+    margin-bottom: 4px;
 }
 
 .stat-change {
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 600;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 5px;
 }
 
-.stat-change.positive {
-    color: #34d399;
-}
-
-.stat-change.negative {
-    color: #f87171;
-}
-
-.stat-change i {
-    font-size: 11px;
-}
+.stat-change.positive { color: #34d399; }
+.stat-change.negative { color: #f87171; }
+.stat-change i { font-size: 10px; }
 
 /* ===== CONTENT GRID ===== */
 .content-grid {
@@ -448,20 +423,19 @@
 /* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {
     .overview-container {
-        padding: 20px;
+        padding: 16px;
     }
 
     .stats-grid {
-        grid-template-columns: 1fr;
-        gap: 16px;
+        gap: 10px;
     }
 
     .stat-card {
-        padding: 20px;
+        min-width: 140px;
     }
 
     .stat-value {
-        font-size: 28px;
+        font-size: 22px;
     }
 
     .content-grid {
