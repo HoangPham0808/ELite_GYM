@@ -32,15 +32,20 @@ $cid = (int)$customer['customer_id'];
 
 // ── Memberships ───────────────────────────────────────────────
 $memberships = $conn->query("
-    SELECT mr.start_date, mr.end_date, mp.plan_name, mp.duration_months, mp.price
+    SELECT mr.registration_id, mr.start_date, mr.end_date, mr.status,
+           mp.plan_name, mp.duration_months, mp.price,
+           pt.type_name, pt.color_code
     FROM MembershipRegistration mr
     JOIN MembershipPlan mp ON mp.plan_id = mr.plan_id
+    LEFT JOIN PackageType pt ON pt.type_id = mp.package_type_id
     WHERE mr.customer_id = $cid ORDER BY mr.end_date DESC
 ")->fetch_all(MYSQLI_ASSOC);
 
 $active_plan = null;
 $today = date('Y-m-d');
-foreach ($memberships as $m) { if ($m['end_date'] >= $today) { $active_plan = $m; break; } }
+foreach ($memberships as $m) {
+    if ($m['status'] === 'active' && $m['end_date'] >= $today) { $active_plan = $m; break; }
+}
 
 // ── Check-in ──────────────────────────────────────────────────
 // GymCheckIn lưu mỗi lượt checkin/checkout thành 1 row riêng
@@ -203,7 +208,7 @@ if ($pw_step === 2 && !empty($_SESSION['chpw_email'])) {
     <div class="mini-stats">
       <div class="ms"><div class="ms-n"><?= $total_checkins ?></div><div class="ms-l">Check-in</div></div>
       <div class="ms"><div class="ms-n"><?= count($classes) ?></div><div class="ms-l">Lớp tập</div></div>
-      <div class="ms"><div class="ms-n"><?= count($memberships) ?></div><div class="ms-l">Gói đã mua</div></div>
+      <div class="ms"><div class="ms-n"><?= count(array_filter($memberships, fn($m) => $m['status']==='active' && $m['end_date']>=$today)) ?></div><div class="ms-l">Gói active</div></div>
       <div class="ms"><div class="ms-n"><?= count($reviews) ?></div><div class="ms-l">Đánh giá</div></div>
     </div>
   </aside>
@@ -379,17 +384,35 @@ if ($pw_step === 2 && !empty($_SESSION['chpw_email'])) {
       <div class="pcard">
         <div class="pcard-title"><i class="fas fa-history"></i> Lịch sử đăng ký gói tập</div>
         <table class="ptable">
-          <thead><tr><th>Gói tập</th><th>Bắt đầu</th><th>Kết thúc</th><th>Trạng thái</th></tr></thead>
+          <thead><tr><th>Gói tập</th><th>Loại</th><th>Bắt đầu</th><th>Kết thúc</th><th>Trạng thái</th></tr></thead>
           <tbody>
-          <?php foreach($memberships as $m): $exp = $m['end_date'] < $today; ?>
+          <?php foreach($memberships as $m):
+            $pt_color = !empty($m['color_code']) ? htmlspecialchars($m['color_code']) : '#6b7280';
+            $pt_name  = !empty($m['type_name'])  ? htmlspecialchars($m['type_name'])  : '';
+            $is_active   = ($m['status'] === 'active')   && $m['end_date'] >= $today;
+            $is_inactive = ($m['status'] === 'inactive');
+            $is_expired  = ($m['status'] === 'active')   && $m['end_date'] < $today;
+          ?>
             <tr>
               <td class="td-name"><?= htmlspecialchars($m['plan_name']) ?>
-                <span style="color:var(--text3);font-size:.8rem">(<?= $m['duration_months'] ?> tháng)</span></td>
+                <span style="color:var(--text3);font-size:.8rem">(<?= $m['duration_months'] ?> tháng)</span>
+              </td>
+              <td>
+                <?php if ($pt_name): ?>
+                  <span style="display:inline-block;padding:2px 8px;border-radius:99px;font-size:.72rem;font-weight:600;background:<?= $pt_color ?>22;color:<?= $pt_color ?>;border:1px solid <?= $pt_color ?>44">
+                    <?= $pt_name ?>
+                  </span>
+                <?php else: ?>
+                  <span style="color:var(--text3)">—</span>
+                <?php endif; ?>
+              </td>
               <td><?= date('d/m/Y', strtotime($m['start_date'])) ?></td>
               <td><?= date('d/m/Y', strtotime($m['end_date'])) ?></td>
               <td>
-                <?php if(!$exp): ?>
-                  <span class="badge badge-green"><i class="fas fa-circle" style="font-size:.4rem"></i> Đang hoạt động</span>
+                <?php if ($is_active): ?>
+                  <span class="badge badge-green"><i class="fas fa-circle" style="font-size:.4rem"></i> Đang sử dụng</span>
+                <?php elseif ($is_inactive): ?>
+                  <span class="badge badge-red"><i class="fas fa-ban" style="font-size:.6rem"></i> Ngừng sử dụng</span>
                 <?php else: ?>
                   <span class="badge badge-red">Đã hết hạn</span>
                 <?php endif; ?>

@@ -26,7 +26,18 @@ function safe_query($conn, $sql) {
 
 /**
  * Đăng ký gói tập vào MembershipRegistration sau khi hóa đơn được thanh toán.
- * Nếu khách đã có gói còn hiệu lực → nối tiếp từ ngày kết thúc cũ + 1 ngày.
+ *
+ * Logic nâng cấp gói (upgrade):
+ *   - Nếu khách đang có gói còn hiệu lực (status = 'active') và gói mới có
+ *     package_type_id CAO HƠN → đây là nâng cấp:
+ *       1. Tính tiền thừa của gói cũ = (price / total_days) * days_remaining
+ *          (giá trị này đã được trừ trước ở hóa đơn khi nhân viên tạo invoice,
+ *           hàm này chỉ xử lý trạng thái & ngày tháng)
+ *       2. Đánh dấu TẤT CẢ các MembershipRegistration cũ còn active
+ *          của customer đó → status = 'inactive' (ngừng sử dụng)
+ *       3. Tạo bản ghi mới với start_date = invoice_date, status = 'active'
+ *   - Nếu cùng loại gói hoặc gói thấp hơn → nối tiếp thông thường
+ *   - Nếu khách chưa có gói nào → tạo mới, status = 'active'
  */
 function registerPackagesForInvoice($conn, $invoice_id) {
     $inv = $conn->query("SELECT customer_id, invoice_date FROM Invoice WHERE invoice_id = $invoice_id")->fetch_assoc();
@@ -34,44 +45,130 @@ function registerPackagesForInvoice($conn, $invoice_id) {
 
     $customer_id  = intval($inv['customer_id']);
     $invoice_date = $inv['invoice_date'];
+    $today        = $invoice_date; // dùng ngày hóa đơn làm mốc
 
     $ctRes = $conn->query("
-        SELECT ct.plan_id, ct.quantity, mp.duration_months
+        SELECT ct.plan_id, ct.quantity, mp.duration_months,
+               mp.package_type_id, pt.sort_order AS type_order
         FROM InvoiceDetail ct
         JOIN MembershipPlan mp ON mp.plan_id = ct.plan_id
+        LEFT JOIN PackageType pt ON pt.type_id = mp.package_type_id
         WHERE ct.invoice_id = $invoice_id
     ");
     if (!$ctRes) return;
 
-    $stmtDK = $conn->prepare("
-        INSERT INTO MembershipRegistration (customer_id, plan_id, start_date, end_date)
-        VALUES (?, ?, ?, ?)
-    ");
-
     while ($row = $ctRes->fetch_assoc()) {
-        $plan_id        = intval($row['plan_id']);
-        $quantity       = intval($row['quantity']);
-        $duration       = intval($row['duration_months'] ?? 1);
-        $total_months   = $duration * $quantity;
+        $plan_id       = intval($row['plan_id']);
+        $quantity      = intval($row['quantity']);
+        $duration      = intval($row['duration_months'] ?? 1);
+        $total_months  = $duration * $quantity;
+        $new_type_id   = $row['package_type_id'] ? intval($row['package_type_id']) : null;
+        $new_type_ord  = $row['type_order']       ? intval($row['type_order'])      : 0;
 
-        $existRes = $conn->query("
-            SELECT MAX(end_date) as max_end
-            FROM MembershipRegistration
-            WHERE customer_id = $customer_id
-              AND plan_id    = $plan_id
+        // ── Lấy gói đang active của khách (status='active' và end_date >= hôm nay) ──
+        $activeRes = $conn->query("
+            SELECT mr.registration_id, mr.plan_id, mr.start_date, mr.end_date,
+                   mp.price, mp.duration_months AS plan_months,
+                   mp.package_type_id AS old_type_id,
+                   pt.sort_order AS old_type_order
+            FROM MembershipRegistration mr
+            JOIN MembershipPlan mp ON mp.plan_id = mr.plan_id
+            LEFT JOIN PackageType pt ON pt.type_id = mp.package_type_id
+            WHERE mr.customer_id = $customer_id
+              AND mr.status      = 'active'
+              AND mr.end_date   >= '$today'
+            ORDER BY mr.end_date DESC
+            LIMIT 1
         ");
-        $max_end = $existRes ? ($existRes->fetch_assoc()['max_end'] ?? null) : null;
+        $activeReg = $activeRes ? $activeRes->fetch_assoc() : null;
 
-        if ($max_end && $max_end >= $invoice_date) {
-            $start_date = date('Y-m-d', strtotime("$max_end +1 day"));
-        } else {
-            $start_date = $invoice_date;
+        $is_upgrade = false;
+        if ($activeReg && $new_type_id && intval($activeReg['old_type_order']) < $new_type_ord) {
+            $is_upgrade = true;
         }
-        $end_date = date('Y-m-d', strtotime("$start_date +$total_months months"));
 
+        if ($is_upgrade) {
+            // ── NÂNG CẤP: vô hiệu hóa TẤT CẢ gói còn active của khách ──
+            $conn->query("
+                UPDATE MembershipRegistration
+                SET status = 'inactive'
+                WHERE customer_id = $customer_id
+                  AND status      = 'active'
+                  AND end_date   >= '$today'
+            ");
+
+            // Gói nâng cấp bắt đầu ngay từ ngày hóa đơn
+            $start_date = $today;
+            $end_date   = date('Y-m-d', strtotime("$start_date +$total_months months"));
+
+        } else {
+            // ── THÊM MỚI hoặc GIA HẠN: nối tiếp sau gói cùng loại cuối cùng ──
+            $existRes = $conn->query("
+                SELECT MAX(end_date) as max_end
+                FROM MembershipRegistration
+                WHERE customer_id = $customer_id
+                  AND plan_id     = $plan_id
+            ");
+            $max_end = $existRes ? ($existRes->fetch_assoc()['max_end'] ?? null) : null;
+
+            if ($max_end && $max_end >= $today) {
+                $start_date = date('Y-m-d', strtotime("$max_end +1 day"));
+            } else {
+                $start_date = $today;
+            }
+            $end_date = date('Y-m-d', strtotime("$start_date +$total_months months"));
+        }
+
+        // ── Insert bản ghi mới với status = 'active' ──
+        $stmtDK = $conn->prepare("
+            INSERT INTO MembershipRegistration (customer_id, plan_id, start_date, end_date, status)
+            VALUES (?, ?, ?, ?, 'active')
+        ");
         $stmtDK->bind_param('iiss', $customer_id, $plan_id, $start_date, $end_date);
         $stmtDK->execute();
     }
+}
+
+/**
+ * Tính số tiền còn lại (giá trị thừa) của gói tập đang active.
+ * Dùng để hiển thị ở frontend khi nhân viên tạo hóa đơn nâng cấp.
+ * Trả về: float số tiền được khấu trừ.
+ */
+function calcUpgradeCredit($conn, $customer_id, $new_package_type_id) {
+    $today = date('Y-m-d');
+
+    // Lấy sort_order của gói mới
+    $newTypeRes = $conn->query("SELECT sort_order FROM PackageType WHERE type_id = " . intval($new_package_type_id));
+    $newTypeRow = $newTypeRes ? $newTypeRes->fetch_assoc() : null;
+    if (!$newTypeRow) return 0.0;
+    $new_order = intval($newTypeRow['sort_order']);
+
+    // Gói active hiện tại
+    $activeRes = $conn->query("
+        SELECT mr.start_date, mr.end_date, mp.price, mp.duration_months,
+               pt.sort_order AS old_order
+        FROM MembershipRegistration mr
+        JOIN MembershipPlan mp ON mp.plan_id = mr.plan_id
+        LEFT JOIN PackageType pt ON pt.type_id = mp.package_type_id
+        WHERE mr.customer_id = " . intval($customer_id) . "
+          AND mr.status      = 'active'
+          AND mr.end_date   >= '$today'
+        ORDER BY mr.end_date DESC
+        LIMIT 1
+    ");
+    $active = $activeRes ? $activeRes->fetch_assoc() : null;
+    if (!$active) return 0.0;
+
+    // Chỉ tính credit nếu đây là nâng cấp
+    if (intval($active['old_order']) >= $new_order) return 0.0;
+
+    $start    = new DateTime($active['start_date']);
+    $end      = new DateTime($active['end_date']);
+    $now      = new DateTime($today);
+    $total_days     = max(1, $start->diff($end)->days);
+    $days_remaining = max(0, $now->diff($end)->days);
+    $daily_rate     = floatval($active['price']) / $total_days;
+    return round($daily_rate * $days_remaining, 0);
 }
 
 switch ($action) {
@@ -275,18 +372,20 @@ switch ($action) {
         $stmt->execute();
         $customers = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
-        // Với mỗi khách hàng, lấy package_type_id đang còn hiệu lực
+        // Với mỗi khách hàng, lấy package_type active cao nhất
         $today = date('Y-m-d');
         foreach ($customers as &$cust) {
             $cid = intval($cust['customer_id']);
             $pkRes = $conn->query("
-                SELECT DISTINCT mp.package_type_id, pt.type_name
+                SELECT mp.package_type_id, pt.type_name, pt.sort_order
                 FROM MembershipRegistration mr
                 JOIN MembershipPlan mp ON mp.plan_id = mr.plan_id
                 LEFT JOIN PackageType pt ON pt.type_id = mp.package_type_id
                 WHERE mr.customer_id = $cid
-                  AND mr.end_date >= '$today'
+                  AND mr.status      = 'active'
+                  AND mr.end_date   >= '$today'
                   AND mp.package_type_id IS NOT NULL
+                ORDER BY pt.sort_order DESC
                 LIMIT 1
             ");
             $pk = $pkRes ? $pkRes->fetch_assoc() : null;
@@ -299,23 +398,38 @@ switch ($action) {
         break;
 
     // ========================
-    // LẤY GÓI TẬP (cho dropdown) — lọc theo package_type nếu có
+    // LẤY GÓI TẬP (cho dropdown)
+    // Basic (sort=1)    → tất cả gói
+    // Standard (sort=2) → Standard + Premium (sort_order >= 2)
+    // Premium (sort=3)  → chỉ Premium        (sort_order >= 3)
     // ========================
     case 'get_packages':
         $filter_type = intval($_GET['package_type_id'] ?? 0);
+
         if ($filter_type > 0) {
-            $stmt = $conn->prepare("
-                SELECT plan_id, plan_name, duration_months, price, package_type_id
-                FROM MembershipPlan
-                WHERE package_type_id = ?
-                ORDER BY price ASC
-            ");
-            $stmt->bind_param('i', $filter_type);
+            $sortRes  = $conn->query("SELECT sort_order FROM PackageType WHERE type_id = $filter_type");
+            $sortRow  = $sortRes ? $sortRes->fetch_assoc() : null;
+            $cur_sort = $sortRow ? intval($sortRow['sort_order']) : 0;
+
+            if ($cur_sort > 0) {
+                $stmt = $conn->prepare("
+                    SELECT mp.plan_id, mp.plan_name, mp.duration_months, mp.price, mp.package_type_id
+                    FROM MembershipPlan mp
+                    LEFT JOIN PackageType pt ON pt.type_id = mp.package_type_id
+                    WHERE pt.sort_order >= ?
+                    ORDER BY pt.sort_order ASC, mp.price ASC
+                ");
+                $stmt->bind_param('i', $cur_sort);
+            } else {
+                $stmt = $conn->prepare("
+                    SELECT plan_id, plan_name, duration_months, price, package_type_id
+                    FROM MembershipPlan ORDER BY price ASC
+                ");
+            }
         } else {
             $stmt = $conn->prepare("
                 SELECT plan_id, plan_name, duration_months, price, package_type_id
-                FROM MembershipPlan
-                ORDER BY price ASC
+                FROM MembershipPlan ORDER BY price ASC
             ");
         }
         $stmt->execute();
@@ -377,9 +491,33 @@ switch ($action) {
             $original_amount += floatval($item['unit_price']) * intval($item['quantity']);
         }
 
-        // Áp dụng khuyến mãi
-        $discount_amount = 0;
-        $final_amount    = $original_amount;
+        // ── Kiểm tra nâng cấp gói: trừ credit gói cũ còn lại ──
+        $upgrade_credit  = 0;
+        $new_type_order  = 0;
+        $new_pkg_type_id = 0;
+        if ($customer_id > 0) {
+            foreach ($items as $item) {
+                $pid   = intval($item['plan_id']);
+                $pkRes = $conn->query("
+                    SELECT mp.package_type_id, pt.sort_order
+                    FROM MembershipPlan mp
+                    LEFT JOIN PackageType pt ON pt.type_id = mp.package_type_id
+                    WHERE mp.plan_id = $pid
+                ");
+                $pkRow = $pkRes ? $pkRes->fetch_assoc() : null;
+                if ($pkRow && intval($pkRow['sort_order']) > $new_type_order) {
+                    $new_pkg_type_id = intval($pkRow['package_type_id']);
+                    $new_type_order  = intval($pkRow['sort_order']);
+                }
+            }
+            if ($new_pkg_type_id > 0) {
+                $upgrade_credit = calcUpgradeCredit($conn, $customer_id, $new_pkg_type_id);
+            }
+        }
+
+        // Áp dụng khuyến mãi (credit nâng cấp được tính trước, rồi mới KM)
+        $discount_amount = $upgrade_credit;
+        $final_amount    = max(0, $original_amount - $upgrade_credit);
 
         if ($promotion_id) {
             $promo = $conn->query("
@@ -405,11 +543,12 @@ switch ($action) {
                 exit;
             }
 
-            $discount_amount = $original_amount * floatval($promo['discount_percent']) / 100;
-            if ($promo['max_discount_amount'] !== null && $discount_amount > floatval($promo['max_discount_amount'])) {
-                $discount_amount = floatval($promo['max_discount_amount']);
+            $promo_discount = $original_amount * floatval($promo['discount_percent']) / 100;
+            if ($promo['max_discount_amount'] !== null && $promo_discount > floatval($promo['max_discount_amount'])) {
+                $promo_discount = floatval($promo['max_discount_amount']);
             }
-            $final_amount = max(0, $original_amount - $discount_amount);
+            $discount_amount += $promo_discount; // cộng thêm vào credit đã có
+            $final_amount     = max(0, $original_amount - $discount_amount);
         }
 
         // Transaction
@@ -465,6 +604,8 @@ switch ($action) {
                 'original_amount' => $original_amount,
                 'discount_amount' => $discount_amount,
                 'final_amount'    => $final_amount,
+                'upgrade_credit'  => $upgrade_credit,
+                'is_upgrade'      => $upgrade_credit > 0,
             ]);
         } catch (Exception $e) {
             $conn->rollback();
@@ -682,6 +823,65 @@ switch ($action) {
         } else {
             echo json_encode(['success' => false, 'message' => 'Lỗi: ' . $conn->error]);
         }
+        break;
+
+    // ========================
+    // TÍNH TIỀN KHẤU TRỪ KHI NÂNG CẤP GÓI
+    // ========================
+    case 'get_upgrade_credit':
+        $customer_id       = intval($_GET['customer_id']      ?? 0);
+        $new_pkg_type_id   = intval($_GET['package_type_id']  ?? 0);
+
+        if ($customer_id === 0 || $new_pkg_type_id === 0) {
+            echo json_encode(['success' => true, 'credit' => 0]);
+            exit;
+        }
+
+        $today = date('Y-m-d');
+
+        // sort_order của gói mới
+        $newTypeRes = $conn->query("SELECT sort_order FROM PackageType WHERE type_id = $new_pkg_type_id");
+        $newTypeRow = $newTypeRes ? $newTypeRes->fetch_assoc() : null;
+        $new_order  = $newTypeRow ? intval($newTypeRow['sort_order']) : 0;
+
+        // Gói active hiện tại của khách
+        $activeRes = $conn->query("
+            SELECT mr.registration_id, mr.start_date, mr.end_date,
+                   mp.price, mp.plan_name,
+                   pt.sort_order AS old_order, pt.type_name AS old_type
+            FROM MembershipRegistration mr
+            JOIN MembershipPlan mp ON mp.plan_id = mr.plan_id
+            LEFT JOIN PackageType pt ON pt.type_id = mp.package_type_id
+            WHERE mr.customer_id = $customer_id
+              AND mr.status      = 'active'
+              AND mr.end_date   >= '$today'
+            ORDER BY mr.end_date DESC
+            LIMIT 1
+        ");
+        $active = $activeRes ? $activeRes->fetch_assoc() : null;
+
+        if (!$active || intval($active['old_order']) >= $new_order) {
+            echo json_encode(['success' => true, 'credit' => 0, 'is_upgrade' => false]);
+            exit;
+        }
+
+        $start         = new DateTime($active['start_date']);
+        $end           = new DateTime($active['end_date']);
+        $now           = new DateTime($today);
+        $total_days    = max(1, $start->diff($end)->days);
+        $days_remaining= max(0, $now->diff($end)->days);
+        $daily_rate    = floatval($active['price']) / $total_days;
+        $credit        = round($daily_rate * $days_remaining, 0);
+
+        echo json_encode([
+            'success'        => true,
+            'is_upgrade'     => true,
+            'credit'         => $credit,
+            'days_remaining' => $days_remaining,
+            'old_plan_name'  => $active['plan_name'],
+            'old_type'       => $active['old_type'],
+            'end_date'       => $active['end_date'],
+        ]);
         break;
 
     default:

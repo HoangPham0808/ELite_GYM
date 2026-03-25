@@ -14,14 +14,66 @@ $total_members = $conn->query("SELECT COUNT(*) AS c FROM Customer")->fetch_assoc
 $total_classes = $conn->query("SELECT COUNT(*) AS c FROM TrainingClass")->fetch_assoc()['c'] ?? 0;
 $total_plans   = $conn->query("SELECT COUNT(*) AS c FROM MembershipPlan")->fetch_assoc()['c'] ?? 0;
 
-$plans = $conn->query("
-    SELECT mp.plan_id, mp.plan_name, mp.duration_months, mp.price,
-           mp.description, mp.image_url,
-           pt.type_name, pt.color_code, pt.sort_order AS type_order
-    FROM MembershipPlan mp
-    LEFT JOIN PackageType pt ON pt.type_id = mp.package_type_id
-    ORDER BY mp.price ASC LIMIT 4
-")->fetch_all(MYSQLI_ASSOC);
+// ── Lấy $cid sớm để dùng cho filter plans ────────────────────
+$cid           = 0;
+$cur_sort      = 0;
+$cur_type_name = '';
+if ($is_customer) {
+    $account_id = (int)$_SESSION['account_id'];
+    $rCid = $conn->prepare("SELECT customer_id FROM Customer WHERE account_id = ? LIMIT 1");
+    $rCid->bind_param("i", $account_id);
+    $rCid->execute();
+    $rowCid = $rCid->get_result()->fetch_assoc();
+    $rCid->close();
+    $cid = (int)($rowCid['customer_id'] ?? 0);
+
+    if ($cid) {
+        $today_tmp = date('Y-m-d');
+        // Lấy packagetype active cao nhất của khách
+        $curRes = $conn->query("
+            SELECT pt.sort_order, pt.type_name
+            FROM MembershipRegistration mr
+            JOIN MembershipPlan mp ON mp.plan_id = mr.plan_id
+            LEFT JOIN PackageType pt ON pt.type_id = mp.package_type_id
+            WHERE mr.customer_id = $cid
+              AND mr.status      = 'active'
+              AND mr.end_date   >= '$today_tmp'
+            ORDER BY pt.sort_order DESC
+            LIMIT 1
+        ");
+        $curPkg = $curRes ? $curRes->fetch_assoc() : null;
+        if ($curPkg) {
+            $cur_sort      = intval($curPkg['sort_order']);
+            $cur_type_name = $curPkg['type_name'] ?? '';
+        }
+    }
+}
+
+// ── Plans: lọc theo sort_order của packagetype đang dùng ─────
+// Guest / chưa có gói → tất cả
+// Basic(1)    → tất cả        (sort_order >= 1 = tất cả)
+// Standard(2) → Standard+     (sort_order >= 2)
+// Premium(3)  → Premium only  (sort_order >= 3)
+if ($cur_sort > 0) {
+    $plans = $conn->query("
+        SELECT mp.plan_id, mp.plan_name, mp.duration_months, mp.price,
+               mp.description, mp.image_url,
+               pt.type_name, pt.color_code, pt.sort_order AS type_order
+        FROM MembershipPlan mp
+        LEFT JOIN PackageType pt ON pt.type_id = mp.package_type_id
+        WHERE pt.sort_order >= $cur_sort
+        ORDER BY pt.sort_order ASC, mp.price ASC
+    ")->fetch_all(MYSQLI_ASSOC);
+} else {
+    $plans = $conn->query("
+        SELECT mp.plan_id, mp.plan_name, mp.duration_months, mp.price,
+               mp.description, mp.image_url,
+               pt.type_name, pt.color_code, pt.sort_order AS type_order
+        FROM MembershipPlan mp
+        LEFT JOIN PackageType pt ON pt.type_id = mp.package_type_id
+        ORDER BY pt.sort_order ASC, mp.price ASC
+    ")->fetch_all(MYSQLI_ASSOC);
+}
 
 $reviews = $conn->query("
     SELECT r.content, r.rating, c.full_name
@@ -47,36 +99,48 @@ $cus_total_ci    = 0;
 $cus_upcoming    = [];
 $cus_days_left   = 0;
 $cus_plan_pct    = 0;
-$cid             = 0;
 
-if ($is_customer) {
-    $account_id = (int)$_SESSION['account_id'];
-    $r = $conn->prepare("SELECT customer_id FROM Customer WHERE account_id = ? LIMIT 1");
-    $r->bind_param("i", $account_id);
-    $r->execute();
-    $row = $r->get_result()->fetch_assoc();
-    $r->close();
-    $cid = (int)($row['customer_id'] ?? 0);
+if ($is_customer && $cid) {
+    $today = date('Y-m-d');
 
-    if ($cid) {
-        $today = date('Y-m-d');
-
-        $mems = $conn->query("
-            SELECT mr.start_date, mr.end_date, mp.plan_name, mp.duration_months, mp.price
-            FROM MembershipRegistration mr
-            JOIN MembershipPlan mp ON mp.plan_id = mr.plan_id
-            WHERE mr.customer_id = $cid ORDER BY mr.end_date DESC
+    $mems = $conn->query("
+        SELECT mr.start_date, mr.end_date, mp.plan_name, mp.duration_months, mp.price
+        FROM MembershipRegistration mr
+        JOIN MembershipPlan mp ON mp.plan_id = mr.plan_id
+        WHERE mr.customer_id = $cid
+          AND mr.status = 'active'
+        ORDER BY mr.end_date DESC
+    ")->fetch_all(MYSQLI_ASSOC);
+    foreach ($mems as $m) {
+        if ($m['end_date'] >= $today) { $cus_active_plan = $m; break; }
+    }
+    if ($cus_active_plan) {
+        $total_days    = max(1, (new DateTime($cus_active_plan['start_date']))->diff(new DateTime($cus_active_plan['end_date']))->days);
+        $cus_days_left = max(0, (new DateTime($today))->diff(new DateTime($cus_active_plan['end_date']))->days);
+        $cus_plan_pct  = min(100, round(($total_days - $cus_days_left) / $total_days * 100));
+    }
+        // Lấy 5 lần check-in gần nhất từ GymCheckIn, ghép check_out tương ứng
+        $cus_checkins = $conn->query("
+            SELECT
+                ci.check_time  AS check_in,
+                co.check_time  AS check_out
+            FROM GymCheckIn ci
+            LEFT JOIN GymCheckIn co
+                ON  co.customer_id = ci.customer_id
+                AND co.type        = 'checkout'
+                AND co.check_time  = (
+                    SELECT MIN(x.check_time)
+                    FROM GymCheckIn x
+                    WHERE x.customer_id = ci.customer_id
+                      AND x.type        = 'checkout'
+                      AND x.check_time  > ci.check_time
+                )
+            WHERE ci.customer_id = $cid
+              AND ci.type        = 'checkin'
+            ORDER BY ci.check_time DESC
+            LIMIT 5
         ")->fetch_all(MYSQLI_ASSOC);
-        foreach ($mems as $m) {
-            if ($m['end_date'] >= $today) { $cus_active_plan = $m; break; }
-        }
-        if ($cus_active_plan) {
-            $total_days    = max(1, (new DateTime($cus_active_plan['start_date']))->diff(new DateTime($cus_active_plan['end_date']))->days);
-            $cus_days_left = max(0, (new DateTime($today))->diff(new DateTime($cus_active_plan['end_date']))->days);
-            $cus_plan_pct  = min(100, round(($total_days - $cus_days_left) / $total_days * 100));
-        }
-        $cus_checkins  = $conn->query("SELECT check_in, check_out FROM CheckInHistory WHERE customer_id=$cid ORDER BY check_in DESC LIMIT 5")->fetch_all(MYSQLI_ASSOC);
-        $cus_total_ci  = $conn->query("SELECT COUNT(*) AS c FROM CheckInHistory WHERE customer_id=$cid")->fetch_assoc()['c'] ?? 0;
+        $cus_total_ci  = $conn->query("SELECT COUNT(*) AS c FROM GymCheckIn WHERE customer_id=$cid AND type='checkin'")->fetch_assoc()['c'] ?? 0;
         $cus_upcoming  = $conn->query("
             SELECT tc.class_name, tc.class_time, e.full_name AS trainer
             FROM ClassRegistration cr
@@ -85,7 +149,6 @@ if ($is_customer) {
             WHERE cr.customer_id=$cid AND tc.class_time >= NOW()
             ORDER BY tc.class_time ASC LIMIT 3
         ")->fetch_all(MYSQLI_ASSOC);
-    }
 }
 // ── Plan card helpers (shared between guest & customer) ──────────
 $fallback_icons  = ['fas fa-fire','fas fa-bolt','fas fa-crown','fas fa-gem'];
@@ -626,7 +689,12 @@ $type_icon_map = [
 <?php if (!empty($plans)): ?>
 <div class="shop-bar" style="background:#1a1a1a;border-bottom:1px solid rgba(255,255,255,.07)">
   <div class="shop-bar-inner">
-    <span class="shop-bar-count" style="color:rgba(255,255,255,.4)">Hiển thị 1–<?= count($plans) ?> trong <?= $total_plans ?> gói tập</span>
+    <span class="shop-bar-count" style="color:rgba(255,255,255,.4)">
+        Hiển thị 1–<?= count($plans) ?> trong <?= $total_plans ?> gói tập
+        <?php if ($cur_type_name): ?>
+            &nbsp;·&nbsp;<span style="color:#4ade80;font-weight:600"><i class="fas fa-filter" style="font-size:.65rem"></i> Từ <?= htmlspecialchars($cur_type_name) ?> trở lên</span>
+        <?php endif; ?>
+    </span>
     <div class="shop-bar-right"></div>
   </div>
 </div>
@@ -683,7 +751,7 @@ $type_icon_map = [
           <div class="product-price-old"><?= number_format($old_price,0,',','.') ?>₫</div>
           <div class="product-price-new" style="color:<?= $is_hot ? htmlspecialchars($pt_color) : 'var(--red)' ?>"><?= number_format($plan['price'],0,',','.') ?><sub>₫</sub></div>
         </div>
-        <a href="Profile/Profile.php?tab=plans" class="product-add-btn" style="<?= $is_hot ? 'background:'.htmlspecialchars($pt_color).';color:#fff' : '' ?>">
+        <a href="Payment/Payment.php" class="product-add-btn" style="<?= $is_hot ? 'background:'.htmlspecialchars($pt_color).';color:#fff' : '' ?>">
           <i class="fas fa-plus"></i>&nbsp;ĐĂNG KÝ
         </a>
       </div>

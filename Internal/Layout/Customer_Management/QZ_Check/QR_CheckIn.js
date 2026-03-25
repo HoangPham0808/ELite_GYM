@@ -4,7 +4,9 @@
  * Yêu cầu: jsQR, QRious, Customer_Management.js
  */
 
-const QR_API    = 'QR_CheckIn_function.php';
+// Paths are relative to the page (Customer_Management.php), NOT this JS file.
+// This JS file lives in QZ_Check/ but fetch() resolves from the page's directory.
+const QR_API    = 'QZ_Check/QR_CheckIn_function.php';
 const QR_BRIDGE = 'QZ_Check/qr_bridge.php';
 
 // ── Bridge / Phone mode state ──

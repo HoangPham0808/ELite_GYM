@@ -264,7 +264,7 @@ function selectCustomer(id, name, phone, email, activePackageTypeId, activePacka
 
     const pkBadge = activePackageTypeName
         ? `<span style="font-size:11px;background:rgba(212,160,23,0.15);color:#d4a017;padding:2px 8px;border-radius:10px;margin-left:6px;border:1px solid rgba(212,160,23,0.3)">
-               <i class="fas fa-lock" style="font-size:9px;margin-right:3px"></i>Chỉ mua thêm: ${esc(activePackageTypeName)}
+               <i class="fas fa-layer-group" style="font-size:9px;margin-right:3px"></i>Đang dùng: ${esc(activePackageTypeName)}
            </span>`
         : '';
 
@@ -319,14 +319,14 @@ function addItem() {
     document.getElementById('fPricePreview').style.display = 'none';
 
     renderItems();
-    recalcSummary();
+    recalcSummary(); // async, fire and forget
     loadAvailablePromos();
 }
 
 function removeItem(idx) {
     invoiceItems.splice(idx, 1);
     renderItems();
-    recalcSummary();
+    recalcSummary(); // async, fire and forget
     loadAvailablePromos();
 }
 
@@ -408,19 +408,47 @@ async function loadAvailablePromos() {
 
 function applyPromo(promoData) {
     selectedPromo = promoData;
-    recalcSummary();
+    recalcSummary(); // async, fire and forget
 }
 
 // ===== RECALC SUMMARY =====
-function recalcSummary() {
+let _upgradeCredit = 0; // cache credit từ server
+
+async function recalcSummary() {
     const totalGoc = invoiceItems.reduce((s, i) => s + i.unit_price * i.quantity, 0);
-    let soGiam = 0;
+    const customerId = document.getElementById('fCustomerId').value;
+
+    // Lấy package_type_id cao nhất trong giỏ hàng
+    let maxTypeId = 0;
+    for (const item of invoiceItems) {
+        const pkg = packages.find(p => p.plan_id == item.plan_id);
+        if (pkg && pkg.package_type_id) {
+            // So sánh bằng cách dùng sort_order từ _allPackageTypes nếu có
+            if (parseInt(pkg.package_type_id) > maxTypeId) {
+                maxTypeId = parseInt(pkg.package_type_id);
+            }
+        }
+    }
+
+    // Lấy upgrade credit nếu có khách + gói
+    if (customerId && maxTypeId > 0 && totalGoc > 0) {
+        try {
+            const r = await fetch(`${API}?action=get_upgrade_credit&customer_id=${customerId}&package_type_id=${maxTypeId}`);
+            const d = await r.json();
+            _upgradeCredit = (d.success && d.is_upgrade) ? parseFloat(d.credit) : 0;
+        } catch(e) { _upgradeCredit = 0; }
+    } else {
+        _upgradeCredit = 0;
+    }
+
+    let soGiam = _upgradeCredit;
 
     if (selectedPromo && totalGoc > 0) {
-        soGiam = totalGoc * parseFloat(selectedPromo.discount_percent) / 100;
-        if (selectedPromo.max_discount_amount && soGiam > parseFloat(selectedPromo.max_discount_amount)) {
-            soGiam = parseFloat(selectedPromo.max_discount_amount);
+        let promoDisc = totalGoc * parseFloat(selectedPromo.discount_percent) / 100;
+        if (selectedPromo.max_discount_amount && promoDisc > parseFloat(selectedPromo.max_discount_amount)) {
+            promoDisc = parseFloat(selectedPromo.max_discount_amount);
         }
+        soGiam += promoDisc;
     }
 
     const totalSau = Math.max(0, totalGoc - soGiam);
@@ -431,8 +459,10 @@ function recalcSummary() {
     const discRow = document.getElementById('summaryDiscountRow');
     if (soGiam > 0) {
         discRow.style.display = 'flex';
-        document.getElementById('summaryDiscountLabel').textContent =
-            `Giảm giá (${selectedPromo.discount_percent}%):`;
+        let labelParts = [];
+        if (_upgradeCredit > 0) labelParts.push(`Hoàn tiền nâng cấp: -${fmtMoney(_upgradeCredit)}`);
+        if (selectedPromo) labelParts.push(`KM ${selectedPromo.discount_percent}%: -${fmtMoney(soGiam - _upgradeCredit)}`);
+        document.getElementById('summaryDiscountLabel').textContent = labelParts.join(' | ') || 'Giảm giá:';
         document.getElementById('summaryDiscount').textContent = `- ${fmtMoney(soGiam)}`;
     } else {
         discRow.style.display = 'none';
@@ -454,7 +484,7 @@ function openAddModal() {
     document.getElementById('promoPlaceholder').innerHTML =
         '<i class="fas fa-info-circle"></i> Thêm sản phẩm trước để xem khuyến mãi áp dụng được';
     renderItems();
-    recalcSummary();
+    recalcSummary(); // async, fire and forget
     document.getElementById('invoiceModal').classList.add('active');
 }
 

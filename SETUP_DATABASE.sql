@@ -583,3 +583,14 @@ ALTER TABLE `Payroll`
 -- DESCRIBE Employee;
 -- DESCRIBE GymRoom;
 -- DESCRIBE Payroll;
+ALTER TABLE `MembershipRegistration`
+    ADD COLUMN `status` ENUM('active', 'inactive') NOT NULL DEFAULT 'active'
+        COMMENT 'active = đang sử dụng | inactive = ngừng sử dụng'
+    AFTER `end_date`;
+
+-- Cập nhật dữ liệu cũ: active nếu end_date >= hôm nay, ngược lại inactive
+UPDATE `MembershipRegistration`
+SET `status` = CASE
+    WHEN end_date >= CURDATE() THEN 'active'
+    ELSE 'inactive'
+END;
