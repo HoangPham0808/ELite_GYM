@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en-GB">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -79,6 +79,9 @@
             <select class="filter-select" id="listHlv">
                 <option value="">Tất cả HLV</option>
             </select>
+            <select class="filter-select" id="listRoom">
+                <option value="">Tất cả phòng</option>
+            </select>
             <div class="date-range">
                 <input type="date" class="filter-select" id="listFrom" style="max-width:150px">
                 <span style="color:var(--tm);font-size:13px">—</span>
@@ -99,11 +102,12 @@
                         <th>Thời gian</th>
                         <th>Thứ</th>
                         <th>HLV phụ trách</th>
+                        <th>Phòng tập</th>
                         <th>Đăng ký</th>
                         <th>Thao tác</th>
                     </tr></thead>
                     <tbody id="listTbody">
-                        <tr><td colspan="7" class="loading-cell"><i class="fas fa-spinner fa-spin"></i></td></tr>
+                        <tr><td colspan="8" class="loading-cell"><i class="fas fa-spinner fa-spin"></i></td></tr>
                     </tbody>
                 </table>
             </div>
@@ -133,12 +137,22 @@
                     <input type="text" id="fSchTen" class="form-control" placeholder="VD: Yoga buổi sáng, Kickboxing...">
                 </div>
                 <div class="form-group">
-                    <label>Ngày & Giờ <span class="req">*</span></label>
+                    <label>Giờ bắt đầu <span class="req">*</span></label>
                     <input type="datetime-local" id="fSchTime" class="form-control">
                 </div>
                 <div class="form-group">
+                    <label>Giờ kết thúc</label>
+                    <input type="datetime-local" id="fSchEndTime" class="form-control">
+                </div>
+                <div class="form-group full">
                     <label>Huấn luyện viên</label>
                     <select id="fSchHlv" class="form-control">
+                        <option value="">— Không chỉ định —</option>
+                    </select>
+                </div>
+                <div class="form-group full">
+                    <label>Phòng tập</label>
+                    <select id="fSchRoom" class="form-control">
                         <option value="">— Không chỉ định —</option>
                     </select>
                 </div>

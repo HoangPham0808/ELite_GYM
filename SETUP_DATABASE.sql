@@ -594,3 +594,41 @@ SET `status` = CASE
     WHEN end_date >= CURDATE() THEN 'active'
     ELSE 'inactive'
 END;
+ALTER TABLE `TrainingClass`
+    ADD COLUMN `room_id` INT NULL DEFAULT NULL
+        COMMENT 'Phòng tập diễn ra buổi học (FK → GymRoom)'
+    AFTER `class_id`,
+    ADD CONSTRAINT `fk_class_room`
+        FOREIGN KEY (`room_id`) REFERENCES `GymRoom`(`room_id`)
+        ON DELETE SET NULL ON UPDATE CASCADE;
+ 
+-- 2. Đổi tên class_time → start_time và thêm end_time
+ALTER TABLE `TrainingClass`
+    CHANGE COLUMN `class_time` `start_time` DATETIME NOT NULL
+        COMMENT 'Giờ bắt đầu buổi tập',
+    ADD COLUMN `end_time` DATETIME NULL DEFAULT NULL
+        COMMENT 'Giờ kết thúc buổi tập'
+    AFTER `start_time`;
+ 
+-- 3. Cập nhật end_time mặc định = start_time + 1 giờ cho dữ liệu cũ
+UPDATE `TrainingClass`
+SET `end_time` = DATE_ADD(`start_time`, INTERVAL 1 HOUR)
+WHERE `end_time` IS NULL;
+-- Chuẩn hóa status về 'Active'
+UPDATE GymRoom
+SET status = REPLACE(REPLACE(TRIM(status), CHAR(13), ''), CHAR(10), '');
+ 
+-- Step 2: Verify the result
+SELECT room_id, room_name, status, LENGTH(status)
+FROM GymRoom
+ORDER BY room_id;
+UPDATE GymRoom
+SET status = CASE
+    WHEN REPLACE(REPLACE(TRIM(status), CHAR(13), ''), CHAR(10), '') = 'Hoạt động' THEN 'Active'
+    WHEN REPLACE(REPLACE(TRIM(status), CHAR(13), ''), CHAR(10), '') = 'Bảo trì'   THEN 'Maintenance'
+    WHEN REPLACE(REPLACE(TRIM(status), CHAR(13), ''), CHAR(10), '') = 'Đóng cửa'  THEN 'Closed'
+    ELSE REPLACE(REPLACE(TRIM(status), CHAR(13), ''), CHAR(10), '') -- clean any other values too
+END;
+ 
+-- Verify:
+SELECT room_id, room_name, status FROM GymRoom ORDER BY room_id;

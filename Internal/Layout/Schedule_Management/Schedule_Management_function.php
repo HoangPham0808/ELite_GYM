@@ -15,11 +15,11 @@ switch ($action) {
 // ── STATS ──────────────────────────────────────────────────────────
 case 'get_stats':
     $total     = $conn->query("SELECT COUNT(*) c FROM TrainingClass")->fetch_assoc()['c'];
-    $today     = $conn->query("SELECT COUNT(*) c FROM TrainingClass WHERE DATE(class_time)=CURDATE()")->fetch_assoc()['c'];
-    $this_week = $conn->query("SELECT COUNT(*) c FROM TrainingClass WHERE YEARWEEK(class_time,1)=YEARWEEK(CURDATE(),1)")->fetch_assoc()['c'];
+    $today     = $conn->query("SELECT COUNT(*) c FROM TrainingClass WHERE DATE(start_time)=CURDATE()")->fetch_assoc()['c'];
+    $this_week = $conn->query("SELECT COUNT(*) c FROM TrainingClass WHERE YEARWEEK(start_time,1)=YEARWEEK(CURDATE(),1)")->fetch_assoc()['c'];
     $registrations   = $conn->query("SELECT COUNT(*) c FROM ClassRegistration")->fetch_assoc()['c'];
     $hlv       = $conn->query("SELECT COUNT(DISTINCT trainer_id) c FROM TrainingClass WHERE trainer_id IS NOT NULL")->fetch_assoc()['c'];
-    $sap_dien  = $conn->query("SELECT COUNT(*) c FROM TrainingClass WHERE class_time > NOW() AND class_time <= DATE_ADD(NOW(), INTERVAL 24 HOUR)")->fetch_assoc()['c'];
+    $sap_dien  = $conn->query("SELECT COUNT(*) c FROM TrainingClass WHERE start_time > NOW() AND start_time <= DATE_ADD(NOW(), INTERVAL 24 HOUR)")->fetch_assoc()['c'];
     echo json_encode(['success'=>true,'total'=>(int)$total,'today'=>(int)$today,
         'this_week'=>(int)$this_week,'dang_ky'=>(int)$registrations,
         'hlv'=>(int)$hlv,'sap_dien'=>(int)$sap_dien]);
@@ -35,11 +35,13 @@ case 'get_schedules':
     $to     = trim($_GET['to']??'');
     $offset = ($page-1)*$limit;
 
+    $room_id = trim($_GET['room_id']??'');
     $w=[]; $p=[]; $t='';
     if ($search!=='') { $w[]="tc.class_name LIKE ?"; $p[]="%$search%"; $t.='s'; }
     if ($trainer_id!=='') { $w[]="tc.trainer_id=?"; $p[]=(int)$trainer_id; $t.='i'; }
-    if ($from!=='')   { $w[]="DATE(tc.class_time)>=?"; $p[]=$from; $t.='s'; }
-    if ($to!=='')     { $w[]="DATE(tc.class_time)<=?"; $p[]=$to;   $t.='s'; }
+    if ($room_id!=='') { $w[]="tc.room_id=?"; $p[]=(int)$room_id; $t.='i'; }
+    if ($from!=='')   { $w[]="DATE(tc.start_time)>=?"; $p[]=$from; $t.='s'; }
+    if ($to!=='')     { $w[]="DATE(tc.start_time)<=?"; $p[]=$to;   $t.='s'; }
     $ws = $w ? 'WHERE '.implode(' AND ',$w) : '';
 
     $cs=$conn->prepare("SELECT COUNT(*) total FROM TrainingClass tc $ws");
@@ -47,11 +49,12 @@ case 'get_schedules':
     $total=$cs->get_result()->fetch_assoc()['total'];
 
     $ds=$conn->prepare("
-        SELECT tc.*, e.full_name AS trainer_name,
+        SELECT tc.*, e.full_name AS trainer_name, gr.room_name,
                (SELECT COUNT(*) FROM ClassRegistration WHERE class_id=tc.class_id) AS registration_count
         FROM TrainingClass tc
         LEFT JOIN Employee e ON e.employee_id=tc.trainer_id
-        $ws ORDER BY tc.class_time DESC LIMIT ? OFFSET ?");
+        LEFT JOIN GymRoom gr ON gr.room_id=tc.room_id
+        $ws ORDER BY tc.start_time DESC LIMIT ? OFFSET ?");
     $dp=$p; $dt=$t; $dp[]=$limit; $dp[]=$offset; $dt.='ii';
     $ds->bind_param($dt,...$dp); $ds->execute();
     $rows=$ds->get_result()->fetch_all(MYSQLI_ASSOC);
@@ -63,12 +66,13 @@ case 'get_week_schedules':
     $week_start = trim($_GET['week_start']??date('Y-m-d', strtotime('monday this week')));
     $week_end   = date('Y-m-d', strtotime($week_start.' +6 days'));
     $s=$conn->prepare("
-        SELECT tc.*, e.full_name AS trainer_name,
+        SELECT tc.*, e.full_name AS trainer_name, gr.room_name,
                (SELECT COUNT(*) FROM ClassRegistration WHERE class_id=tc.class_id) AS registration_count
         FROM TrainingClass tc
         LEFT JOIN Employee e ON e.employee_id=tc.trainer_id
-        WHERE DATE(tc.class_time) BETWEEN ? AND ?
-        ORDER BY tc.class_time ASC");
+        LEFT JOIN GymRoom gr ON gr.room_id=tc.room_id
+        WHERE DATE(tc.start_time) BETWEEN ? AND ?
+        ORDER BY tc.start_time ASC");
     $s->bind_param('ss',$week_start,$week_end); $s->execute();
     $rows=$s->get_result()->fetch_all(MYSQLI_ASSOC);
     echo json_encode(['success'=>true,'data'=>$rows,'week_start'=>$week_start,'week_end'=>$week_end]);
@@ -77,8 +81,10 @@ case 'get_week_schedules':
 // ── CHI TIẾT BUỔI TẬP ────────────────────────────────────────────
 case 'get_schedule_detail':
     $id=(int)($_GET['id']??0);
-    $s=$conn->prepare("SELECT tc.*, e.full_name AS trainer_name, e.phone AS trainer_phone
+    $s=$conn->prepare("SELECT tc.*, e.full_name AS trainer_name, e.phone AS trainer_phone,
+        gr.room_name, gr.capacity AS room_capacity
         FROM TrainingClass tc LEFT JOIN Employee e ON e.employee_id=tc.trainer_id
+        LEFT JOIN GymRoom gr ON gr.room_id=tc.room_id
         WHERE tc.class_id=?");
     $s->bind_param('i',$id); $s->execute();
     $lt=$s->get_result()->fetch_assoc();
@@ -93,27 +99,31 @@ case 'get_schedule_detail':
 
 // ── THÊM BUỔI TẬP ────────────────────────────────────────────────
 case 'add_schedule':
-    $class_name      = trim($_POST['class_name']??'');
+    $class_name   = trim($_POST['class_name']??'');
     $trainer_id   = (int)($_POST['trainer_id']??0) ?: null;
-    $class_time= trim($_POST['class_time']??'');
-    if (!$class_name||!$class_time) { echo json_encode(['success'=>false,'message'=>'Class name and time are required']); exit; }
-    $s=$conn->prepare("INSERT INTO TrainingClass (class_name,trainer_id,class_time) VALUES(?,?,?)");
-    $s->bind_param('sis',$class_name,$trainer_id,$class_time);
+    $room_id      = (int)($_POST['room_id']??0) ?: null;
+    $start_time   = trim($_POST['start_time']??'');
+    $end_time     = trim($_POST['end_time']??'') ?: null;
+    if (!$class_name||!$start_time) { echo json_encode(['success'=>false,'message'=>'Tên lớp và giờ bắt đầu là bắt buộc']); exit; }
+    $s=$conn->prepare("INSERT INTO TrainingClass (class_name,trainer_id,room_id,start_time,end_time) VALUES(?,?,?,?,?)");
+    $s->bind_param('siiss',$class_name,$trainer_id,$room_id,$start_time,$end_time);
     echo json_encode($s->execute()
-        ? ['success'=>true,'message'=>'Training class added successfully','id'=>$conn->insert_id]
+        ? ['success'=>true,'message'=>'Thêm buổi tập thành công','id'=>$conn->insert_id]
         : ['success'=>false,'message'=>$conn->error]);
     break;
 
 // ── SỬA BUỔI TẬP ─────────────────────────────────────────────────
 case 'update_schedule':
-    $id       = (int)($_POST['id']??0);
-    $class_name      = trim($_POST['class_name']??'');
-    $trainer_id   = (int)($_POST['trainer_id']??0) ?: null;
-    $class_time= trim($_POST['class_time']??'');
-    if (!$id||!$class_name||!$class_time) { echo json_encode(['success'=>false,'message'=>'Invalid data']); exit; }
-    $s=$conn->prepare("UPDATE TrainingClass SET class_name=?,trainer_id=?,class_time=? WHERE class_id=?");
-    $s->bind_param('sisi',$class_name,$trainer_id,$class_time,$id);
-    echo json_encode($s->execute() ? ['success'=>true,'message'=>'Updated successfully'] : ['success'=>false,'message'=>$conn->error]);
+    $id         = (int)($_POST['id']??0);
+    $class_name = trim($_POST['class_name']??'');
+    $trainer_id = (int)($_POST['trainer_id']??0) ?: null;
+    $room_id    = (int)($_POST['room_id']??0) ?: null;
+    $start_time = trim($_POST['start_time']??'');
+    $end_time   = trim($_POST['end_time']??'') ?: null;
+    if (!$id||!$class_name||!$start_time) { echo json_encode(['success'=>false,'message'=>'Dữ liệu không hợp lệ']); exit; }
+    $s=$conn->prepare("UPDATE TrainingClass SET class_name=?,trainer_id=?,room_id=?,start_time=?,end_time=? WHERE class_id=?");
+    $s->bind_param('siissi',$class_name,$trainer_id,$room_id,$start_time,$end_time,$id);
+    echo json_encode($s->execute() ? ['success'=>true,'message'=>'Cập nhật thành công'] : ['success'=>false,'message'=>$conn->error]);
     break;
 
 // ── XÓA BUỔI TẬP ─────────────────────────────────────────────────
@@ -122,19 +132,19 @@ case 'delete_schedule':
     $conn->query("DELETE FROM ClassRegistration WHERE class_id=$id");
     $s=$conn->prepare("DELETE FROM TrainingClass WHERE class_id=?");
     $s->bind_param('i',$id);
-    echo json_encode($s->execute() ? ['success'=>true,'message'=>'Training class deleted'] : ['success'=>false,'message'=>$conn->error]);
+    echo json_encode($s->execute() ? ['success'=>true,'message'=>'Đã xóa buổi tập'] : ['success'=>false,'message'=>$conn->error]);
     break;
 
 // ── ĐĂNG KÝ THAM GIA ─────────────────────────────────────────────
 case 'add_registration':
-    $class_id = (int)($_POST['class_id']??0);
-    $customer_id   = (int)($_POST['customer_id']??0);
-    if (!$class_id||!$customer_id) { echo json_encode(['success'=>false,'message'=>'Missing required data']); exit; }
+    $class_id    = (int)($_POST['class_id']??0);
+    $customer_id = (int)($_POST['customer_id']??0);
+    if (!$class_id||!$customer_id) { echo json_encode(['success'=>false,'message'=>'Thiếu dữ liệu']); exit; }
     $chk=$conn->query("SELECT class_registration_id FROM ClassRegistration WHERE class_id=$class_id AND customer_id=$customer_id");
-    if ($chk->num_rows>0) { echo json_encode(['success'=>false,'message'=>'Customer already registered for this class']); exit; }
+    if ($chk->num_rows>0) { echo json_encode(['success'=>false,'message'=>'Khách hàng đã đăng ký lớp này']); exit; }
     $s=$conn->prepare("INSERT INTO ClassRegistration (class_id,customer_id) VALUES(?,?)");
     $s->bind_param('ii',$class_id,$customer_id);
-    echo json_encode($s->execute() ? ['success'=>true,'message'=>'Registration successful'] : ['success'=>false,'message'=>$conn->error]);
+    echo json_encode($s->execute() ? ['success'=>true,'message'=>'Đăng ký thành công'] : ['success'=>false,'message'=>$conn->error]);
     break;
 
 // ── HỦY ĐĂNG KÝ ──────────────────────────────────────────────────
@@ -142,7 +152,7 @@ case 'delete_registration':
     $id=(int)($_POST['id']??0);
     $s=$conn->prepare("DELETE FROM ClassRegistration WHERE class_registration_id=?");
     $s->bind_param('i',$id);
-    echo json_encode($s->execute() ? ['success'=>true,'message'=>'Registration cancelled'] : ['success'=>false,'message'=>$conn->error]);
+    echo json_encode($s->execute() ? ['success'=>true,'message'=>'Đã hủy đăng ký'] : ['success'=>false,'message'=>$conn->error]);
     break;
 
 // ── DANH SÁCH HLV (cho dropdown) ─────────────────────────────────
@@ -151,16 +161,22 @@ case 'get_trainers':
     echo json_encode(['success'=>true,'data'=>$rows]);
     break;
 
+// ── DANH SÁCH PHÒNG TẬP (cho dropdown) ───────────────────────────
+case 'get_rooms':
+    $rows=$conn->query("SELECT room_id, room_name, capacity, status FROM GymRoom WHERE status='Active' ORDER BY room_name")->fetch_all(MYSQLI_ASSOC);
+    echo json_encode(['success'=>true,'data'=>$rows]);
+    break;
+
 // ── DANH SÁCH KHÁCH HÀNG (cho dropdown đăng ký) ──────────────────
 case 'get_customers':
     $search = trim($_GET['search']??'');
-    $s=$conn->prepare("SELECT customer_id, full_name, phone FROM Customer WHERE full_name LIKE ? ORDER BY full_name LIMIT 30");
-    $like="%$search%"; $s->bind_param('s',$like); $s->execute();
+    $s=$conn->prepare("SELECT customer_id, full_name, phone FROM Customer WHERE full_name LIKE ? OR phone LIKE ? ORDER BY full_name LIMIT 30");
+    $like="%$search%"; $s->bind_param('ss',$like,$like); $s->execute();
     $rows=$s->get_result()->fetch_all(MYSQLI_ASSOC);
     echo json_encode(['success'=>true,'data'=>$rows]);
     break;
 
 default:
-    echo json_encode(['success'=>false,'message'=>'Invalid action']);
+    echo json_encode(['success'=>false,'message'=>'Action không hợp lệ']);
 }
 ?>

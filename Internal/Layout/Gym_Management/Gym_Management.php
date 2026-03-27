@@ -58,9 +58,9 @@
         </div>
         <select class="filter-select" id="statusFilter">
             <option value="">Tất cả trạng thái</option>
-            <option value="Hoạt động">Hoạt động</option>
-            <option value="Bảo trì">Bảo trì</option>
-            <option value="Đóng cửa">Đóng cửa</option>
+            <option value="Active">Hoạt động</option>
+            <option value="Maintenance">Bảo trì</option>
+            <option value="Closed">Đóng cửa</option>
         </select>
 
         <select class="filter-select" id="sortFilter">
@@ -158,9 +158,9 @@
                 <div class="form-group">
                     <label>Trạng thái</label>
                     <select id="fTrangThai" class="form-control">
-                        <option value="Hoạt động">✅ Hoạt động</option>
-                        <option value="Bảo trì">🔧 Bảo trì</option>
-                        <option value="Đóng cửa">🚫 Đóng cửa</option>
+                        <option value="Active">✅ Hoạt động</option>
+                        <option value="Maintenance">🔧 Bảo trì</option>
+                        <option value="Closed">🚫 Đóng cửa</option>
                     </select>
                 </div>
                 <div class="form-group">

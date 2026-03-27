@@ -100,9 +100,11 @@ function setView(v) {
 // ============ HELPERS ============
 
 function getStatusInfo(s) {
-    if (s === 'Hoạt động') return { cls: 'active',   label: '● Hoạt động' };
-    if (s === 'Bảo trì')   return { cls: 'maintain', label: '⚙ Bảo trì'   };
-    return                         { cls: 'closed',   label: '✕ Đóng cửa'  };
+    s = (s || '').replace(/[\r\n]/g, '').trim();
+    if (s === 'Active')      return { cls: 'active',   label: '● Hoạt động' };
+    if (s === 'Maintenance') return { cls: 'maintain', label: '⚙ Bảo trì'   };
+    if (s === 'Closed')      return { cls: 'closed',   label: '✕ Đóng cửa'  };
+    return                          { cls: 'closed',   label: '✕ Đóng cửa'  };
 }
 
 function escHtml(s) {
@@ -187,7 +189,7 @@ function renderTable(data) {
         return `<tr>
             <td>
                 <div class="room-name-cell">
-                    <div class="room-avatar ${avcls}">${icon}</div>
+                    <div class="room-avatar ${avcls}">🏋️</div>
                     <div>
                         <div class="room-name">${escHtml(r.room_name)}</div>
                         <div class="room-floor">${r.floor != null ? "Tầng " + r.floor : "—"}</div>
@@ -242,7 +244,7 @@ function openAddModal() {
     document.getElementById('modalTitle').innerHTML = '<i class="fas fa-chess-board" style="color:#fb923c;margin-right:8px"></i>Thêm phòng tập mới';
     ['fTenPhong','fMoTa'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('fPackageType').value = '';
-    document.getElementById('fTrangThai').value  = 'Hoạt động';
+    document.getElementById('fTrangThai').value  = 'Active';
     document.getElementById('fSucChua').value    = '';
     document.getElementById('fDienTich').value   = '';
     document.getElementById('fTang').value       = '';
@@ -261,7 +263,7 @@ async function openEditModal(id) {
         const r = d.room;
         document.getElementById('gymId').value      = r.room_id;
         document.getElementById('fTenPhong').value  = r.room_name   || '';
-        document.getElementById('fTrangThai').value = r.status      || 'Hoạt động';
+        document.getElementById('fTrangThai').value = (r.status || 'Active').replace(/[\r\n]/g, '').trim();
         document.getElementById('fSucChua').value   = r.capacity    || '';
         document.getElementById('fDienTich').value  = r.area        || '';
         document.getElementById('fTang').value      = r.floor       ?? '';

@@ -158,6 +158,11 @@ label{font-size:12px;font-weight:600;color:var(--ts)}
 .form-control:focus{border-color:var(--gold);background:rgba(212,160,23,.05)}
 .form-control::placeholder{color:var(--tm)}
 input[type="datetime-local"].form-control::-webkit-calendar-picker-indicator{filter:invert(.4)}
+
+/* ── FORCE 24H CLOCK (ẩn cột AM/PM) ─────────────────────────── */
+input[type="datetime-local"]::-webkit-datetime-edit-ampm-field{display:none!important}
+input[type="date"]::-webkit-datetime-edit-ampm-field{display:none!important}
+input[type="time"]::-webkit-datetime-edit-ampm-field{display:none!important}
 .btn-secondary{height:40px;padding:0 18px;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:9px;color:var(--ts);font-family:'Barlow',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s}
 .btn-secondary:hover{border-color:rgba(255,255,255,.2);color:var(--tp)}
 .btn-danger{height:40px;padding:0 18px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);border-radius:9px;color:#ef4444;font-family:'Barlow',sans-serif;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:7px;transition:all .15s}
@@ -217,3 +222,7 @@ input[type="datetime-local"].form-control::-webkit-calendar-picker-indicator{fil
 @media(max-width:1200px){.stats-strip{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:800px){.stats-strip{grid-template-columns:repeat(2,1fr)}.form-grid{grid-template-columns:1fr}.form-group.full{grid-column:1}.det-grid{grid-template-columns:1fr}}
 @media(max-width:600px){.sch-container{padding:14px 12px 40px}.view-controls{gap:8px}.calendar-grid-wrap{overflow-x:auto}}
+
+/* ── ROOM BADGE ──────────────────────────────────────────────── */
+.room-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(45,212,191,.1);border:1px solid rgba(45,212,191,.2);color:var(--teal);border-radius:6px;padding:3px 8px;font-size:12px;font-weight:600;white-space:nowrap}
+.room-badge i{font-size:10px}

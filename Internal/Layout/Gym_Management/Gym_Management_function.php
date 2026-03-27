@@ -29,8 +29,8 @@ switch ($action) {
     // ========================
     case 'get_stats':
         $total       = $conn->query("SELECT COUNT(*) c FROM GymRoom")->fetch_assoc()['c'];
-        $active      = $conn->query("SELECT COUNT(*) c FROM GymRoom WHERE status='Hoạt động'")->fetch_assoc()['c'];
-        $maintenance = $conn->query("SELECT COUNT(*) c FROM GymRoom WHERE status='Bảo trì'")->fetch_assoc()['c'];
+        $active      = $conn->query("SELECT COUNT(*) c FROM GymRoom WHERE REPLACE(REPLACE(TRIM(status), CHAR(13), ''), CHAR(10), '') = 'Active'")->fetch_assoc()['c'];
+        $maintenance = $conn->query("SELECT COUNT(*) c FROM GymRoom WHERE REPLACE(REPLACE(TRIM(status), CHAR(13), ''), CHAR(10), '') = 'Maintenance'")->fetch_assoc()['c'];
         $capacity    = $conn->query("SELECT COALESCE(SUM(capacity),0) c FROM GymRoom")->fetch_assoc()['c'];
         // DB table: Equipment  columns: equipment_id, equipment_name, condition_status, room_id
         $thiet_bi    = $conn->query("SELECT COUNT(*) c FROM Equipment WHERE condition_status != 'Hỏng' OR condition_status IS NULL")->fetch_assoc()['c'];
@@ -66,7 +66,12 @@ $sort   = $_GET['sort']                 ?? 'id_desc';
             $params[] = $s; $params[] = $s;
             $types .= 'ss';
         }
-        if ($status !== '') { $where[] = "status = ?";    $params[] = $status; $types .= 's'; }
+        if ($status !== '') {
+            // Dùng REPLACE để loại bỏ newline thừa trong giá trị status DB
+            $where[] = "REPLACE(REPLACE(TRIM(status), CHAR(13), ''), CHAR(10), '') = ?";
+            $params[] = $status;
+            $types .= 's';
+        }
 
 
         $whereStr = implode(' AND ', $where);
@@ -145,7 +150,8 @@ $sort   = $_GET['sort']                 ?? 'id_desc';
     // ========================
     case 'add_gym':
         $room_name   = trim($_POST['ten_phong']  ?? '');
-        $status      = trim($_POST['trang_thai'] ?? 'Hoạt động');
+        $status      = trim($_POST['trang_thai'] ?? 'Active');
+        $status      = str_replace(["\r", "\n"], '', $status); // loại bỏ newline thừa
         $capacity    = (int)($_POST['suc_chua']  ?? 0) ?: null;
         $area        = (float)($_POST['dien_tich'] ?? 0) ?: null;
         $floor_raw   = trim($_POST['tang']        ?? '');
@@ -182,7 +188,8 @@ $sort   = $_GET['sort']                 ?? 'id_desc';
     case 'update_gym':
         $id          = (int)($_POST['id']          ?? 0);
         $room_name   = trim($_POST['ten_phong']    ?? '');
-        $status      = trim($_POST['trang_thai']   ?? 'Hoạt động');
+        $status      = trim($_POST['trang_thai']   ?? 'Active');
+        $status      = str_replace(["\r", "\n"], '', $status); // loại bỏ newline thừa
         $capacity    = (int)($_POST['suc_chua']    ?? 0) ?: null;
         $area        = (float)($_POST['dien_tich'] ?? 0) ?: null;
         $floor_raw   = trim($_POST['tang']         ?? '');
