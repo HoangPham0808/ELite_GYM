@@ -63,7 +63,7 @@ $active = array_sum(array_column($images, 'is_active'));
     <i class="fas fa-images"></i> QUẢN LÝ ẢNH SLIDESHOW
   </span>
 
-  <div class="tb-right">
+  <div class="tb-right" style="margin-top: -20px;">
     <span style="font-size:.8rem;color:var(--text-3)">
       <i class="fas fa-user-shield" style="color:var(--gold);margin-right:5px"></i>
       <?= $admin_name ?>

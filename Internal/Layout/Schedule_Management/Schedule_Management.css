@@ -7,9 +7,17 @@
     --green:#4ade80;--red:#f87171;--orange:#fb923c;
     --blue:#60a5fa;--purple:#c084fc;--teal:#2dd4bf;--yellow:#fbbf24;
     --r:12px;
+    /* Package type accent colors matching DB color_code */
+    --pkg-basic:#6b7280;--pkg-standard:#3b82f6;--pkg-premium:#d4a017;--pkg-vip:#a855f7;--pkg-student:#22c55e;
 }
 body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--tp);font-size:15px;min-height:100vh}
 .sch-container{padding:28px 32px 60px;max-width:1600px;margin:0 auto}
+
+/* ── ROLE BANNER ─────────────────────────────────────────────── */
+.role-banner{display:flex;align-items:center;gap:10px;padding:10px 16px;border-radius:10px;margin-bottom:18px;font-size:13px;font-weight:600;letter-spacing:.2px}
+.role-banner.admin{background:rgba(212,160,23,.08);border:1px solid rgba(212,160,23,.22);color:var(--gold)}
+.role-banner.trainer{background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.22);color:var(--blue)}
+.role-banner i{font-size:15px}
 
 /* ── STATS ───────────────────────────────────────────────────── */
 .stats-strip{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-bottom:22px}
@@ -32,7 +40,6 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--tp);font-s
 .vt-btn{display:flex;align-items:center;gap:7px;padding:8px 18px;border:none;border-radius:7px;background:transparent;color:var(--tm);font-family:'Barlow',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s}
 .vt-btn:hover{color:var(--ts)}
 .vt-btn.active{background:linear-gradient(135deg,#d4a017,#f0c040);color:#000;box-shadow:0 2px 8px rgba(212,160,23,.3)}
-
 .btn-primary{display:flex;align-items:center;gap:7px;padding:0 18px;height:42px;background:linear-gradient(135deg,#d4a017,#f0c040);color:#000;border:none;border-radius:9px;font-family:'Barlow',sans-serif;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;transition:opacity .2s,transform .15s;box-shadow:0 4px 14px rgba(212,160,23,.25)}
 .btn-primary:hover{opacity:.88;transform:translateY(-1px)}
 
@@ -43,6 +50,11 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--tp);font-s
 .cal-week-title{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:var(--tp);flex:1}
 .cal-today-btn{padding:7px 16px;border-radius:8px;border:1px solid var(--border-gold);background:var(--gold-dim);color:var(--gold);font-family:'Barlow',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s}
 .cal-today-btn:hover{background:rgba(212,160,23,.22)}
+
+/* Package type legend strip */
+.pkg-legend{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-left:auto}
+.pkg-legend-item{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--ts);white-space:nowrap;cursor:default}
+.pkg-dot{display:inline-block!important;width:9px!important;height:9px!important;min-width:9px;min-height:9px;border-radius:50%;flex-shrink:0;vertical-align:middle}
 
 /* ── CALENDAR GRID ───────────────────────────────────────────── */
 .calendar-grid-wrap{overflow-x:auto;border-radius:var(--r);border:1px solid var(--border);background:var(--surface)}
@@ -63,23 +75,49 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--tp);font-s
 .cal-day-col.today{background:rgba(212,160,23,.03)}
 .cal-day-col:hover{background:rgba(255,255,255,.015)}
 
-/* Event card */
+/* Base event card */
 .cal-event{background:var(--surface-2);border:1px solid var(--border);border-left:3px solid var(--gold);border-radius:8px;padding:8px 10px;cursor:pointer;transition:all .18s;position:relative}
 .cal-event:hover{background:var(--surface-3);border-color:var(--border-gold);transform:translateX(2px);box-shadow:0 4px 14px rgba(0,0,0,.3)}
-.cal-event.past{opacity:.55;border-left-color:var(--tm)}
-.cal-event.upcoming{border-left-color:var(--green)}
-.cal-event.soon{border-left-color:var(--yellow)}
+.cal-event.past{opacity:.55}
+.cal-event.past .cal-event-accent{border-left-color:var(--tm)!important}
+
+/* Package type accent — applied via JS class on a child wrapper */
+.cal-event-accent{border-left:3px solid transparent;position:absolute;left:0;top:0;bottom:0;border-radius:8px 0 0 8px}
+.pkg-basic  .cal-event-accent,.cal-event.pkg-basic  {border-left-color:var(--pkg-basic)!important}
+.pkg-standard.cal-event-accent,.cal-event.pkg-standard{border-left-color:var(--pkg-standard)!important}
+.pkg-premium .cal-event-accent,.cal-event.pkg-premium {border-left-color:var(--pkg-premium)!important}
+.pkg-vip    .cal-event-accent,.cal-event.pkg-vip     {border-left-color:var(--pkg-vip)!important}
+.pkg-student .cal-event-accent,.cal-event.pkg-student {border-left-color:var(--pkg-student)!important}
+
+/* Subtle background glow for VIP / Premium */
+.cal-event.pkg-vip{background:linear-gradient(135deg,rgba(168,85,247,.06),rgba(33,33,33,1))}
+.cal-event.pkg-premium{background:linear-gradient(135deg,rgba(212,160,23,.06),rgba(33,33,33,1))}
+
+.pkg-tag{display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;padding:2px 6px;border-radius:4px;margin-top:3px;width:fit-content}
+.pkg-tag.pkg-basic  {background:rgba(107,114,128,.18);color:var(--pkg-basic)}
+.pkg-tag.pkg-standard{background:rgba(59,130,246,.18); color:var(--pkg-standard)}
+.pkg-tag.pkg-premium{background:rgba(212,160,23,.18); color:var(--pkg-premium)}
+.pkg-tag.pkg-vip    {background:rgba(168,85,247,.18); color:var(--pkg-vip)}
+.pkg-tag.pkg-student{background:rgba(34,197,94,.18);  color:var(--pkg-student)}
+
 .cal-event-time{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--gold);display:flex;align-items:center;gap:5px;line-height:1.2}
 .cal-event-time.past-time{color:var(--tm)}
 .cal-event-time.soon-time{color:var(--yellow)}
 .cal-event-name{font-size:12px;font-weight:600;color:var(--tp);margin-top:4px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cal-event-hlv{font-size:11px;color:var(--tm);margin-top:3px;display:flex;align-items:center;gap:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cal-event-count{position:absolute;top:7px;right:8px;background:rgba(96,165,250,.15);color:var(--blue);font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;border:1px solid rgba(96,165,250,.2)}
+.cal-repeat-icon{position:absolute;bottom:5px;right:8px;font-size:9px;color:var(--tm)}
 
 .cal-empty{font-size:12px;color:var(--tm);text-align:center;padding:20px 0;opacity:.5}
-
 .cal-add-btn{display:flex;align-items:center;justify-content:center;gap:5px;padding:7px;border:1px dashed rgba(212,160,23,.2);border-radius:7px;color:var(--tm);font-size:12px;cursor:pointer;transition:all .15s;background:transparent;width:100%;font-family:'Barlow',sans-serif;margin-top:auto}
 .cal-add-btn:hover{border-color:var(--border-gold);color:var(--gold);background:var(--gold-dim)}
+
+/* Trainer register/unregister button on calendar card */
+.cal-trainer-btn{display:flex;align-items:center;justify-content:center;gap:4px;width:100%;margin-top:6px;padding:4px 0;border-radius:6px;border:none;font-family:'Barlow',sans-serif;font-size:10px;font-weight:700;letter-spacing:.3px;cursor:pointer;transition:all .15s;text-transform:uppercase}
+.cal-trainer-register{background:rgba(96,165,250,.15);color:var(--blue);border:1px solid rgba(96,165,250,.25)}
+.cal-trainer-register:hover{background:rgba(96,165,250,.28);border-color:var(--blue)}
+.cal-trainer-unregister{background:rgba(248,113,113,.12);color:var(--red);border:1px solid rgba(248,113,113,.22)}
+.cal-trainer-unregister:hover{background:rgba(248,113,113,.24);border-color:var(--red)}
 
 /* ── FILTER BAR ──────────────────────────────────────────────── */
 .filter-bar{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
@@ -112,14 +150,28 @@ tbody tr:last-child td{border-bottom:none}
 .id-cell{font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:var(--gold)}
 .col-primary{font-weight:600;color:var(--tp);font-size:14px}
 
-/* ── EVENT STATUS BADGES ─────────────────────────────────────── */
+/* ── BADGES ──────────────────────────────────────────────────── */
 .time-badge{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;white-space:nowrap}
-.tb-future{color:var(--green)} .tb-soon{color:var(--yellow)} .tb-past{color:var(--tm)} .tb-now{color:var(--orange)}
+.tb-future{color:var(--green)}.tb-soon{color:var(--yellow)}.tb-past{color:var(--tm)}.tb-now{color:var(--orange)}
 .thu-badge{display:inline-flex;padding:3px 9px;border-radius:12px;font-size:11px;font-weight:700;background:var(--gold-dim);color:var(--gold);border:1px solid var(--border-gold)}
 .reg-count{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--ts)}
 .reg-count i{color:var(--blue);font-size:11px}
 .hlv-cell{display:flex;align-items:center;gap:8px}
 .hlv-av{width:28px;height:28px;border-radius:7px;background:var(--gold-dim);color:var(--gold);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;border:1px solid var(--border-gold);flex-shrink:0;font-family:'Barlow Condensed',sans-serif}
+
+/* Repeat badge */
+.repeat-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;padding:2px 7px;border-radius:6px;white-space:nowrap}
+.rep-none  {background:rgba(255,255,255,.05);color:var(--tm);border:1px solid var(--border)}
+.rep-daily {background:rgba(74,222,128,.1); color:var(--green);border:1px solid rgba(74,222,128,.25)}
+.rep-weekly{background:rgba(96,165,250,.1); color:var(--blue);border:1px solid rgba(96,165,250,.25)}
+
+/* Package badge in table */
+.pkg-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;letter-spacing:.3px;text-transform:uppercase}
+.pb-basic  {background:rgba(107,114,128,.15);color:var(--pkg-basic)}
+.pb-standard{background:rgba(59,130,246,.15); color:var(--pkg-standard)}
+.pb-premium{background:rgba(212,160,23,.15); color:var(--pkg-premium)}
+.pb-vip    {background:rgba(168,85,247,.15); color:var(--pkg-vip)}
+.pb-student{background:rgba(34,197,94,.15);  color:var(--pkg-student)}
 
 /* ── ACTIONS ─────────────────────────────────────────────────── */
 .action-btns{display:flex;gap:5px}
@@ -158,11 +210,23 @@ label{font-size:12px;font-weight:600;color:var(--ts)}
 .form-control:focus{border-color:var(--gold);background:rgba(212,160,23,.05)}
 .form-control::placeholder{color:var(--tm)}
 input[type="datetime-local"].form-control::-webkit-calendar-picker-indicator{filter:invert(.4)}
-
-/* ── FORCE 24H CLOCK (ẩn cột AM/PM) ─────────────────────────── */
 input[type="datetime-local"]::-webkit-datetime-edit-ampm-field{display:none!important}
 input[type="date"]::-webkit-datetime-edit-ampm-field{display:none!important}
 input[type="time"]::-webkit-datetime-edit-ampm-field{display:none!important}
+
+/* Repeat type selector
+   Use !important on layout properties so admin-panel global rules
+   (which reset every <label> to display:block) can't break the cards. */
+.repeat-options{display:flex!important;gap:8px}
+.repeat-opt{flex:1;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center;gap:5px;padding:10px 6px;border:1px solid var(--border);border-radius:9px;cursor:pointer;transition:all .2s;background:rgba(255,255,255,.02);margin:0!important;font-weight:normal!important}
+.repeat-opt:hover{border-color:rgba(255,255,255,.18)}
+.repeat-opt.active{border-color:var(--gold);background:var(--gold-dim)}
+.repeat-opt input[type=radio]{display:none!important;width:0;height:0;margin:0;padding:0;position:absolute;opacity:0}
+.repeat-opt-icon{font-size:18px;color:var(--tm);transition:color .2s;display:block!important}
+.repeat-opt.active .repeat-opt-icon{color:var(--gold)}
+.repeat-opt-label{font-size:11px;font-weight:700!important;color:var(--tm);text-align:center!important;line-height:1.3;transition:color .2s;display:block!important}
+.repeat-opt.active .repeat-opt-label{color:var(--gold)}
+
 .btn-secondary{height:40px;padding:0 18px;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:9px;color:var(--ts);font-family:'Barlow',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s}
 .btn-secondary:hover{border-color:rgba(255,255,255,.2);color:var(--tp)}
 .btn-danger{height:40px;padding:0 18px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);border-radius:9px;color:#ef4444;font-family:'Barlow',sans-serif;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:7px;transition:all .15s}
@@ -221,8 +285,97 @@ input[type="time"]::-webkit-datetime-edit-ampm-field{display:none!important}
 /* ── RESPONSIVE ──────────────────────────────────────────────── */
 @media(max-width:1200px){.stats-strip{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:800px){.stats-strip{grid-template-columns:repeat(2,1fr)}.form-grid{grid-template-columns:1fr}.form-group.full{grid-column:1}.det-grid{grid-template-columns:1fr}}
-@media(max-width:600px){.sch-container{padding:14px 12px 40px}.view-controls{gap:8px}.calendar-grid-wrap{overflow-x:auto}}
+@media(max-width:600px){.sch-container{padding:14px 12px 40px}.view-controls{gap:8px}.calendar-grid-wrap{overflow-x:auto}.repeat-options{flex-direction:column}}
 
 /* ── ROOM BADGE ──────────────────────────────────────────────── */
 .room-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(45,212,191,.1);border:1px solid rgba(45,212,191,.2);color:var(--teal);border-radius:6px;padding:3px 8px;font-size:12px;font-weight:600;white-space:nowrap}
 .room-badge i{font-size:10px}
+
+/* ── TRAINER MODE: role banner & calendar register button ────── */
+/* Trainer register button on calendar card — make it more prominent */
+.cal-trainer-register{
+    background:rgba(96,165,250,.18);
+    color:var(--blue);
+    border:1px solid rgba(96,165,250,.35);
+    box-shadow:0 1px 6px rgba(96,165,250,.15);
+}
+.cal-trainer-register:hover{
+    background:rgba(96,165,250,.32);
+    border-color:var(--blue);
+    box-shadow:0 2px 10px rgba(96,165,250,.25);
+    transform:translateY(-1px);
+}
+.cal-trainer-unregister{
+    background:rgba(248,113,113,.15);
+    color:var(--red);
+    border:1px solid rgba(248,113,113,.3);
+}
+.cal-trainer-unregister:hover{
+    background:rgba(248,113,113,.28);
+    border-color:var(--red);
+    transform:translateY(-1px);
+}
+
+/* Trainer-registered highlight on event card */
+.cal-event.trainer-assigned-me{
+    border-left-color:var(--blue);
+    background:rgba(96,165,250,.06);
+}
+
+/* "Trainer view" note at bottom of day column (replaces "+ Thêm" btn) */
+.cal-trainer-note{
+    display:flex;align-items:center;justify-content:center;gap:4px;
+    padding:6px;
+    border:1px dashed rgba(96,165,250,.15);
+    border-radius:7px;
+    color:rgba(96,165,250,.35);
+    font-size:10px;
+    font-weight:600;
+    letter-spacing:.4px;
+    text-transform:uppercase;
+    margin-top:auto;
+    cursor:default;
+    user-select:none;
+}
+
+/* ── TRAINER ACTION BAR (in detail modal) ────────────────────── */
+.trainer-action-bar{
+    display:flex;align-items:center;justify-content:space-between;
+    gap:12px;
+    padding:12px 16px;
+    border-radius:10px;
+    margin-bottom:16px;
+    background:rgba(255,255,255,.03);
+    border:1px solid var(--border);
+}
+.trainer-action-status{
+    display:flex;align-items:center;gap:8px;
+    font-size:13px;font-weight:600;
+}
+.trainer-action-status.assigned{ color:var(--blue) }
+.trainer-action-status.assigned i{ color:var(--blue) }
+.trainer-action-status.vacant  { color:var(--gold) }
+.trainer-action-status.vacant  i{ color:var(--gold) }
+.trainer-action-status.taken   { color:var(--green) }
+.trainer-action-status.taken   i{ color:var(--green) }
+
+.trainer-action-btn{
+    display:flex;align-items:center;gap:6px;
+    padding:8px 16px;
+    border-radius:8px;border:none;
+    font-family:'Barlow',sans-serif;font-size:12px;font-weight:700;
+    cursor:pointer;white-space:nowrap;transition:all .15s;
+    flex-shrink:0;
+}
+.trainer-action-btn.register{
+    background:linear-gradient(135deg,#d4a017,#f0c040);
+    color:#000;
+    box-shadow:0 3px 10px rgba(212,160,23,.3);
+}
+.trainer-action-btn.register:hover{ opacity:.88;transform:translateY(-1px) }
+.trainer-action-btn.cancel{
+    background:rgba(248,113,113,.14);
+    color:var(--red);
+    border:1px solid rgba(248,113,113,.3);
+}
+.trainer-action-btn.cancel:hover{ background:rgba(248,113,113,.26);transform:translateY(-1px) }

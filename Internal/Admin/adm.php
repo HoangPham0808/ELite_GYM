@@ -86,7 +86,7 @@ $initials    = mb_strtoupper(mb_substr($full_name, 0, 1));
                     <span class="nav-group-label">BÁO CÁO</span>
                     <ul>
                         <li class="nav-item" data-page="management_statistics.php">
-                            <a href="#management_statistics.php"><i class="fas fa-chart-bar"></i><span>Báo cáo thống kê</span></a>
+                            <a href="#management_statistics.php"><i class="fas fa-chart-bar"></i><span>Thống kê báo cáo</span></a>
                         </li>
                     </ul>
                 </div>

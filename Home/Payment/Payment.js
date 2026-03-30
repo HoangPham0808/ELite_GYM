@@ -194,16 +194,37 @@ async function openCheckout(planJson) {
     const iconMap = { Basic:'fas fa-fire', Standard:'fas fa-bolt', Premium:'fas fa-crown', VIP:'fas fa-gem', Student:'fas fa-graduation-cap' };
     const icon  = iconMap[selectedPlan.type_name] || 'fas fa-dumbbell';
 
+    // Parse description into bullet points if it contains "·", ".", ",", or line breaks
+    function renderDescBullets(desc, planColor) {
+        if (!desc) return '';
+        // Split by common delimiters used in Vietnamese gym descriptions
+        const seps = /[·•\n]|(?:\.\s+(?=[A-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚÝĂĐƠƯ]))/;
+        const parts = desc.split(seps).map(s => s.trim()).filter(s => s.length > 3);
+        if (parts.length <= 1) {
+            return `<p class="co-plan-desc-text">${desc}</p>`;
+        }
+        return `<ul class="co-plan-desc-bullets" style="--plan-color:${planColor}">
+            ${parts.map(p => `<li>${p}</li>`).join('')}
+        </ul>`;
+    }
+
     document.getElementById('checkoutPlanInfo').innerHTML = `
-        <div class="co-plan-row">
-            <div class="co-plan-icon" style="background:${color}22;color:${color}">
-                <i class="${icon}"></i>
+        <div class="co-plan-card">
+            <div class="co-plan-card-header">
+                <div class="co-plan-icon" style="background:${color}22;color:${color}">
+                    <i class="${icon}"></i>
+                </div>
+                <div style="flex:1;min-width:0">
+                    <div class="co-plan-name">${selectedPlan.plan_name}</div>
+                    <div class="co-plan-meta">${selectedPlan.duration_months} tháng · ${selectedPlan.type_name || 'Gói tập'}</div>
+                </div>
+                <div class="co-plan-price" style="color:${color}">${fmtMoney(selectedPlan.price)}</div>
             </div>
-            <div style="flex:1">
-                <div class="co-plan-name">${selectedPlan.plan_name}</div>
-                <div class="co-plan-meta">${selectedPlan.duration_months} tháng · ${selectedPlan.type_name || 'Gói tập'}</div>
-            </div>
-            <div class="co-plan-price" style="color:${color}">${fmtMoney(selectedPlan.price)}</div>
+            ${selectedPlan.description ? `
+            <div class="co-plan-desc-block">
+                <div class="co-plan-desc-label">Quyền lợi gói</div>
+                ${renderDescBullets(selectedPlan.description, color)}
+            </div>` : ''}
         </div>`;
 
     // Fetch upgrade credit

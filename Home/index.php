@@ -142,12 +142,12 @@ if ($is_customer && $cid) {
         ")->fetch_all(MYSQLI_ASSOC);
         $cus_total_ci  = $conn->query("SELECT COUNT(*) AS c FROM GymCheckIn WHERE customer_id=$cid AND type='checkin'")->fetch_assoc()['c'] ?? 0;
         $cus_upcoming  = $conn->query("
-            SELECT tc.class_name, tc.class_time, e.full_name AS trainer
+            SELECT tc.class_name, tc.start_time, e.full_name AS trainer
             FROM ClassRegistration cr
             JOIN TrainingClass tc ON tc.class_id = cr.class_id
             LEFT JOIN Employee e ON e.employee_id = tc.trainer_id
-            WHERE cr.customer_id=$cid AND tc.class_time >= NOW()
-            ORDER BY tc.class_time ASC LIMIT 3
+            WHERE cr.customer_id=$cid AND tc.start_time >= NOW()
+            ORDER BY tc.start_time ASC LIMIT 3
         ")->fetch_all(MYSQLI_ASSOC);
 }
 // ── Plan card helpers (shared between guest & customer) ──────────
@@ -364,7 +364,7 @@ $type_icon_map = [
           <?php if (!empty($cus_upcoming)): ?>
           <div class="dc-recent">
             <div class="dcr-head">Lớp tập sắp tới</div>
-            <?php foreach($cus_upcoming as $cl): $cdt = new DateTime($cl['class_time']); ?>
+            <?php foreach($cus_upcoming as $cl): $cdt = new DateTime($cl['start_time']); ?>
             <div class="dcr-row">
               <div class="dcr-av"><i class="fas fa-dumbbell" style="font-size:.58rem"></i></div>
               <span style="flex:1;font-size:.78rem"><?= htmlspecialchars($cl['class_name']) ?></span>
@@ -667,7 +667,7 @@ $type_icon_map = [
         <h3>Lớp tập sắp tới</h3>
         <?php if (!empty($cus_upcoming)): ?>
           <p>Bạn có <strong style="color:#60a5fa"><?= count($cus_upcoming) ?> lớp</strong> sắp diễn ra. Đừng bỏ lỡ!</p>
-          <div class="fc-chips"><?php foreach($cus_upcoming as $cl): ?><span><?= htmlspecialchars($cl['class_name']) ?> — <?= (new DateTime($cl['class_time']))->format('d/m H:i') ?></span><?php endforeach; ?></div>
+          <div class="fc-chips"><?php foreach($cus_upcoming as $cl): ?><span><?= htmlspecialchars($cl['class_name']) ?> — <?= (new DateTime($cl['start_time']))->format('d/m H:i') ?></span><?php endforeach; ?></div>
         <?php else: ?>
           <p>Chưa có lớp nào sắp tới. Liên hệ lễ tân để đặt lịch.</p>
           <div class="fc-chips"><span>Chưa có lịch</span></div>

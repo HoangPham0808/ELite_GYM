@@ -11,6 +11,80 @@
 <body>
 <div class="sch-container">
 
+    <?php
+    /* ── ROLE DETECTION ──────────────────────────────────────────
+       auth_check.php stores in session:
+         role        = 'Admin' | 'Employee' | 'Customer'
+         position    = 'Personal Trainer' | 'Receptionist'  (Employee)
+         employee_id = int
+         account_id  = int
+
+       Strategy — 3 layers:
+       1. Check $_SESSION['position'] directly
+       2. If empty, query Employee table by employee_id / account_id
+       3. Fallback: if no session at all → isAdmin = true (dev mode)
+    ─────────────────────────────────────────────────────────── */
+    if (session_status() === PHP_SESSION_NONE) session_start();
+
+    $sessionRole     = $_SESSION['role']        ?? '';
+    $sessionPosition = $_SESSION['position']    ?? '';
+    $sessionEmpId    = (int)($_SESSION['employee_id'] ?? 0);
+    $sessionAccId    = (int)($_SESSION['account_id']  ?? 0);
+
+    /* Layer 2: position (and employee_id) not cached in session → query DB */
+    if ($sessionRole === 'Employee' && (trim($sessionPosition) === '' || $sessionEmpId === 0)) {
+        $dbPath = __DIR__ . '/../../../Database/db.php';
+        if (file_exists($dbPath)) {
+            require_once $dbPath;
+            if (isset($conn) && !$conn->connect_error) {
+                $empRow = null;
+                if ($sessionEmpId > 0) {
+                    $rr = $conn->query("SELECT employee_id, position FROM Employee WHERE employee_id=$sessionEmpId LIMIT 1");
+                    if ($rr && $rr->num_rows > 0) $empRow = $rr->fetch_assoc();
+                }
+                if (!$empRow && $sessionAccId > 0) {
+                    $rr = $conn->query("SELECT employee_id, position FROM Employee WHERE account_id=$sessionAccId LIMIT 1");
+                    if ($rr && $rr->num_rows > 0) $empRow = $rr->fetch_assoc();
+                }
+                if ($empRow) {
+                    $sessionPosition = $empRow['position'] ?? '';
+                    $_SESSION['position']    = $sessionPosition;           // cache position
+                    if ($sessionEmpId === 0 && !empty($empRow['employee_id'])) {
+                        $sessionEmpId            = (int)$empRow['employee_id'];
+                        $_SESSION['employee_id'] = $sessionEmpId;         // cache employee_id
+                    }
+                }
+            }
+        }
+    }
+
+    $isPersonalTrainer = ($sessionRole === 'Employee'
+                          && trim($sessionPosition) === 'Personal Trainer');
+    $isAdmin           = !$isPersonalTrainer && ($sessionRole === 'Admin' || $sessionRole === 'Employee');
+    if ($sessionRole === '') $isAdmin = true; // dev fallback
+    ?>
+    <script>
+        /* Injected by PHP — USER_ROLE drives all client-side role checks */
+        window.USER_ROLE  = '<?= $isAdmin ? "admin" : "trainer" ?>';
+        window.TRAINER_ID = <?= $sessionEmpId ?: 0 ?>;
+        window._DBG = {
+            role:     '<?= htmlspecialchars($sessionRole,     ENT_QUOTES) ?>',
+            position: '<?= htmlspecialchars($sessionPosition, ENT_QUOTES) ?>',
+            empId:    <?= $sessionEmpId ?>,
+            isAdmin:  <?= $isAdmin ? 'true' : 'false' ?>
+        };
+        console.info('[Schedule] USER_ROLE='+window.USER_ROLE+' | position='+window._DBG.position+' | empId='+window._DBG.empId);
+    </script>
+
+    <!-- ROLE BANNER -->
+    <?php if ($isAdmin): ?>
+    <?php else: ?>
+    <div class="role-banner trainer">
+        <i class="fas fa-person-running"></i>
+        Huấn luyện viên — xem lịch & đăng ký tham gia
+    </div>
+    <?php endif; ?>
+
     <!-- STATS -->
     <div class="stats-strip">
         <div class="strip-card c-blue">
@@ -49,9 +123,11 @@
                 <i class="fas fa-list"></i> Danh sách
             </button>
         </div>
+        <?php if ($isAdmin): ?>
         <button class="btn-primary" onclick="openAddModal()">
             <i class="fas fa-plus"></i> Thêm buổi tập
         </button>
+        <?php endif; ?>
     </div>
 
     <!-- ═══ CALENDAR VIEW ═══ -->
@@ -61,11 +137,17 @@
             <div class="cal-week-title" id="calWeekTitle">—</div>
             <button class="cal-nav-btn" onclick="navWeek(1)"><i class="fas fa-chevron-right"></i></button>
             <button class="cal-today-btn" onclick="goToday()">Hôm nay</button>
+            <!-- Package type legend -->
+            <div class="pkg-legend">
+                <span class="pkg-legend-item"><span class="pkg-dot" style="background:var(--pkg-basic)"></span>Basic</span>
+                <span class="pkg-legend-item"><span class="pkg-dot" style="background:var(--pkg-standard)"></span>Standard</span>
+                <span class="pkg-legend-item"><span class="pkg-dot" style="background:var(--pkg-premium)"></span>Premium</span>
+                <span class="pkg-legend-item"><span class="pkg-dot" style="background:var(--pkg-vip)"></span>VIP</span>
+                <span class="pkg-legend-item"><span class="pkg-dot" style="background:var(--pkg-student)"></span>Student</span>
+            </div>
         </div>
         <div class="calendar-grid-wrap">
-            <div class="calendar-grid" id="calendarGrid">
-                <!-- Generated by JS -->
-            </div>
+            <div class="calendar-grid" id="calendarGrid"></div>
         </div>
     </div>
 
@@ -85,7 +167,7 @@
             <div class="date-range">
                 <input type="date" class="filter-select" id="listFrom" style="max-width:150px">
                 <span style="color:var(--tm);font-size:13px">—</span>
-                <input type="date" class="filter-select" id="listTo"   style="max-width:150px">
+                <input type="date" class="filter-select" id="listTo" style="max-width:150px">
             </div>
         </div>
 
@@ -120,9 +202,9 @@
 
 </div><!-- end container -->
 
-<!-- ═══ MODAL THÊM / SỬA BUỔI TẬP ═══ -->
+<!-- ═══ MODAL THÊM / SỬA BUỔI TẬP (Admin only) ═══ -->
 <div class="modal-overlay" id="scheduleModal">
-    <div class="modal" style="max-width:500px">
+    <div class="modal" style="max-width:520px">
         <div class="modal-header">
             <h3 id="schModalTitle">
                 <i class="fas fa-calendar-plus" style="color:var(--gold);margin-right:8px"></i>Thêm buổi tập
@@ -143,6 +225,27 @@
                 <div class="form-group">
                     <label>Giờ kết thúc</label>
                     <input type="datetime-local" id="fSchEndTime" class="form-control">
+                </div>
+                <div class="form-group full">
+                    <label>Lặp lại</label>
+                    <div class="repeat-options" id="repeatOptions">
+                        <div class="repeat-opt active" data-val="none">
+                            <input type="radio" name="repeatType" value="none" checked>
+                            <span class="repeat-opt-icon"><i class="fas fa-minus-circle"></i></span>
+                            <span class="repeat-opt-label">Không<br>lặp lại</span>
+                        </div>
+                        <div class="repeat-opt" data-val="daily">
+                            <input type="radio" name="repeatType" value="daily">
+                            <span class="repeat-opt-icon"><i class="fas fa-rotate-right"></i></span>
+                            <span class="repeat-opt-label">Hàng<br>ngày</span>
+                        </div>
+                        <div class="repeat-opt" data-val="weekly">
+                            <input type="radio" name="repeatType" value="weekly">
+                            <span class="repeat-opt-icon"><i class="fas fa-calendar-week"></i></span>
+                            <span class="repeat-opt-label">Hàng<br>tuần</span>
+                        </div>
+                    </div>
+                    <div id="repeatNote" style="font-size:11px;color:var(--tm);margin-top:6px;display:none"></div>
                 </div>
                 <div class="form-group full">
                     <label>Huấn luyện viên</label>

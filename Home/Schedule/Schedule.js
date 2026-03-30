@@ -14,7 +14,6 @@ if (cursorGlow) {
 ══════════════════════════════════ */
 const nav = document.getElementById('nav');
 if (nav) {
-  // Already has .scrolled class from PHP, keep it always
   window.addEventListener('scroll', () => {
     nav.classList.add('scrolled');
   }, { passive: true });
@@ -26,62 +25,45 @@ if (nav) {
 const tabs   = document.querySelectorAll('.sch-tab');
 const panels = document.querySelectorAll('.sch-panel');
 
-// Check URL hash to activate correct tab
+// Kích hoạt tab đúng theo URL hash khi tải trang
 const hashTab = window.location.hash === '#my' ? 'my' : 'week';
-
-tabs.forEach(tab => {
-  if (tab.dataset.tab === hashTab) {
-    tab.classList.add('active');
-  } else {
-    tab.classList.remove('active');
-  }
-});
-panels.forEach(panel => {
-  if (panel.id === 'panel-' + hashTab) {
-    panel.classList.add('active');
-  } else {
-    panel.classList.remove('active');
-  }
-});
+tabs.forEach(tab     => tab.classList.toggle('active',   tab.dataset.tab === hashTab));
+panels.forEach(panel => panel.classList.toggle('active', panel.id === 'panel-' + hashTab));
 
 tabs.forEach(tab => {
   tab.addEventListener('click', () => {
+    const targetTab = tab.dataset.tab;
+
+    // Tab "Lớp của tôi": luôn reload để lấy dữ liệu mới nhất từ server
+    if (targetTab === 'my') {
+      const weekParam = new URLSearchParams(window.location.search).get('week') || '0';
+      // _r=timestamp buộc browser không dùng cache
+      window.location.replace(`Schedule.php?week=${weekParam}&_r=${Date.now()}#my`);
+      return;
+    }
+
+    // Tab "Lịch tuần": chuyển tab bình thường, không reload
     tabs.forEach(t => t.classList.remove('active'));
     panels.forEach(p => p.classList.remove('active'));
     tab.classList.add('active');
-    const target = document.getElementById('panel-' + tab.dataset.tab);
+    const target = document.getElementById('panel-' + targetTab);
     if (target) target.classList.add('active');
-    // Update hash without scrolling
-    history.replaceState(null, '', '#' + tab.dataset.tab);
+    history.replaceState(null, '', '#' + targetTab);
   });
 });
 
 /* ══════════════════════════════════
    REVEAL ANIMATION
 ══════════════════════════════════ */
-const revealObs = new IntersectionObserver((entries) => {
-  entries.forEach(e => {
-    if (e.isIntersecting) {
-      e.target.classList.add('visible');
-      revealObs.unobserve(e.target);
-    }
-  });
-}, { threshold: 0.06, rootMargin: '0px 0px -30px 0px' });
-
 document.querySelectorAll('.sch-list-card, .sch-day').forEach((el, i) => {
-  el.style.opacity = '0';
-  el.style.transform = 'translateY(16px)';
+  el.style.opacity    = '0';
+  el.style.transform  = 'translateY(16px)';
   el.style.transition = `opacity .45s ease ${i * 0.04}s, transform .45s ease ${i * 0.04}s`;
-  revealObs.observe(el);
-});
 
-// Override IntersectionObserver to set visible
-const origReveal = revealObs;
-document.querySelectorAll('.sch-list-card, .sch-day').forEach(el => {
   const obs = new IntersectionObserver((entries) => {
     entries.forEach(e => {
       if (e.isIntersecting) {
-        e.target.style.opacity = '1';
+        e.target.style.opacity   = '1';
         e.target.style.transform = 'translateY(0)';
         obs.unobserve(e.target);
       }
@@ -109,9 +91,9 @@ function showToast(msg, isError = false) {
    ĐĂNG KÝ / HỦY — AJAX
 ══════════════════════════════════ */
 async function doClassAction(classId, action, btn) {
-  btn.disabled = true;
+  btn.disabled   = true;
   const origHTML = btn.innerHTML;
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+  btn.innerHTML  = '<i class="fas fa-spinner fa-spin"></i>';
 
   try {
     const fd = new FormData();
@@ -124,29 +106,29 @@ async function doClassAction(classId, action, btn) {
     if (data.success) {
       showToast(data.message, false);
 
-      // ── Cập nhật UI ngay lập tức ──
+      // ── Cập nhật UI lịch tuần ngay lập tức ──
       const card = btn.closest('.sch-class-card');
       if (card) {
         if (data.action === 'registered') {
           card.classList.add('sch-class-card--mine');
-          btn.className   = 'sch-btn-cancel';
+          btn.className      = 'sch-btn-cancel';
           btn.dataset.action = 'cancel';
-          btn.innerHTML   = '<i class="fas fa-times"></i> Hủy';
+          btn.innerHTML      = '<i class="fas fa-times"></i> Hủy';
         } else {
           card.classList.remove('sch-class-card--mine');
-          btn.className   = 'sch-btn-register';
+          btn.className      = 'sch-btn-register';
           btn.dataset.action = 'register';
-          btn.innerHTML   = '<i class="fas fa-plus"></i> Đăng ký';
+          btn.innerHTML      = '<i class="fas fa-plus"></i> Đăng ký';
         }
         btn.disabled = false;
       }
 
-      // ── Nếu là nút hủy trong tab "Lớp của tôi" ──
+      // ── Nút hủy trong tab "Lớp của tôi" → xoá card khỏi DOM ──
       const listCard = btn.closest('.sch-list-card');
       if (listCard && data.action === 'cancelled') {
         listCard.style.transition = 'opacity .3s, transform .3s';
-        listCard.style.opacity = '0';
-        listCard.style.transform = 'translateY(-8px)';
+        listCard.style.opacity    = '0';
+        listCard.style.transform  = 'translateY(-8px)';
         setTimeout(() => listCard.remove(), 300);
       }
 
@@ -162,22 +144,14 @@ async function doClassAction(classId, action, btn) {
   }
 }
 
-/* Gắn event listener cho tất cả nút bằng event delegation */
+/* Gắn event listener bằng event delegation */
 document.addEventListener('click', e => {
-  // Nút trong week grid
   const btnReg = e.target.closest('.sch-btn-register');
-  if (btnReg) {
-    doClassAction(btnReg.dataset.classId, 'register', btnReg);
-    return;
-  }
+  if (btnReg) { doClassAction(btnReg.dataset.classId, 'register', btnReg); return; }
+
   const btnCan = e.target.closest('.sch-btn-cancel');
-  if (btnCan) {
-    doClassAction(btnCan.dataset.classId, 'cancel', btnCan);
-    return;
-  }
-  // Nút hủy trong tab "Lớp của tôi"
+  if (btnCan) { doClassAction(btnCan.dataset.classId, 'cancel', btnCan); return; }
+
   const btnCanList = e.target.closest('.sch-btn-cancel-list');
-  if (btnCanList) {
-    doClassAction(btnCanList.dataset.classId, 'cancel', btnCanList);
-  }
+  if (btnCanList) { doClassAction(btnCanList.dataset.classId, 'cancel', btnCanList); }
 });

@@ -29,14 +29,50 @@ $week_end->modify('+6 days');
 $ws = $week_start->format('Y-m-d');
 $we = $week_end->format('Y-m-d 23:59:59');
 
-$classes = $conn->query("
-    SELECT tc.class_id, tc.class_name, tc.class_time,
-           e.full_name AS trainer_name
-    FROM TrainingClass tc
-    LEFT JOIN Employee e ON e.employee_id = tc.trainer_id
-    WHERE tc.class_time BETWEEN '$ws' AND '$we'
-    ORDER BY tc.class_time ASC
-")->fetch_all(MYSQLI_ASSOC);
+// ── Lấy PackageType của khách (gói active hiện tại) ──────────
+// Ưu tiên gói cao nhất (sort_order lớn nhất) nếu có nhiều gói active
+$customer_package = null;
+if ($cid) {
+    $pkg = $conn->query("
+        SELECT pt.type_id, pt.type_name, pt.sort_order, pt.color_code
+        FROM MembershipRegistration mr
+        JOIN MembershipPlan mp ON mp.plan_id = mr.plan_id
+        JOIN PackageType pt ON pt.type_id = mp.package_type_id
+        WHERE mr.customer_id = $cid
+          AND mr.status = 'active'
+          AND mr.end_date >= CURDATE()
+        ORDER BY pt.sort_order DESC
+        LIMIT 1
+    ");
+    if ($pkg && $pkg->num_rows > 0) {
+        $customer_package = $pkg->fetch_assoc();
+    }
+}
+$customer_sort_order = $customer_package ? (int)$customer_package['sort_order'] : 0;
+
+// ── Lịch tuần: chỉ lấy lớp ở phòng có sort_order ≤ gói khách ─
+// Nếu chưa có gói → $classes rỗng (UI sẽ ẩn hoàn toàn lịch)
+$classes = [];
+if ($customer_package) {
+    $classes = $conn->query("
+        SELECT tc.class_id, tc.class_name, tc.start_time,
+               e.full_name AS trainer_name,
+               gr.room_name, gr.room_id,
+               pt.type_name AS room_package_type,
+               pt.sort_order AS room_sort_order,
+               pt.color_code AS room_type_color
+        FROM TrainingClass tc
+        LEFT JOIN Employee e    ON e.employee_id  = tc.trainer_id
+        LEFT JOIN GymRoom gr    ON gr.room_id     = tc.room_id
+        LEFT JOIN PackageType pt ON pt.type_id    = gr.package_type_id
+        WHERE tc.start_time BETWEEN '$ws' AND '$we'
+          AND (
+              pt.sort_order IS NULL
+              OR pt.sort_order <= $customer_sort_order
+          )
+        ORDER BY tc.start_time ASC
+    ")->fetch_all(MYSQLI_ASSOC);
+}
 
 $my_classes = [];
 if ($cid) {
@@ -44,26 +80,50 @@ if ($cid) {
     while ($row = $res->fetch_assoc()) $my_classes[] = (int)$row['class_id'];
 }
 
+// ── Slot đã đăng ký trong tuần này: map start_time → class_id ──
+// Dùng để detect trùng giờ (cùng start_time) trong cùng ngày
+// Key: 'Y-m-d H:i' (làm tròn theo giờ:phút), value: class_id đã đăng ký
+$booked_slots = [];
+if ($cid && $customer_package) {
+    $bk = $conn->query("
+        SELECT tc.start_time, tc.end_time, cr.class_id
+        FROM ClassRegistration cr
+        JOIN TrainingClass tc ON tc.class_id = cr.class_id
+        WHERE cr.customer_id = $cid
+          AND tc.start_time BETWEEN '$ws' AND '$we'
+    ");
+    while ($row = $bk->fetch_assoc()) {
+        // key = 'Y-m-d H:i' của slot đã đăng ký
+        $slot_key = (new DateTime($row['start_time']))->format('Y-m-d H:i');
+        $booked_slots[$slot_key] = (int)$row['class_id'];
+    }
+}
+
 $by_day = [];
 foreach ($classes as $c) {
-    $by_day[(new DateTime($c['class_time']))->format('Y-m-d')][] = $c;
+    $by_day[(new DateTime($c['start_time']))->format('Y-m-d')][] = $c;
 }
 
 $all_my = [];
 if ($cid) {
     $all_my = $conn->query("
-        SELECT tc.class_id, tc.class_name, tc.class_time, e.full_name AS trainer_name
+        SELECT tc.class_id, tc.class_name, tc.start_time, e.full_name AS trainer_name,
+               gr.room_name,
+               pt.type_name AS room_package_type,
+               pt.color_code AS room_type_color
         FROM ClassRegistration cr
-        JOIN TrainingClass tc ON tc.class_id = cr.class_id
-        LEFT JOIN Employee e ON e.employee_id = tc.trainer_id
+        JOIN TrainingClass tc  ON tc.class_id     = cr.class_id
+        LEFT JOIN Employee e   ON e.employee_id   = tc.trainer_id
+        LEFT JOIN GymRoom gr   ON gr.room_id      = tc.room_id
+        LEFT JOIN PackageType pt ON pt.type_id    = gr.package_type_id
         WHERE cr.customer_id = $cid
-        ORDER BY tc.class_time ASC
+        ORDER BY tc.start_time ASC
     ")->fetch_all(MYSQLI_ASSOC);
 }
 
 $now_ts      = time();
-$upcoming_my = array_filter($all_my, fn($c) => strtotime($c['class_time']) >= $now_ts);
-$past_my     = array_filter($all_my, fn($c) => strtotime($c['class_time']) <  $now_ts);
+$upcoming_my = array_filter($all_my, fn($c) => strtotime($c['start_time']) >= $now_ts);
+$past_my     = array_filter($all_my, fn($c) => strtotime($c['start_time']) <  $now_ts);
 ?>
 <!DOCTYPE html>
 <html lang="vi">
@@ -146,6 +206,15 @@ $past_my     = array_filter($all_my, fn($c) => strtotime($c['class_time']) <  $n
       <div class="sch-stat"><div class="sch-stat-n"><?= count($upcoming_my) ?></div><div class="sch-stat-l">Sắp tới</div></div>
       <div class="sch-stat-sep"></div>
       <div class="sch-stat"><div class="sch-stat-n"><?= count($classes) ?></div><div class="sch-stat-l">Tuần này</div></div>
+      <?php if ($customer_package): ?>
+      <div class="sch-stat-sep"></div>
+      <div class="sch-stat">
+        <div class="sch-stat-n" style="font-size:1rem;color:<?= htmlspecialchars($customer_package['color_code'] ?? '#cc0000') ?>">
+          <i class="fas fa-id-card"></i> <?= htmlspecialchars($customer_package['type_name']) ?>
+        </div>
+        <div class="sch-stat-l">Gói hiện tại</div>
+      </div>
+      <?php endif; ?>
     </div>
   </div>
 </section>
@@ -163,6 +232,26 @@ $past_my     = array_filter($all_my, fn($c) => strtotime($c['class_time']) <  $n
 <!-- ══ PANEL: LỊCH TUẦN ══ -->
 <div class="sch-panel active" id="panel-week">
   <div class="wrap">
+
+  <?php if (!$customer_package): ?>
+  <!-- ── Chưa có gói: hiện wall mua gói ── -->
+  <div class="sch-locked-wall">
+    <div class="sch-locked-icon"><i class="fas fa-lock"></i></div>
+    <h2 class="sch-locked-title">Bạn chưa có gói tập</h2>
+    <p class="sch-locked-desc">Để xem lịch và đăng ký lớp tập, bạn cần mua một gói tập phù hợp.<br>Mỗi gói sẽ mở khóa các phòng tập và lớp học tương ứng.</p>
+    <a href="../index.php#schedule" class="sch-locked-cta">
+      <i class="fas fa-shopping-cart"></i> Xem các gói tập
+    </a>
+    <div class="sch-locked-pkg-list">
+      <div class="sch-locked-pkg-item" style="border-color:#6b7280"><span style="color:#6b7280">Basic</span> — Phòng tập chính</div>
+      <div class="sch-locked-pkg-item" style="border-color:#3b82f6"><span style="color:#3b82f6">Standard</span> — Phòng tập + lớp nhóm</div>
+      <div class="sch-locked-pkg-item" style="border-color:#d4a017"><span style="color:#d4a017">Premium</span> — Toàn bộ phòng &amp; thiết bị</div>
+      <div class="sch-locked-pkg-item" style="border-color:#a855f7"><span style="color:#a855f7">VIP</span> — Full access + HLV cá nhân</div>
+    </div>
+  </div>
+
+  <?php else: ?>
+  <!-- ── Có gói: hiện lịch tuần bình thường ── -->
     <div class="sch-week-nav">
       <a href="?week=<?= $week_offset - 1 ?>" class="sch-week-btn"><i class="fas fa-chevron-left"></i></a>
       <div class="sch-week-label">
@@ -181,9 +270,9 @@ $past_my     = array_filter($all_my, fn($c) => strtotime($c['class_time']) <  $n
     <?php $vi_days = ['Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7','CN']; $today_str = (new DateTime())->format('Y-m-d'); ?>
     <div class="sch-week-grid">
       <?php for ($d = 0; $d < 7; $d++):
-        $day_dt = clone $week_start; $day_dt->modify("+{$d} days");
-        $day_str = $day_dt->format('Y-m-d');
-        $is_today = ($day_str === $today_str);
+        $day_dt      = clone $week_start; $day_dt->modify("+{$d} days");
+        $day_str     = $day_dt->format('Y-m-d');
+        $is_today    = ($day_str === $today_str);
         $day_classes = $by_day[$day_str] ?? [];
       ?>
       <div class="sch-day <?= $is_today ? 'sch-day--today' : '' ?> <?= empty($day_classes) ? 'sch-day--empty' : '' ?>">
@@ -195,28 +284,71 @@ $past_my     = array_filter($all_my, fn($c) => strtotime($c['class_time']) <  $n
           <?php if (empty($day_classes)): ?>
             <div class="sch-no-class"><i class="fas fa-moon"></i> Nghỉ</div>
           <?php else: foreach ($day_classes as $c):
-            $dt = new DateTime($c['class_time']);
-            $is_mine = in_array((int)$c['class_id'], $my_classes);
-            $is_past = $dt->getTimestamp() < $now_ts;
+            $dt         = new DateTime($c['start_time']);
+            $slot_key   = $dt->format('Y-m-d H:i');
+            $is_mine    = in_array((int)$c['class_id'], $my_classes);
+            $is_past    = $dt->getTimestamp() < $now_ts;
+            $room_color = $c['room_type_color'] ?? '#6b7280';
+            $room_type  = $c['room_package_type'] ?? null;
+
+            // Trùng time slot: cùng giờ đã có lớp khác đã đăng ký
+            $conflict_id  = $booked_slots[$slot_key] ?? 0;
+            $slot_conflict = $conflict_id && !$is_mine; // trùng giờ, không phải lớp của mình
           ?>
-          <div class="sch-class-card <?= $is_mine ? 'sch-class-card--mine' : '' ?> <?= $is_past ? 'sch-class-card--past' : '' ?>"
+          <div class="sch-class-card
+            <?= $is_mine       ? 'sch-class-card--mine'     : '' ?>
+            <?= $is_past       ? 'sch-class-card--past'     : '' ?>
+            <?= $slot_conflict ? 'sch-class-card--conflict'  : '' ?>"
                data-class-id="<?= $c['class_id'] ?>">
-            <div class="sch-class-time"><i class="fas fa-clock"></i> <?= $dt->format('H:i') ?></div>
-            <div class="sch-class-name"><?= htmlspecialchars($c['class_name']) ?></div>
-            <?php if ($c['trainer_name']): ?><div class="sch-class-trainer"><i class="fas fa-user-tie"></i> <?= htmlspecialchars($c['trainer_name']) ?></div><?php endif; ?>
-            <?php if (!$is_past): ?>
-              <?php if ($is_mine): ?>
-                <button class="sch-btn-cancel" data-class-id="<?= $c['class_id'] ?>">
-                  <i class="fas fa-times"></i> Hủy
-                </button>
-              <?php else: ?>
-                <button class="sch-btn-register" data-class-id="<?= $c['class_id'] ?>">
-                  <i class="fas fa-plus"></i> Đăng ký
-                </button>
-              <?php endif; ?>
-            <?php else: ?>
-              <div class="sch-class-badge sch-badge--past"><i class="fas fa-check"></i> Đã qua</div>
+
+            <?php if ($room_type): ?>
+              <div class="sch-card-pkg-stripe" style="background:<?= $room_color ?>"></div>
             <?php endif; ?>
+
+            <div class="sch-card-inner">
+              <div class="sch-class-time">
+                <i class="fas fa-clock"></i> <?= $dt->format('H:i') ?>
+                <?php if (!empty($c['end_time'])): ?>
+                  <span class="sch-time-end">– <?= (new DateTime($c['end_time']))->format('H:i') ?></span>
+                <?php endif; ?>
+              </div>
+
+              <div class="sch-class-name"><?= htmlspecialchars($c['class_name']) ?></div>
+
+              <div class="sch-card-meta">
+                <?php if ($c['trainer_name']): ?>
+                  <div class="sch-meta-row"><i class="fas fa-user-tie"></i> <?= htmlspecialchars($c['trainer_name']) ?></div>
+                <?php endif; ?>
+                <?php if ($c['room_name']): ?>
+                  <div class="sch-meta-row"><i class="fas fa-door-open"></i> <?= htmlspecialchars($c['room_name']) ?></div>
+                <?php endif; ?>
+              </div>
+
+              <?php if ($room_type): ?>
+                <div class="sch-class-pkg-tag" style="background:<?= $room_color ?>18;color:<?= $room_color ?>;border-color:<?= $room_color ?>44">
+                  <?= htmlspecialchars($room_type) ?>
+                </div>
+              <?php endif; ?>
+
+              <?php if (!$is_past): ?>
+                <?php if ($is_mine): ?>
+                  <button class="sch-btn-cancel" data-class-id="<?= $c['class_id'] ?>">
+                    <i class="fas fa-times"></i> Hủy
+                  </button>
+                <?php elseif ($slot_conflict): ?>
+                  <div class="sch-btn-conflict"
+                       title="Bạn đã đăng ký lớp khác cùng giờ này. Hủy lớp đó trước để đổi sang lớp này.">
+                    <i class="fas fa-clock"></i> Trùng giờ
+                  </div>
+                <?php else: ?>
+                  <button class="sch-btn-register" data-class-id="<?= $c['class_id'] ?>">
+                    <i class="fas fa-plus"></i> Đăng ký
+                  </button>
+                <?php endif; ?>
+              <?php else: ?>
+                <div class="sch-class-badge sch-badge--past"><i class="fas fa-check"></i> Đã qua</div>
+              <?php endif; ?>
+            </div>
           </div>
           <?php endforeach; endif; ?>
         </div>
@@ -227,7 +359,9 @@ $past_my     = array_filter($all_my, fn($c) => strtotime($c['class_time']) <  $n
     <div class="sch-legend">
       <div class="sch-legend-item"><span class="sch-legend-dot sch-legend-dot--mine"></span> Lớp đã đăng ký</div>
       <div class="sch-legend-item"><span class="sch-legend-dot"></span> Lớp chưa đăng ký</div>
+      <div class="sch-legend-item"><span class="sch-legend-dot sch-legend-dot--conflict"></span> Trùng giờ</div>
     </div>
+  <?php endif; /* end if $customer_package */ ?>
   </div>
 </div>
 
@@ -248,7 +382,7 @@ $past_my     = array_filter($all_my, fn($c) => strtotime($c['class_time']) <  $n
       <div class="sch-list-head"><i class="fas fa-bolt" style="color:var(--red)"></i> Lớp sắp tới <span class="sch-list-count"><?= count($upcoming_my) ?></span></div>
       <div class="sch-list-grid">
         <?php foreach ($upcoming_my as $c):
-          $dt = new DateTime($c['class_time']);
+          $dt = new DateTime($c['start_time']);
           $days_until = max(0, (int)(($dt->getTimestamp() - $now_ts) / 86400));
         ?>
         <div class="sch-list-card sch-list-card--upcoming">
@@ -258,6 +392,12 @@ $past_my     = array_filter($all_my, fn($c) => strtotime($c['class_time']) <  $n
               <div>
                 <div class="sch-list-class-name"><?= htmlspecialchars($c['class_name']) ?></div>
                 <?php if ($c['trainer_name']): ?><div class="sch-list-trainer"><i class="fas fa-user-tie"></i> <?= htmlspecialchars($c['trainer_name']) ?></div><?php endif; ?>
+                <?php if (!empty($c['room_name'])): ?><div class="sch-list-trainer"><i class="fas fa-door-open"></i> <?= htmlspecialchars($c['room_name']) ?></div><?php endif; ?>
+                <?php if (!empty($c['room_package_type'])): ?>
+                  <div class="sch-class-pkg-tag" style="margin-top:4px;background:<?= $c['room_type_color'] ?? '#6b728022' ?>22;color:<?= $c['room_type_color'] ?? '#6b7280' ?>;border-color:<?= $c['room_type_color'] ?? '#6b7280' ?>55">
+                    <?= htmlspecialchars($c['room_package_type']) ?>
+                  </div>
+                <?php endif; ?>
               </div>
               <div class="sch-list-meta">
                 <?php if ($days_until === 0): ?><span class="sch-tag sch-tag--today">Hôm nay</span>
@@ -287,7 +427,7 @@ $past_my     = array_filter($all_my, fn($c) => strtotime($c['class_time']) <  $n
       <div class="sch-list-head" style="opacity:.7"><i class="fas fa-history" style="color:rgba(255,255,255,.4)"></i> Đã qua <span class="sch-list-count" style="background:rgba(255,255,255,.05);color:rgba(255,255,255,.4)"><?= count($past_my) ?></span></div>
       <div class="sch-list-grid">
         <?php foreach (array_reverse($past_my) as $c):
-          $dt = new DateTime($c['class_time']);
+          $dt = new DateTime($c['start_time']);
         ?>
         <div class="sch-list-card sch-list-card--past">
           <div class="sch-list-card-side"></div>

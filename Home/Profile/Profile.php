@@ -73,11 +73,11 @@ $total_checkins = $conn->query("SELECT COUNT(*) AS c FROM GymCheckIn WHERE custo
 
 // ── Classes ───────────────────────────────────────────────────
 $classes = $conn->query("
-    SELECT tc.class_name, tc.class_time, e.full_name AS trainer_name
+    SELECT tc.class_name, tc.start_time AS class_time, tc.end_time, e.full_name AS trainer_name
     FROM ClassRegistration cr
     JOIN TrainingClass tc ON tc.class_id = cr.class_id
     LEFT JOIN Employee e ON e.employee_id = tc.trainer_id
-    WHERE cr.customer_id = $cid ORDER BY tc.class_time DESC LIMIT 10
+    WHERE cr.customer_id = $cid ORDER BY tc.start_time DESC LIMIT 10
 ")->fetch_all(MYSQLI_ASSOC);
 
 // ── Reviews ───────────────────────────────────────────────────
@@ -172,7 +172,7 @@ if ($pw_step === 2 && !empty($_SESSION['chpw_email'])) {
     </a>
     <div class="nav-spacer"></div>
     <a href="../index.php" class="nav-back"><i class="fas fa-arrow-left"></i> Trang chủ</a>
-    <a href="../Internal/Index/Login/logout.php" class="nav-logout"><i class="fas fa-sign-out-alt"></i> Đăng xuất</a>
+    <a href="../../Internal/Index/Login/logout.php" class="nd-logout"><i class="fas fa-sign-out-alt"></i> Đăng xuất</a>
   </div>
 </nav>
 

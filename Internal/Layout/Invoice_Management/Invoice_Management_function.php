@@ -102,16 +102,29 @@ function registerPackagesForInvoice($conn, $invoice_id) {
             $end_date   = date('Y-m-d', strtotime("$start_date +$total_months months"));
 
         } else {
-            // ── THÊM MỚI hoặc GIA HẠN: nối tiếp sau gói cùng loại cuối cùng ──
-            $existRes = $conn->query("
-                SELECT MAX(end_date) as max_end
-                FROM MembershipRegistration
-                WHERE customer_id = $customer_id
-                  AND plan_id     = $plan_id
-            ");
+            // ── THÊM MỚI hoặc GIA HẠN: nối tiếp sau gói cùng package_type cuối cùng ──
+            // Miễn là cùng package_type_id thì cộng dồn ngày (không phân biệt plan_id)
+            if ($new_type_id) {
+                $existRes = $conn->query("
+                    SELECT MAX(mr.end_date) as max_end
+                    FROM MembershipRegistration mr
+                    JOIN MembershipPlan mp ON mp.plan_id = mr.plan_id
+                    WHERE mr.customer_id      = $customer_id
+                      AND mp.package_type_id  = $new_type_id
+                ");
+            } else {
+                // Gói không có package_type → fallback về cùng plan_id
+                $existRes = $conn->query("
+                    SELECT MAX(end_date) as max_end
+                    FROM MembershipRegistration
+                    WHERE customer_id = $customer_id
+                      AND plan_id     = $plan_id
+                ");
+            }
             $max_end = $existRes ? ($existRes->fetch_assoc()['max_end'] ?? null) : null;
 
             if ($max_end && $max_end >= $today) {
+                // Cộng dồn: bắt đầu từ ngày hết hạn của gói cùng loại
                 $start_date = date('Y-m-d', strtotime("$max_end +1 day"));
             } else {
                 $start_date = $today;

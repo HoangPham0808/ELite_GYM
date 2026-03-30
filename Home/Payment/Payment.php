@@ -128,82 +128,110 @@ if ($active_plan) {
 </main>
 
 <!-- ══════════════════════════════════════════════════
-     MODAL: CHECKOUT
+     MODAL: CHECKOUT  (2-column redesign)
 ══════════════════════════════════════════════════ -->
 <div class="modal-overlay" id="checkoutModal">
   <div class="modal-box checkout-box">
     <button class="modal-x" onclick="closeCheckout()"><i class="fas fa-times"></i></button>
 
+    <!-- Header -->
     <div class="checkout-header">
-      <div class="checkout-title"><i class="fas fa-shopping-cart"></i> Xác nhận đơn hàng</div>
-    </div>
-
-    <!-- Thông tin gói -->
-    <div class="checkout-plan-info" id="checkoutPlanInfo">
-      <!-- filled by JS -->
-    </div>
-
-    <!-- Upgrade notice -->
-    <div class="checkout-upgrade-notice" id="upgradeNotice" style="display:none">
-      <i class="fas fa-arrow-circle-up"></i>
-      <div>
-        <strong>Nâng cấp gói!</strong>
-        <span id="upgradeText">Tiền hoàn lại từ gói cũ sẽ được khấu trừ.</span>
+      <div class="checkout-title">
+        <i class="fas fa-shopping-cart"></i> Xác nhận đơn hàng
       </div>
     </div>
 
-    <!-- Số lượng -->
-    <div class="checkout-qty-row">
-      <label>Số tháng:</label>
-      <div class="qty-ctrl">
-        <button type="button" onclick="changeQty(-1)"><i class="fas fa-minus"></i></button>
-        <span id="qtyDisplay">1</span>
-        <button type="button" onclick="changeQty(1)"><i class="fas fa-plus"></i></button>
-      </div>
-    </div>
+    <!-- 2-Column body -->
+    <div class="checkout-body">
 
-    <!-- Khuyến mãi -->
-    <div class="checkout-promo-section">
-      <div class="promo-toggle" onclick="togglePromo()">
-        <i class="fas fa-tag"></i> Khuyến mãi
-        <i class="fas fa-chevron-down" id="promoChevron"></i>
-      </div>
-      <div class="promo-list" id="promoList" style="display:none">
-        <div class="promo-loading" id="promoLoading"><i class="fas fa-spinner fa-spin"></i> Đang tải...</div>
-        <div id="promoItems"></div>
-        <div class="promo-none" id="promoNone" style="display:none">
-          <i class="fas fa-info-circle"></i> Không có khuyến mãi phù hợp
+      <!-- LEFT COL: plan info + upgrade notice -->
+      <div class="checkout-col-left">
+
+        <!-- Plan card (filled by JS) -->
+        <div class="checkout-plan-info" id="checkoutPlanInfo">
+          <!-- filled by JS -->
         </div>
-      </div>
+
+        <!-- Upgrade notice -->
+        <div class="checkout-upgrade-notice" id="upgradeNotice" style="display:none">
+          <i class="fas fa-arrow-circle-up"></i>
+          <div>
+            <strong>Nâng cấp gói!</strong>
+            <span id="upgradeText">Tiền hoàn lại từ gói cũ sẽ được khấu trừ.</span>
+          </div>
+        </div>
+
+        <!-- Số lượng -->
+        <div class="checkout-qty-row">
+          <label>Số tháng đăng ký:</label>
+          <div class="qty-ctrl">
+            <button type="button" onclick="changeQty(-1)"><i class="fas fa-minus"></i></button>
+            <span id="qtyDisplay">1</span>
+            <button type="button" onclick="changeQty(1)"><i class="fas fa-plus"></i></button>
+          </div>
+        </div>
+
+        <!-- Khuyến mãi -->
+        <div class="checkout-promo-section">
+          <div class="promo-toggle" onclick="togglePromo()">
+            <i class="fas fa-tag"></i> Mã khuyến mãi
+            <i class="fas fa-chevron-down" id="promoChevron"></i>
+          </div>
+          <div class="promo-list" id="promoList" style="display:none">
+            <div class="promo-loading" id="promoLoading"><i class="fas fa-spinner fa-spin"></i> Đang tải...</div>
+            <div id="promoItems"></div>
+            <div class="promo-none" id="promoNone" style="display:none">
+              <i class="fas fa-info-circle"></i> Không có khuyến mãi phù hợp
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /left col -->
+
+      <!-- RIGHT COL: summary + pay button -->
+      <div class="checkout-col-right">
+
+        <!-- Summary -->
+        <div class="checkout-summary" id="checkoutSummary">
+          <div class="checkout-summary-title">Chi tiết thanh toán</div>
+
+          <div class="summary-row">
+            <span>Giá gốc</span>
+            <span id="sumOriginal">—</span>
+          </div>
+          <div class="summary-row upgrade-row" id="sumUpgradeRow" style="display:none">
+            <span><i class="fas fa-arrow-up" style="font-size:.65rem;color:#4ade80;margin-right:4px"></i>Hoàn tiền nâng cấp</span>
+            <span id="sumUpgrade" style="color:#4ade80">—</span>
+          </div>
+          <div class="summary-row promo-row" id="sumPromoRow" style="display:none">
+            <span><i class="fas fa-tag" style="font-size:.65rem;color:#fbbf24;margin-right:4px"></i>Khuyến mãi</span>
+            <span id="sumPromo" style="color:#fbbf24">—</span>
+          </div>
+
+          <div class="summary-divider"></div>
+
+          <div class="summary-row total-row">
+            <span>Thực thanh toán</span>
+            <span id="sumTotal" class="sum-total-val">—</span>
+          </div>
+        </div>
+
+        <!-- Pay buttons -->
+        <div class="checkout-actions">
+          <button class="btn-pay-transfer" onclick="submitOrder('transfer')">
+            <i class="fas fa-qrcode"></i> Chuyển khoản QR
+          </button>
+        </div>
+
+      </div><!-- /right col -->
+    </div><!-- /checkout-body -->
+
+    <!-- Footer note -->
+    <div class="checkout-footer-note">
+      <i class="fas fa-shield-alt"></i>
+      Thanh toán được bảo mật. Gói tập kích hoạt ngay sau khi xác nhận.
     </div>
 
-    <!-- Summary -->
-    <div class="checkout-summary" id="checkoutSummary">
-      <div class="summary-row">
-        <span>Giá gốc:</span>
-        <span id="sumOriginal">—</span>
-      </div>
-      <div class="summary-row upgrade-row" id="sumUpgradeRow" style="display:none">
-        <span><i class="fas fa-arrow-up" style="font-size:.7rem;color:#4ade80"></i> Hoàn tiền nâng cấp:</span>
-        <span id="sumUpgrade" style="color:#4ade80">—</span>
-      </div>
-      <div class="summary-row promo-row" id="sumPromoRow" style="display:none">
-        <span><i class="fas fa-tag" style="font-size:.7rem;color:#fbbf24"></i> Khuyến mãi:</span>
-        <span id="sumPromo" style="color:#fbbf24">—</span>
-      </div>
-      <div class="summary-divider"></div>
-      <div class="summary-row total-row">
-        <span>Thực thanh toán:</span>
-        <span id="sumTotal" class="sum-total-val">—</span>
-      </div>
-    </div>
-
-    <!-- Nút thanh toán -->
-    <div class="checkout-actions">
-      <button class="btn-pay-transfer" onclick="submitOrder('transfer')">
-        <i class="fas fa-qrcode"></i> Chuyển khoản QR
-      </button>
-    </div>
   </div>
 </div>
 
