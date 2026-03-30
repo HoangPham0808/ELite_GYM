@@ -119,3 +119,70 @@
 [2026-03-23 20:41:38] Invoice #37 updated to Paid successfully!
 [2026-03-23 20:41:38] Packages registered for invoice #37
 [2026-03-23 20:41:38] === Done ===
+[2026-03-30 19:23:21] === Webhook called ===
+[2026-03-30 19:23:21] Method: GET
+[2026-03-30 19:23:21] Auth header: (empty)
+[2026-03-30 19:23:21] BLOCKED: Thieu hoac sai Authorization header
+[2026-03-30 19:24:03] === Webhook called ===
+[2026-03-30 19:24:03] Method: GET
+[2026-03-30 19:24:03] Auth header: (empty)
+[2026-03-30 19:24:03] BLOCKED: Thieu hoac sai Authorization header
+[2026-03-30 19:26:41] === Webhook called ===
+[2026-03-30 19:26:41] Method: GET
+[2026-03-30 19:26:41] Auth header: (empty)
+[2026-03-30 19:26:41] BLOCKED: Thieu hoac sai Authorization header
+[2026-03-30 19:32:00] === Webhook called ===
+[2026-03-30 19:32:00] Method: GET
+[2026-03-30 19:32:00] Auth header: (empty)
+[2026-03-30 19:32:00] BLOCKED: Thieu hoac sai Authorization header
+[2026-03-30 19:32:12] === Webhook called ===
+[2026-03-30 19:32:12] Method: POST
+[2026-03-30 19:32:12] Auth header: Apikey elitegym_PAY
+[2026-03-30 19:32:12] API Key OK
+[2026-03-30 19:32:12] Raw body: {"gateway":"MBBank","transactionDate":"2026-03-31 02:24:00","accountNumber":"0981015808","subAccount":null,"code":null,"content":"SHOPEEPAY CHUYEN TIEN 2038698954452250624 Scan QR ELITEGYM HD49 Hong Phm Vn","transferType":"in","description":"BankAPINotify SHOPEEPAY CHUYEN TIEN 2038698954452250624 Scan QR ELITEGYM HD49 Hong Phm Vn","transferAmount":5555,"referenceCode":"FT26090467930500","accumulated":0,"id":47579491}
+[2026-03-30 19:32:12] transferType: in
+[2026-03-30 19:32:12] Content: SHOPEEPAY CHUYEN TIEN 2038698954452250624 Scan QR ELITEGYM HD49 Hong Phm Vn | Amount: 5555
+[2026-03-30 19:32:12] Invoice ID extracted: #49
+[2026-03-30 19:32:12] Trying DB path: C:\wamp64\www\PHP\ELite_GYM\Internal\Admin/../../Database/db.php | FOUND
+[2026-03-30 19:32:12] Using DB: C:\wamp64\www\PHP\ELite_GYM\Internal\Admin/../../Database/db.php
+[2026-03-31 02:32:12] DB connected OK
+[2026-03-31 02:32:12] Invoice #49 found. Status: Pending | Amount in DB: 5555.00
+[2026-03-31 02:32:12] Kiem tra so tien OK: 5555 >= 5555
+[2026-03-31 02:32:12] Invoice #49 cap nhat Paid thanh cong!
+[2026-03-31 02:32:12] Dang ky: plan_id=11 | start=2027-10-24 | end=2028-04-24 | months=6
+[2026-03-31 02:32:12] Da dang ky goi tap cho invoice #49
+[2026-03-31 02:32:12] === Done ===
+[2026-03-30 19:33:06] === Webhook called ===
+[2026-03-30 19:33:06] Method: POST
+[2026-03-30 19:33:06] Auth header: Apikey elitegym_PAY
+[2026-03-30 19:33:06] API Key OK
+[2026-03-30 19:33:06] Raw body: {"gateway":"MBBank","transactionDate":"2026-03-31 02:33:00","accountNumber":"0981015808","subAccount":null,"code":null,"content":"SHOPEEPAY CHUYEN TIEN 2038701049366212608 Scan QR ELITEGYM HD50 Hong Phm Vn","transferType":"in","description":"BankAPINotify SHOPEEPAY CHUYEN TIEN 2038701049366212608 Scan QR ELITEGYM HD50 Hong Phm Vn","transferAmount":5555,"referenceCode":"FT26090597276207","accumulated":0,"id":47579579}
+[2026-03-30 19:33:06] transferType: in
+[2026-03-30 19:33:06] Content: SHOPEEPAY CHUYEN TIEN 2038701049366212608 Scan QR ELITEGYM HD50 Hong Phm Vn | Amount: 5555
+[2026-03-30 19:33:06] Invoice ID extracted: #50
+[2026-03-30 19:33:06] Trying DB path: C:\wamp64\www\PHP\ELite_GYM\Internal\Admin/../../Database/db.php | FOUND
+[2026-03-30 19:33:06] Using DB: C:\wamp64\www\PHP\ELite_GYM\Internal\Admin/../../Database/db.php
+[2026-03-31 02:33:06] DB connected OK
+[2026-03-31 02:33:06] Invoice #50 found. Status: Pending | Amount in DB: 5555.00
+[2026-03-31 02:33:06] Kiem tra so tien OK: 5555 >= 5555
+[2026-03-31 02:33:06] Invoice #50 cap nhat Paid thanh cong!
+[2026-03-31 02:33:06] Dang ky: plan_id=11 | start=2027-10-24 | end=2028-04-24 | months=6
+[2026-03-31 02:33:06] Da dang ky goi tap cho invoice #50
+[2026-03-31 02:33:06] === Done ===
+[2026-03-30 19:33:56] === Webhook called ===
+[2026-03-30 19:33:56] Method: POST
+[2026-03-30 19:33:56] Auth header: Apikey elitegym_PAY
+[2026-03-30 19:33:56] API Key OK
+[2026-03-30 19:33:56] Raw body: {"gateway":"MBBank","transactionDate":"2026-03-31 02:33:00","accountNumber":"0981015808","subAccount":null,"code":null,"content":"SHOPEEPAY CHUYEN TIEN 2038701243902337024 Scan QR ELITEGYM HD51","transferType":"in","description":"BankAPINotify SHOPEEPAY CHUYEN TIEN 2038701243902337024 Scan QR ELITEGYM HD51","transferAmount":5555,"referenceCode":"FT26090814770028","accumulated":0,"id":47579589}
+[2026-03-30 19:33:56] transferType: in
+[2026-03-30 19:33:56] Content: SHOPEEPAY CHUYEN TIEN 2038701243902337024 Scan QR ELITEGYM HD51 | Amount: 5555
+[2026-03-30 19:33:56] Invoice ID extracted: #51
+[2026-03-30 19:33:56] Trying DB path: C:\wamp64\www\PHP\ELite_GYM\Internal\Admin/../../Database/db.php | FOUND
+[2026-03-30 19:33:56] Using DB: C:\wamp64\www\PHP\ELite_GYM\Internal\Admin/../../Database/db.php
+[2026-03-31 02:33:56] DB connected OK
+[2026-03-31 02:33:56] Invoice #51 found. Status: Pending | Amount in DB: 5555.00
+[2026-03-31 02:33:56] Kiem tra so tien OK: 5555 >= 5555
+[2026-03-31 02:33:56] Invoice #51 cap nhat Paid thanh cong!
+[2026-03-31 02:33:56] Dang ky: plan_id=11 | start=2028-04-24 | end=2028-10-24 | months=6
+[2026-03-31 02:33:56] Da dang ky goi tap cho invoice #51
+[2026-03-31 02:33:56] === Done ===

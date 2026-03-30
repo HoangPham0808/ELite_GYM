@@ -99,14 +99,17 @@ $cus_total_ci    = 0;
 $cus_upcoming    = [];
 $cus_days_left   = 0;
 $cus_plan_pct    = 0;
+$cus_first_start = null;
 
 if ($is_customer && $cid) {
     $today = date('Y-m-d');
 
     $mems = $conn->query("
-        SELECT mr.start_date, mr.end_date, mp.plan_name, mp.duration_months, mp.price
+        SELECT mr.start_date, mr.end_date, mp.plan_name, mp.duration_months, mp.price,
+               mp.package_type_id, pt.type_name
         FROM MembershipRegistration mr
         JOIN MembershipPlan mp ON mp.plan_id = mr.plan_id
+        LEFT JOIN PackageType pt ON pt.type_id = mp.package_type_id
         WHERE mr.customer_id = $cid
           AND mr.status = 'active'
         ORDER BY mr.end_date DESC
@@ -115,9 +118,18 @@ if ($is_customer && $cid) {
         if ($m['end_date'] >= $today) { $cus_active_plan = $m; break; }
     }
     if ($cus_active_plan) {
-        $total_days    = max(1, (new DateTime($cus_active_plan['start_date']))->diff(new DateTime($cus_active_plan['end_date']))->days);
+        // Tìm start_date sớm nhất của chuỗi gói cùng PackageType
+        $chain_type      = $cus_active_plan['type_name'] ?? '';
+        $cus_first_start = $cus_active_plan['start_date'];
+        foreach ($mems as $m) {
+            if (($m['type_name'] ?? '') === $chain_type && $m['start_date'] < $cus_first_start) {
+                $cus_first_start = $m['start_date'];
+            }
+        }
+        $total_days    = max(1, (new DateTime($cus_first_start))->diff(new DateTime($cus_active_plan['end_date']))->days);
         $cus_days_left = max(0, (new DateTime($today))->diff(new DateTime($cus_active_plan['end_date']))->days);
-        $cus_plan_pct  = min(100, round(($total_days - $cus_days_left) / $total_days * 100));
+        $elapsed       = (new DateTime($cus_first_start))->diff(new DateTime($today))->days;
+        $cus_plan_pct  = min(100, round($elapsed / $total_days * 100));
     }
         // Lấy 5 lần check-in gần nhất từ GymCheckIn, ghép check_out tương ứng
         $cus_checkins = $conn->query("
@@ -335,7 +347,7 @@ $type_icon_map = [
               <div style="width:<?= $cus_plan_pct ?>%;height:100%;background:var(--red);border-radius:99px"></div>
             </div>
             <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:.68rem;color:rgba(255,255,255,.25)">
-              <span><?= date('d/m/Y', strtotime($cus_active_plan['start_date'])) ?></span>
+              <span><?= date('d/m/Y', strtotime($cus_first_start ?? $cus_active_plan['start_date'])) ?></span>
               <span><?= date('d/m/Y', strtotime($cus_active_plan['end_date'])) ?></span>
             </div>
           </div>

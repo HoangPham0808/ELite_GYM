@@ -104,12 +104,24 @@ $invoices = $conn->query("
 ")->fetch_all(MYSQLI_ASSOC);
 
 // ── Plan progress ─────────────────────────────────────────────
-$days_left = 0; $plan_pct = 0;
+$days_left = 0; $plan_pct = 0; $first_start = null;
 if ($active_plan) {
     $diff      = (new DateTime($today))->diff(new DateTime($active_plan['end_date']));
     $days_left = max(0, (int)$diff->days);
-    $total_d   = max(1, (new DateTime($active_plan['start_date']))->diff(new DateTime($active_plan['end_date']))->days);
-    $plan_pct  = min(100, round(($total_d - $days_left) / $total_d * 100));
+
+    // Tìm start_date sớm nhất của chuỗi gói cùng PackageType
+    // → thanh progress tính từ gói đầu tiên đến hết hạn gói cuối cùng
+    $chain_type  = $active_plan['type_name'] ?? '';
+    $first_start = $active_plan['start_date'];
+    foreach ($memberships as $m) {
+        if (($m['type_name'] ?? '') === $chain_type && $m['start_date'] < $first_start) {
+            $first_start = $m['start_date'];
+        }
+    }
+
+    $total_d  = max(1, (new DateTime($first_start))->diff(new DateTime($active_plan['end_date']))->days);
+    $elapsed  = (new DateTime($first_start))->diff(new DateTime($today))->days;
+    $plan_pct = min(100, round($elapsed / $total_d * 100));
 }
 
 $initials  = mb_strtoupper(mb_substr($customer['full_name'], 0, 1));
@@ -197,7 +209,7 @@ if ($pw_step === 2 && !empty($_SESSION['chpw_email'])) {
       <div class="pb-label">Gói hiện tại</div>
       <div class="pb-name"><?= htmlspecialchars($active_plan['plan_name']) ?></div>
       <div class="pb-dates">
-        <?= date('d/m/Y', strtotime($active_plan['start_date'])) ?> →
+        <?= date('d/m/Y', strtotime($first_start)) ?> →
         <?= date('d/m/Y', strtotime($active_plan['end_date'])) ?>
       </div>
       <div class="pb-progress"><div class="pb-fill" style="width:<?= $plan_pct ?>%"></div></div>

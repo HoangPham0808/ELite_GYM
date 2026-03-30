@@ -1,0 +1,9 @@
+# Truyen Authorization header vao PHP tren Apache/WAMP
+SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
+
+RewriteEngine On
+RewriteCond %{HTTP:Authorization} .
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+# Bypass ngrok browser warning cho tat ca request
+Header set ngrok-skip-browser-warning "true"

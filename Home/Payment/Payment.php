@@ -308,7 +308,7 @@ if ($active_plan) {
     <div class="success-title">Thanh toán thành công!</div>
     <div class="success-msg" id="successMsg">Gói tập của bạn đã được kích hoạt.</div>
     <div class="success-actions">
-      <a href="Profile/Profile.php?tab=plans" class="btn-success-profile">
+      <a href="../Profile/Profile.php?tab=plans" class="btn-success-profile">
         <i class="fas fa-id-card"></i> Xem gói tập của tôi
       </a>
       <a href="../index.php" class="btn-success-home">
