@@ -41,14 +41,11 @@ const esc      = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;')
 
 // ── PHÂN QUYỀN ────────────────────────────────────────────────────
 function applyPermissions() {
-    // Personal Trainer: chỉ thấy tab Bảo trì, ẩn Thiết bị
+    // Personal Trainer: thấy cả 2 tab, nhưng tab Thiết bị chỉ hiện thiết bị phòng hôm nay
+    // (không ẩn tab devices nữa)
     if (IS_HLV) {
-        const devTab = document.querySelector('[data-tab="devices"]');
-        if (devTab) devTab.style.display = 'none';
-        document.querySelectorAll('.tab-btn,.tab-content').forEach(el => el.classList.remove('active'));
-        const btBtn = document.querySelector('[data-tab="maintenance"]');
-        if (btBtn) btBtn.classList.add('active');
-        document.getElementById('tab-maintenance').classList.add('active');
+        // Giữ tab devices active theo mặc định (không thay đổi)
+        // Banner sẽ được cập nhật sau khi loadDevices() chạy
     }
 }
 
@@ -149,6 +146,13 @@ function _populateRoomSelect(selectedId) {
 //            purchase_price, purchase_date, last_maintenance_date, description, days_remaining
 async function loadDevices(page = devPage) {
     devPage = page;
+
+    // ── Personal Trainer: chỉ xem thiết bị phòng mình dạy hôm nay ──
+    if (IS_HLV) {
+        await loadTrainerRoomDevices(page);
+        return;
+    }
+
     const search = document.getElementById('devSearch').value.trim();
     const loai   = document.getElementById('devLoai').value;
     const status = document.getElementById('devStatus').value;
@@ -159,6 +163,44 @@ async function loadDevices(page = devPage) {
     renderDevTable(d.data || []);
     renderPag(d.total, d.page, d.totalPages, 'devPagInfo', 'devPagCtrl', loadDevices);
     document.getElementById('devMeta').textContent = `${d.total} thiết bị`;
+}
+
+// ── Tải thiết bị theo phòng mà HLV đăng ký dạy hôm nay ──────────
+async function loadTrainerRoomDevices(page = 1) {
+    document.getElementById('devTbody').innerHTML = `<tr><td colspan="10" class="loading-cell"><i class="fas fa-spinner fa-spin"></i></td></tr>`;
+
+    const params = new URLSearchParams({
+        action:     'get_trainer_room_devices',
+        trainer_id: USER_EMP_ID,
+        page,
+        limit:      LIMIT
+    });
+    const d = await apiFetch(params.toString());
+
+    const banner    = document.getElementById('hlvRoomBanner');
+    const bannerTxt = document.getElementById('hlvRoomBannerText');
+
+    if (!d.success) {
+        if (banner) { banner.style.display = 'flex'; bannerTxt.textContent = 'Không thể tải dữ liệu phòng tập.'; }
+        document.getElementById('devTbody').innerHTML = `<tr><td colspan="10" class="empty-cell">Không thể tải dữ liệu.</td></tr>`;
+        document.getElementById('devMeta').textContent = '—';
+        return;
+    }
+
+    if (banner) {
+        banner.style.display = 'flex';
+        if (d.room_name) {
+            bannerTxt.innerHTML = `<strong>Hôm nay bạn dạy tại:</strong> <span style="color:var(--tm,#d4a017);font-weight:700">${esc(d.room_name)}</span> — Hiển thị ${d.total} thiết bị trong phòng`;
+        } else {
+            bannerTxt.innerHTML = `<span style="color:#f87171">${d.message || 'Hôm nay bạn chưa đăng ký buổi dạy nào.'}</span>`;
+        }
+    }
+
+    renderDevTable(d.data || []);
+    renderPag(d.total, d.page, d.totalPages, 'devPagInfo', 'devPagCtrl', loadTrainerRoomDevices);
+    document.getElementById('devMeta').textContent = d.room_name
+        ? `${d.total} thiết bị — ${esc(d.room_name)}`
+        : '0 thiết bị';
 }
 
 function renderDevTable(rows) {
@@ -525,20 +567,41 @@ function showImportPreview(filename, json) {
     const validStatuses = ['Hoạt động','Hỏng','Đang bảo dưỡng','Ngừng sử dụng'];
     const dateRe = /^\d{4}-\d{2}-\d{2}$/;
 
+    // Chuyển Excel serial / Date object / string → YYYY-MM-DD, trả '' nếu không nhận ra
+    const toYMD = (v) => {
+        if (v === null || v === undefined || v === '') return '';
+        if (v instanceof Date) {
+            return v.getFullYear() + '-'
+                 + String(v.getMonth() + 1).padStart(2, '0') + '-'
+                 + String(v.getDate()).padStart(2, '0');
+        }
+        if (typeof v === 'number' && v > 1000) {
+            // Excel serial date
+            const d = new Date(Date.UTC(1899, 11, 30) + v * 86400000);
+            return d.getUTCFullYear() + '-'
+                 + String(d.getUTCMonth() + 1).padStart(2, '0') + '-'
+                 + String(d.getUTCDate()).padStart(2, '0');
+        }
+        const s = String(v).trim();
+        if (dateRe.test(s)) return s;
+        return ''; // không nhận ra → PHP sẽ tự điền ngày hôm nay
+    };
+
     importData = json.map((row, i) => {
         const r = {};
-        // Normalize keys (trim spaces, lowercase)
-        Object.keys(row).forEach(k => { r[k.trim()] = (row[k] === null || row[k] === undefined) ? '' : String(row[k]).trim(); });
+        Object.keys(row).forEach(k => {
+            const key = k.trim();
+            const val = row[k];
+            if (key === 'purchase_date' || key === 'last_maintenance_date') {
+                r[key] = toYMD(val);
+            } else {
+                r[key] = (val === null || val === undefined) ? '' : String(val).trim();
+            }
+        });
 
         if (!r['equipment_name']) { errors.push(`Dòng ${i+2}: thiếu <strong>equipment_name</strong>`); }
         if (r['condition_status'] && !validStatuses.includes(r['condition_status'])) {
             errors.push(`Dòng ${i+2}: condition_status "<em>${esc(r['condition_status'])}</em>" không hợp lệ`);
-        }
-        if (r['purchase_date'] && !dateRe.test(r['purchase_date'])) {
-            errors.push(`Dòng ${i+2}: purchase_date phải định dạng YYYY-MM-DD`);
-        }
-        if (r['last_maintenance_date'] && !dateRe.test(r['last_maintenance_date'])) {
-            errors.push(`Dòng ${i+2}: last_maintenance_date phải định dạng YYYY-MM-DD`);
         }
         return r;
     });

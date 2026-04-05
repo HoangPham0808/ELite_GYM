@@ -632,3 +632,7 @@ END;
  
 -- Verify:
 SELECT room_id, room_name, status FROM GymRoom ORDER BY room_id;
+ALTER TABLE `Review`
+    ADD COLUMN `staff_reply`      VARCHAR(300) NULL DEFAULT NULL,
+    ADD COLUMN `staff_reply_by`   VARCHAR(100) NULL DEFAULT NULL,
+    ADD COLUMN `staff_replied_at` DATETIME     NULL DEFAULT NULL;

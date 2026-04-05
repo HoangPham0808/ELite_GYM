@@ -1,13 +1,15 @@
 <?php
 if (session_status() === PHP_SESSION_NONE) session_start();
-$_role     = $_SESSION['role']     ?? '';
-$_position = $_SESSION['position'] ?? '';
-$is_admin  = ($_role === 'Admin');
-$is_recept = ($_role === 'Employee' && $_position === 'Receptionist');
-$is_hlv    = ($_role === 'Employee' && $_position === 'Personal Trainer');
+$_role       = $_SESSION['role']        ?? '';
+$_position   = $_SESSION['position']   ?? '';
+$_emp_id     = (int)($_SESSION['employee_id'] ?? 0);
+$is_admin    = ($_role === 'Admin');
+$is_recept   = ($_role === 'Employee' && $_position === 'Receptionist');
+$is_hlv      = ($_role === 'Employee' && $_position === 'Personal Trainer');
 // Encode for JS
 $js_role     = json_encode($_role);
 $js_position = json_encode($_position);
+$js_emp_id   = json_encode($_emp_id);
 ?>
 <!DOCTYPE html>
 <html lang="vi">
@@ -16,6 +18,21 @@ $js_position = json_encode($_position);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cơ sở vật chất - Elite Gym</title>
     <link rel="stylesheet" href="Facilities_Management.css">
+    <style>
+        .hlv-room-banner {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(212, 160, 23, 0.1);
+            border: 1px solid rgba(212, 160, 23, 0.35);
+            border-radius: 8px;
+            padding: 10px 16px;
+            margin-bottom: 14px;
+            font-size: 14px;
+            color: var(--ts, #e2e8f0);
+        }
+        .hlv-room-banner i { color: #d4a017; font-size: 16px; flex-shrink: 0; }
+    </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&family=Barlow+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
 </head>
@@ -37,6 +54,12 @@ $js_position = json_encode($_position);
 
     </div>
     <div class="tab-content active" id="tab-devices">
+        <?php if ($is_hlv): ?>
+        <div class="hlv-room-banner" id="hlvRoomBanner" style="display:none">
+            <i class="fas fa-door-open"></i>
+            <span id="hlvRoomBannerText">Đang tải thông tin phòng tập hôm nay...</span>
+        </div>
+        <?php endif; ?>
         <div class="filter-bar">
             <div class="search-box"><i class="fas fa-search"></i><input type="text" id="devSearch" placeholder="Tìm tên thiết bị..."></div>
             <select class="filter-select" id="devLoai"><option value="">Tất cả loại</option></select>
@@ -281,6 +304,7 @@ $js_position = json_encode($_position);
 <script>
     const USER_ROLE     = <?= $js_role ?>;
     const USER_POSITION = <?= $js_position ?>;
+    const USER_EMP_ID   = <?= $js_emp_id ?>;
     const IS_ADMIN      = <?= $is_admin  ? 'true' : 'false' ?>;
     const IS_RECEPT     = <?= $is_recept ? 'true' : 'false' ?>;
     const IS_HLV        = <?= $is_hlv    ? 'true' : 'false' ?>;

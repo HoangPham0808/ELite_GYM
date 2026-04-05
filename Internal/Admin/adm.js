@@ -10,6 +10,7 @@ const menuRoutes = {
     'Schedule_Management.php':   '../layout/Schedule_Management/Schedule_Management.php',
     'management_package.php':    '../layout/Package_Management/Package_Management.php',
     'customer.php':              '../layout/Customer_Management/Customer_Management.php',
+    'review.php':                '../layout/Review_Management/Review_Management.php',
     'management_staff.php':      '../layout/Employee_Management/Employee_Management.php',
     'management_branch.php':     '../layout/Gym_Management/Gym_Management.php',
     'System.php':                '../Layout/Setting/System/System.php',
@@ -21,6 +22,7 @@ const menuRoutes = {
 const pageMeta = {
     'overview.php':              { title: 'TỔNG QUAN',               breadcrumb: 'Trang chủ / Tổng quan',        icon: 'fa-th-large',      color: 'rgba(59,130,246,0.25)',   iconColor: '#60a5fa' },
     'customer.php':              { title: 'QUẢN LÝ KHÁCH HÀNG',      breadcrumb: 'Trang chủ / Khách hàng',       icon: 'fa-users',         color: 'rgba(90,50,180,0.25)',    iconColor: '#a78bfa' },
+    'review.php':                { title: 'QUẢN LÝ ĐÁNH GIÁ',        breadcrumb: 'Trang chủ / Đánh giá',         icon: 'fa-star',          color: 'rgba(245,158,11,0.2)',    iconColor: '#f59e0b' },
     'management_staff.php':      { title: 'QUẢN LÝ NHÂN VIÊN',       breadcrumb: 'Trang chủ / Nhân viên',        icon: 'fa-user-tie',      color: 'rgba(34,197,94,0.2)',     iconColor: '#4ade80' },
     'management_branch.php':     { title: 'QUẢN LÝ PHÒNG TẬP',       breadcrumb: 'Trang chủ / Phòng tập',        icon: 'fa-chess-board',   color: 'rgba(249,115,22,0.2)',    iconColor: '#fb923c' },
     'management_invoice.php':    { title: 'QUẢN LÝ HOÁ ĐƠN',         breadcrumb: 'Trang chủ / Hoá đơn',          icon: 'fa-receipt',       color: 'rgba(234,179,8,0.2)',     iconColor: '#facc15' },

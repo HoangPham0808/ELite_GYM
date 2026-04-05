@@ -117,7 +117,7 @@
     <div class="view-controls">
         <div class="view-toggle">
             <button class="vt-btn active" id="btnCalView" onclick="switchView('calendar')">
-                <i class="fas fa-calendar-days"></i> Lịch tuần
+                <i class="fas fa-calendar-days"></i> Lịch
             </button>
             <button class="vt-btn" id="btnListView" onclick="switchView('list')">
                 <i class="fas fa-list"></i> Danh sách
@@ -130,25 +130,49 @@
         <?php endif; ?>
     </div>
 
-    <!-- ═══ CALENDAR VIEW ═══ -->
+    <!-- ═══ CALENDAR / ROOM VIEW (chung 1 khung) ═══ -->
     <div id="view-calendar" class="view-section">
-        <div class="calendar-nav">
-            <button class="cal-nav-btn" onclick="navWeek(-1)"><i class="fas fa-chevron-left"></i></button>
+
+        <!-- Nav chung: prev/next + tiêu đề + today + legend/day-picker -->
+        <div class="calendar-nav" id="calNav">
+            <button class="cal-nav-btn" id="btnNavPrev" onclick="calNavPrev()"><i class="fas fa-chevron-left"></i></button>
             <div class="cal-week-title" id="calWeekTitle">—</div>
-            <button class="cal-nav-btn" onclick="navWeek(1)"><i class="fas fa-chevron-right"></i></button>
-            <button class="cal-today-btn" onclick="goToday()">Hôm nay</button>
-            <!-- Package type legend -->
-            <div class="pkg-legend">
+            <button class="cal-nav-btn" id="btnNavNext" onclick="calNavNext()"><i class="fas fa-chevron-right"></i></button>
+            <button class="cal-today-btn" onclick="calGoToday()">Hôm nay</button>
+
+            <!-- Sub-toggle: Lịch tuần / Theo phòng -->
+            <div class="cal-sub-toggle">
+                <button class="cst-btn active" id="btnSubWeek" onclick="switchCalMode('week')">
+                    <i class="fas fa-calendar-week"></i> Lịch tuần
+                </button>
+                <button class="cst-btn" id="btnSubRoom" onclick="switchCalMode('room')">
+                    <i class="fas fa-door-open"></i> Theo phòng
+                </button>
+            </div>
+
+            <!-- Package legend (week mode) -->
+            <div class="pkg-legend" id="pkgLegend">
                 <span class="pkg-legend-item"><span class="pkg-dot" style="background:var(--pkg-basic)"></span>Basic</span>
                 <span class="pkg-legend-item"><span class="pkg-dot" style="background:var(--pkg-standard)"></span>Standard</span>
                 <span class="pkg-legend-item"><span class="pkg-dot" style="background:var(--pkg-premium)"></span>Premium</span>
                 <span class="pkg-legend-item"><span class="pkg-dot" style="background:var(--pkg-vip)"></span>VIP</span>
                 <span class="pkg-legend-item"><span class="pkg-dot" style="background:var(--pkg-student)"></span>Student</span>
             </div>
+
+            <!-- Day picker tabs (room mode only) -->
+            <div class="room-day-tabs" id="roomDayTabs" style="display:none"></div>
         </div>
-        <div class="calendar-grid-wrap">
+
+        <!-- Week grid -->
+        <div class="calendar-grid-wrap" id="weekGridWrap">
             <div class="calendar-grid" id="calendarGrid"></div>
         </div>
+
+        <!-- Room grid (columns = rooms, for selected day) -->
+        <div class="room-col-grid-wrap" id="roomGridWrap" style="display:none">
+            <div class="room-col-grid" id="roomColGrid"></div>
+        </div>
+
     </div>
 
     <!-- ═══ LIST VIEW ═══ -->

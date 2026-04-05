@@ -1,7 +1,7 @@
+
 <?php
 ob_start();
 session_start();
-
 // ── Detect logged-in customer ────────────────────────────────
 $is_logged_in  = isset($_SESSION['account_id']);
 $is_customer   = $is_logged_in && ($_SESSION['role'] ?? '') === 'Customer';
@@ -190,21 +190,10 @@ $type_icon_map = [
 <?php if ($hero_img): ?>
 <link rel="preload" as="image" href="<?= $hero_img ?>"/>
 <?php endif; ?>
-<link rel="preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous"/>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
-      crossorigin="anonymous" referrerpolicy="no-referrer" id="fa-cdn" media="print" onload="this.media='all'"/>
-<noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous"/></noscript>
-<script>
-  (function(){
-    var l=document.getElementById('fa-cdn');
-    if(l&&!l.sheet){
-      var fb=document.createElement('link');
-      fb.rel='stylesheet';fb.href='fontawesome/css/all.min.css';
-      document.head.appendChild(fb);
-    }
-  })();
-</script>
+<link rel="stylesheet" href="Review/reviews_section.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer"/>
 <link rel="stylesheet" href="Landing.css"/>
+<link rel="stylesheet" href="Review/notification.css"/>
 </head>
 <body>
 
@@ -238,6 +227,25 @@ $type_icon_map = [
     </nav>
     <div class="nav-actions">
       <?php if ($is_customer): ?>
+        <!-- ▼▼▼ BELL NOTIFICATION ▼▼▼ -->
+        <div class="notif-bell-wrap" id="notifBellWrap">
+          <button class="notif-bell-btn" id="notifBellBtn" title="Thông báo" aria-label="Thông báo">
+            <i class="fas fa-bell"></i>
+            <span class="notif-badge" id="notifBadge"></span>
+          </button>
+          <div class="notif-panel" id="notifPanel" role="dialog" aria-label="Thông báo">
+            <div class="np-header">
+              <div class="np-title"><i class="fas fa-bell"></i> Thông báo</div>
+              <button class="np-mark-all" id="npMarkAll">Đánh dấu tất cả đã đọc</button>
+            </div>
+            <div class="np-list" id="npList">
+              <div class="np-skeleton"><div class="np-sk-circle"></div><div class="np-sk-lines"><div class="np-sk-line"></div><div class="np-sk-line s"></div></div></div>
+              <div class="np-skeleton"><div class="np-sk-circle"></div><div class="np-sk-lines"><div class="np-sk-line"></div><div class="np-sk-line s"></div></div></div>
+            </div>
+            <div class="np-footer"><a href="#reviews">Xem tất cả đánh giá của bạn</a></div>
+          </div>
+        </div>
+        <!-- ▲▲▲ END BELL ▲▲▲ -->
         <div class="nav-user-wrap" id="navUserWrap">
           <button class="nav-user-btn" id="navUserBtn">
             <div class="nav-avatar"><?= mb_strtoupper(mb_substr($customer_name, 0, 1)) ?></div>
@@ -805,29 +813,7 @@ $type_icon_map = [
 <?php endif; ?>
 
 <!-- ══ REVIEWS ══ -->
-<?php if (!empty($reviews)): ?>
-<section class="reviews" id="reviews">
-  <div class="wrap">
-    <div class="sec-head light reveal">
-      <div class="eyebrow"><span></span>Đánh giá thành viên</div>
-      <h2>Khách hàng <span>nói gì</span> về chúng tôi</h2>
-    </div>
-    <div class="rv-grid">
-      <?php foreach($reviews as $rv): ?>
-      <div class="rv-card reveal">
-        <div class="rv-stars"><?php for($s=0;$s<$rv['rating'];$s++): ?><i class="fas fa-star"></i><?php endfor; ?></div>
-        <p>"<?= htmlspecialchars($rv['content']) ?>"</p>
-        <div class="rv-author">
-          <div class="rv-av"><?= mb_strtoupper(mb_substr($rv['full_name'],-1)) ?></div>
-          <span><?= htmlspecialchars($rv['full_name']) ?></span>
-        </div>
-        <i class="fas fa-quote-right rv-quote"></i>
-      </div>
-      <?php endforeach; ?>
-    </div>
-  </div>
-</section>
-<?php endif; ?>
+<?php include 'Review/reviews_section.php'; ?>
 
 <!-- ══ FINAL CTA ══ -->
 <section class="cta-final">
@@ -937,5 +923,12 @@ function sortPlans(val) {
 }
 </script>
 <script src="Landing.js" defer></script>
+ 
+<?php if ($is_customer): ?>
+<!-- Toast container + Notification JS -->
+<div class="toast-stack" id="toastStack"></div>
+<?php include 'Review/notification_ui.php'; ?>
+<?php endif; ?>
+ 
 </body>
 </html>

@@ -70,6 +70,12 @@ $initials    = mb_strtoupper(mb_substr($full_name, 0, 1));
                                 
                             </a>
                         </li>
+                        <li class="nav-item active" data-page="review.php">
+                            <a href="#review.php">
+                                <i class="fas fa-users"></i><span>Quản lý đánh giá</span>
+                                
+                            </a>
+                        </li>
                         <li class="nav-item" data-page="Schedule_Management.php">
                             <a href="#Schedule_Management.php"><i class="fas fa-calendar-alt"></i><span>Quản lý lịch tập</span></a>
                         </li>

@@ -548,6 +548,105 @@ if (hamburger && mobileMenu) {
   });
 }
 </script>
+
+<!-- ══ AI WORKOUT PLANNER MODAL ══ -->
+<div class="ai-modal-overlay" id="aiPlannerOverlay">
+  <div class="ai-modal" id="aiPlannerModal">
+
+    <button class="ai-modal-close" id="aiModalClose" title="Đóng">
+      <i class="fas fa-times"></i>
+    </button>
+
+    <!-- HEADER CLASS INFO -->
+    <div class="ai-modal-header">
+      <div class="ai-modal-pkg-stripe" id="aiPkgStripe"></div>
+      <div class="ai-modal-header-body">
+        <span class="ai-modal-label">Thông tin buổi tập</span>
+        <h2 class="ai-modal-title" id="aiClassName">—</h2>
+        <div class="ai-modal-meta">
+          <span id="aiClassTime"><i class="fas fa-clock"></i> —</span>
+          <span id="aiClassTrainer"><i class="fas fa-user-tie"></i> —</span>
+          <span id="aiClassRoom"><i class="fas fa-door-open"></i> —</span>
+        </div>
+        <div id="aiPkgTag" class="ai-pkg-tag" style="display:none"></div>
+      </div>
+    </div>
+
+    <!-- BODY: 2 col -->
+    <div class="ai-modal-body">
+
+      <!-- LEFT: BMI form -->
+      <div class="ai-modal-col ai-modal-col--form">
+        <p class="ai-section-label"><i class="fas fa-person"></i> Thông số cơ thể</p>
+
+        <div class="ai-form-row">
+          <div class="ai-form-group">
+            <label>Chiều cao (cm)</label>
+            <input type="number" id="aiHeight" placeholder="170" min="100" max="250">
+          </div>
+          <div class="ai-form-group">
+            <label>Cân nặng (kg)</label>
+            <input type="number" id="aiWeight" placeholder="65" min="30" max="200">
+          </div>
+        </div>
+        <div class="ai-form-row">
+          <div class="ai-form-group">
+            <label>Tuổi</label>
+            <input type="number" id="aiAge" placeholder="25" min="10" max="100">
+          </div>
+          <div class="ai-form-group">
+            <label>Giới tính</label>
+            <select id="aiGender">
+              <option value="male">Nam</option>
+              <option value="female">Nữ</option>
+            </select>
+          </div>
+        </div>
+        <div class="ai-form-group">
+          <label>Mục tiêu</label>
+          <select id="aiGoal">
+            <option value="lose_fat">🔥 Giảm mỡ</option>
+            <option value="build_muscle">💪 Tăng cơ</option>
+            <option value="endurance">🏃 Tăng sức bền</option>
+            <option value="maintain">⚖️ Duy trì thể hình</option>
+          </select>
+        </div>
+
+        <!-- BMI result chips -->
+        <div class="ai-bmi-chips" id="aiBmiChips" style="display:none">
+          <div class="ai-bmi-chip ai-bmi-chip--gold">
+            <span class="ai-chip-val" id="aiBmiVal">—</span>
+            <span class="ai-chip-lbl">BMI</span>
+          </div>
+          <div class="ai-bmi-chip">
+            <span class="ai-chip-val ai-chip-val--sm" id="aiBmiCat">—</span>
+            <span class="ai-chip-lbl">Phân loại</span>
+          </div>
+          <div class="ai-bmi-chip ai-bmi-chip--gold">
+            <span class="ai-chip-val" id="aiBurnTarget">—</span>
+            <span class="ai-chip-lbl">Calo cần đốt</span>
+          </div>
+        </div>
+
+        <button class="ai-gen-btn" id="aiGenBtn" disabled>
+          <i class="fas fa-bolt"></i> Tạo lịch tập AI
+        </button>
+      </div>
+
+      <!-- RIGHT: AI output -->
+      <div class="ai-modal-col ai-modal-col--output">
+        <p class="ai-section-label"><i class="fas fa-robot"></i> Lịch tập được tạo bởi AI</p>
+        <div class="ai-output-box" id="aiOutputBox">
+          <div class="ai-output-empty">
+            <i class="fas fa-dumbbell"></i>
+            <p>Nhập thông số cơ thể và nhấn<br><strong>Tạo lịch tập AI</strong> để bắt đầu</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
 <script src="Schedule.js"></script>
 </body>
 </html>

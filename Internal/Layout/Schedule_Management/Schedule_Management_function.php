@@ -119,6 +119,32 @@ case 'add_schedule':
         }
     }
 
+    /* Kiểm tra phòng bị trùng giờ trong cùng ngày
+       Overlap: A.start < B.end AND (A.end IS NULL OR A.end > B.start)
+       Nếu B chưa có end_time → dùng B.start làm điểm kết thúc tạm thời,
+       vẫn bắt được trường hợp B.start rơi vào giữa buổi đang có lịch. */
+    if ($room_id) {
+        $newEnd = $end_time ?: $start_time;
+        $chkRoom = $conn->prepare("
+            SELECT class_id, class_name, start_time, end_time
+            FROM TrainingClass
+            WHERE room_id          = ?
+              AND DATE(start_time) = DATE(?)
+              AND start_time       < ?
+              AND (end_time IS NULL OR end_time > ?)
+            LIMIT 1
+        ");
+        $chkRoom->bind_param('isss', $room_id, $start_time, $newEnd, $start_time);
+        $chkRoom->execute();
+        $conflict = $chkRoom->get_result()->fetch_assoc();
+        if ($conflict) {
+            $cs = date('H:i', strtotime($conflict['start_time']));
+            $ce = $conflict['end_time'] ? date('H:i', strtotime($conflict['end_time'])) : '?';
+            echo json_encode(['success'=>false,'message'=>"Phòng này đã có lớp \"{$conflict['class_name']}\" ({$cs}\u2013{$ce}). Vui lòng chọn khung giờ không bị trùng."]);
+            exit;
+        }
+    }
+
     $s=$conn->prepare("INSERT INTO TrainingClass (class_name,trainer_id,room_id,start_time,end_time) VALUES(?,?,?,?,?)");
     $s->bind_param('siiss',$class_name,$trainer_id,$room_id,$start_time,$end_time);
     echo json_encode($s->execute()
@@ -151,6 +177,30 @@ case 'update_schedule':
             if ($tOpen  && $tStart < $tOpen)  { echo json_encode(['success'=>false,'message'=>"Giờ bắt đầu sớm hơn giờ mở cửa phòng $rName (" . substr($tOpen,0,5) . ")" ]); exit; }
             if ($tClose && $tStart > $tClose) { echo json_encode(['success'=>false,'message'=>"Giờ bắt đầu muộn hơn giờ đóng cửa phòng $rName (" . substr($tClose,0,5) . ")" ]); exit; }
             if ($tEnd && $tClose && $tEnd > $tClose) { echo json_encode(['success'=>false,'message'=>"Giờ kết thúc vượt quá giờ đóng cửa phòng $rName (" . substr($tClose,0,5) . ")" ]); exit; }
+        }
+    }
+
+    /* Kiểm tra phòng bị trùng giờ trong cùng ngày (trừ chính buổi này) */
+    if ($room_id) {
+        $newEnd = $end_time ?: $start_time;
+        $chkRoom = $conn->prepare("
+            SELECT class_id, class_name, start_time, end_time
+            FROM TrainingClass
+            WHERE room_id          = ?
+              AND DATE(start_time) = DATE(?)
+              AND class_id         <> ?
+              AND start_time       < ?
+              AND (end_time IS NULL OR end_time > ?)
+            LIMIT 1
+        ");
+        $chkRoom->bind_param('isiss', $room_id, $start_time, $id, $newEnd, $start_time);
+        $chkRoom->execute();
+        $conflict = $chkRoom->get_result()->fetch_assoc();
+        if ($conflict) {
+            $cs = date('H:i', strtotime($conflict['start_time']));
+            $ce = $conflict['end_time'] ? date('H:i', strtotime($conflict['end_time'])) : '?';
+            echo json_encode(['success'=>false,'message'=>"Phòng này đã có lớp \"{$conflict['class_name']}\" ({$cs}\u2013{$ce}). Vui lòng chọn khung giờ không bị trùng."]);
+            exit;
         }
     }
 
@@ -190,17 +240,32 @@ case 'assign_trainer':
     $trainer_id = (int)($_POST['trainer_id']??0);
     if (!$class_id||!$trainer_id) { echo json_encode(['success'=>false,'message'=>'Thiếu dữ liệu']); exit; }
 
-    /* Lấy ngày của buổi tập cần đăng ký */
-    $dateRow = $conn->query("SELECT DATE(start_time) AS class_date FROM TrainingClass WHERE class_id=$class_id LIMIT 1")->fetch_assoc();
-    if (!$dateRow) { echo json_encode(['success'=>false,'message'=>'Không tìm thấy buổi tập']); exit; }
-    $class_date = $dateRow['class_date'];
+    /* Lấy thông tin giờ của buổi tập cần đăng ký */
+    $thisClass = $conn->query("SELECT DATE(start_time) AS class_date, start_time, end_time FROM TrainingClass WHERE class_id=$class_id LIMIT 1")->fetch_assoc();
+    if (!$thisClass) { echo json_encode(['success'=>false,'message'=>'Không tìm thấy buổi tập']); exit; }
+    $class_date  = $thisClass['class_date'];
+    $thisStart   = $thisClass['start_time'];
+    $thisEnd     = $thisClass['end_time'];
 
-    /* Kiểm tra HLV đã phụ trách buổi nào trong ngày đó chưa (trừ chính buổi này) */
-    $chk = $conn->prepare("SELECT class_id FROM TrainingClass WHERE trainer_id=? AND DATE(start_time)=? AND class_id<>? LIMIT 1");
-    $chk->bind_param('isi', $trainer_id, $class_date, $class_id);
+    /* Kiểm tra HLV bị trùng giờ trong ngày đó (trừ chính buổi này) */
+    $newEnd = $thisEnd ?: $thisStart;
+    $chk = $conn->prepare("
+        SELECT class_id, class_name, start_time, end_time
+        FROM TrainingClass
+        WHERE trainer_id       = ?
+          AND DATE(start_time) = ?
+          AND class_id         <> ?
+          AND start_time       < ?
+          AND (end_time IS NULL OR end_time > ?)
+        LIMIT 1
+    ");
+    $chk->bind_param('isiss', $trainer_id, $class_date, $class_id, $newEnd, $thisStart);
     $chk->execute();
-    if ($chk->get_result()->num_rows > 0) {
-        echo json_encode(['success'=>false,'message'=>'Bạn đã đăng ký dạy 1 buổi trong ngày này rồi. Mỗi HLV chỉ được dạy tối đa 1 buổi/ngày.']);
+    $conflict = $chk->get_result()->fetch_assoc();
+    if ($conflict) {
+        $cs = date('H:i', strtotime($conflict['start_time']));
+        $ce = $conflict['end_time'] ? date('H:i', strtotime($conflict['end_time'])) : '?';
+        echo json_encode(['success'=>false,'message'=>"HLV đã được phân công lớp \"{$conflict['class_name']}\" ({$cs}\u2013{$ce}) trong khung giờ này."]);
         exit;
     }
 

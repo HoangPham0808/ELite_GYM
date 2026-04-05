@@ -146,8 +146,14 @@ case 'update_device':
     $type_id   = (int)($_POST['loai_id'] ?? 0) ?: null;
     $condition = trim($_POST['tinh_trang'] ?? 'Hoạt động');
     $gia       = trim($_POST['gia_mua'] ?? '') !== '' ? (float)$_POST['gia_mua'] : null;
-    $ngay_mua  = trim($_POST['ngay_mua'] ?? '') ?: null;
-    $ngay_bao  = trim($_POST['ngay_bao_tri_gan'] ?? '') ?: null;
+    $ngay_mua_raw = trim($_POST['ngay_mua'] ?? '');
+    $ngay_mua  = ($ngay_mua_raw && $ngay_mua_raw !== '0000-00-00' && strtotime($ngay_mua_raw))
+                 ? date('Y-m-d', strtotime($ngay_mua_raw))
+                 : date('Y-m-d');   // tự động lấy ngày hôm nay nếu trống/không hợp lệ
+    $ngay_bao_raw = trim($_POST['ngay_bao_tri_gan'] ?? '');
+    $ngay_bao  = ($ngay_bao_raw && $ngay_bao_raw !== '0000-00-00' && strtotime($ngay_bao_raw))
+                 ? date('Y-m-d', strtotime($ngay_bao_raw))
+                 : null;
     $mo_ta     = trim($_POST['mo_ta'] ?? '') ?: null;
     $room_id   = (int)($_POST['phong_tap_id'] ?? 0) ?: null;
 
@@ -293,6 +299,77 @@ case 'delete_maintenance':
 case 'get_all_devices_list':
     $rows = $conn->query("SELECT equipment_id, equipment_name FROM Equipment ORDER BY equipment_name")->fetch_all(MYSQLI_ASSOC);
     echo json_encode(['success' => true, 'data' => $rows]);
+    break;
+
+/* ── Lấy thiết bị trong phòng mà HLV đăng ký dạy hôm nay ── */
+case 'get_trainer_room_devices':
+    $trainer_id = (int)($_GET['trainer_id'] ?? 0);
+    if (!$trainer_id) {
+        echo json_encode(['success' => false, 'message' => 'Thiếu trainer_id']);
+        break;
+    }
+    $today = date('Y-m-d');
+
+    /* Tìm room_id của buổi tập HLV đăng ký trong ngày hôm nay */
+    $roomRes = $conn->prepare(
+        "SELECT tc.room_id, gr.room_name
+         FROM TrainingClass tc
+         LEFT JOIN GymRoom gr ON gr.room_id = tc.room_id
+         WHERE tc.trainer_id = ? AND DATE(tc.start_time) = ?
+           AND tc.room_id IS NOT NULL
+         LIMIT 1"
+    );
+    $roomRes->bind_param('is', $trainer_id, $today);
+    $roomRes->execute();
+    $roomRow = $roomRes->get_result()->fetch_assoc();
+
+    if (!$roomRow) {
+        echo json_encode([
+            'success'   => true,
+            'data'      => [],
+            'room_name' => null,
+            'message'   => 'Hôm nay bạn chưa đăng ký dạy buổi nào hoặc buổi tập không có phòng.'
+        ]);
+        break;
+    }
+
+    $room_id   = (int)$roomRow['room_id'];
+    $room_name = $roomRow['room_name'];
+
+    /* Lấy toàn bộ thiết bị của phòng đó */
+    $page   = max(1, (int)($_GET['page'] ?? 1));
+    $limit  = (int)($_GET['limit'] ?? 15);
+    $offset = ($page - 1) * $limit;
+
+    $total = (int)$conn->query("SELECT COUNT(*) c FROM Equipment WHERE room_id = $room_id")->fetch_assoc()['c'];
+
+    $s = $conn->prepare("
+        SELECT e.*, et.type_name, et.maintenance_interval, gr.room_name,
+               DATEDIFF(
+                   DATE_ADD(COALESCE(e.last_maintenance_date, e.purchase_date, CURDATE()),
+                       INTERVAL COALESCE(et.maintenance_interval, 180) DAY),
+                   CURDATE()
+               ) AS days_remaining
+        FROM Equipment e
+        LEFT JOIN EquipmentType et ON et.type_id = e.type_id
+        LEFT JOIN GymRoom gr       ON gr.room_id  = e.room_id
+        WHERE e.room_id = ?
+        ORDER BY e.equipment_id DESC
+        LIMIT ? OFFSET ?
+    ");
+    $s->bind_param('iii', $room_id, $limit, $offset);
+    $s->execute();
+    $rows = $s->get_result()->fetch_all(MYSQLI_ASSOC);
+
+    echo json_encode([
+        'success'    => true,
+        'data'       => $rows,
+        'total'      => $total,
+        'page'       => $page,
+        'totalPages' => max(1, ceil($total / $limit)),
+        'room_id'    => $room_id,
+        'room_name'  => $room_name,
+    ]);
     break;
 
 default:
