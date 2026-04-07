@@ -109,13 +109,36 @@ async function doClassAction(classId, action, btn) {
           btn.className      = 'sch-btn-cancel';
           btn.dataset.action = 'cancel';
           btn.innerHTML      = '<i class="fas fa-times"></i> Hủy';
+          btn.disabled = false;
+
+          // Ẩn tất cả card cùng slot_key nhưng khác lớp này
+          const slotKey = card.dataset.slotKey;
+          if (slotKey) {
+            document.querySelectorAll(`.sch-class-card[data-slot-key="${slotKey}"]`).forEach(c => {
+              if (c !== card) {
+                c.style.display = 'none';
+                c.classList.add('sch-class-card--conflict');
+              }
+            });
+          }
         } else {
           card.classList.remove('sch-class-card--mine');
           btn.className      = 'sch-btn-register';
           btn.dataset.action = 'register';
           btn.innerHTML      = '<i class="fas fa-plus"></i> Đăng ký';
+          btn.disabled = false;
+
+          // Hiện lại các card cùng slot_key đang bị ẩn do conflict
+          const slotKey = card.dataset.slotKey;
+          if (slotKey) {
+            document.querySelectorAll(`.sch-class-card[data-slot-key="${slotKey}"]`).forEach(c => {
+              if (c !== card && c.classList.contains('sch-class-card--conflict')) {
+                c.style.display = '';
+                c.classList.remove('sch-class-card--conflict');
+              }
+            });
+          }
         }
-        btn.disabled = false;
       }
 
       const listCard = btn.closest('.sch-list-card');

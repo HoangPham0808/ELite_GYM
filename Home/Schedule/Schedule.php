@@ -66,11 +66,12 @@ if ($customer_package) {
         LEFT JOIN GymRoom gr    ON gr.room_id     = tc.room_id
         LEFT JOIN PackageType pt ON pt.type_id    = gr.package_type_id
         WHERE tc.start_time BETWEEN '$ws' AND '$we'
+          AND tc.trainer_id IS NOT NULL
           AND (
               pt.sort_order IS NULL
               OR pt.sort_order <= $customer_sort_order
           )
-        ORDER BY tc.start_time ASC
+        ORDER BY tc.start_time ASC, COALESCE(pt.sort_order, 0) ASC
     ")->fetch_all(MYSQLI_ASSOC);
 }
 
@@ -107,7 +108,8 @@ foreach ($classes as $c) {
 $all_my = [];
 if ($cid) {
     $all_my = $conn->query("
-        SELECT tc.class_id, tc.class_name, tc.start_time, e.full_name AS trainer_name,
+        SELECT tc.class_id, tc.class_name, tc.start_time, tc.end_time,
+               e.full_name AS trainer_name,
                gr.room_name,
                pt.type_name AS room_package_type,
                pt.color_code AS room_type_color
@@ -119,6 +121,31 @@ if ($cid) {
         WHERE cr.customer_id = $cid
         ORDER BY tc.start_time ASC
     ")->fetch_all(MYSQLI_ASSOC);
+}
+
+// ── Lấy tất cả check-in của khách để xác nhận tham dự ────────
+$checkin_times = [];
+if ($cid) {
+    $ci = $conn->query("
+        SELECT check_time FROM GymCheckIn
+        WHERE customer_id = $cid AND type = 'checkin'
+        ORDER BY check_time ASC
+    ");
+    if ($ci) {
+        while ($row = $ci->fetch_assoc()) {
+            $checkin_times[] = strtotime($row['check_time']);
+        }
+    }
+}
+
+// Kiểm tra có check-in nằm trong [start_time, end_time] của buổi tập không
+function hasCheckinInWindow(array $checkin_times, string $start, ?string $end): bool {
+    $s = strtotime($start);
+    $e = $end ? strtotime($end) : ($s + 7200);
+    foreach ($checkin_times as $ts) {
+        if ($ts >= $s && $ts <= $e) return true;
+    }
+    return false;
 }
 
 $now_ts      = time();
@@ -299,7 +326,9 @@ $past_my     = array_filter($all_my, fn($c) => strtotime($c['start_time']) <  $n
             <?= $is_mine       ? 'sch-class-card--mine'     : '' ?>
             <?= $is_past       ? 'sch-class-card--past'     : '' ?>
             <?= $slot_conflict ? 'sch-class-card--conflict'  : '' ?>"
-               data-class-id="<?= $c['class_id'] ?>">
+               data-class-id="<?= $c['class_id'] ?>"
+               data-slot-key="<?= htmlspecialchars($slot_key) ?>"
+               <?= $slot_conflict ? 'style="display:none"' : '' ?>>
 
             <?php if ($room_type): ?>
               <div class="sch-card-pkg-stripe" style="background:<?= $room_color ?>"></div>
@@ -359,7 +388,6 @@ $past_my     = array_filter($all_my, fn($c) => strtotime($c['start_time']) <  $n
     <div class="sch-legend">
       <div class="sch-legend-item"><span class="sch-legend-dot sch-legend-dot--mine"></span> Lớp đã đăng ký</div>
       <div class="sch-legend-item"><span class="sch-legend-dot"></span> Lớp chưa đăng ký</div>
-      <div class="sch-legend-item"><span class="sch-legend-dot sch-legend-dot--conflict"></span> Trùng giờ</div>
     </div>
   <?php endif; /* end if $customer_package */ ?>
   </div>
@@ -428,9 +456,10 @@ $past_my     = array_filter($all_my, fn($c) => strtotime($c['start_time']) <  $n
       <div class="sch-list-grid">
         <?php foreach (array_reverse($past_my) as $c):
           $dt = new DateTime($c['start_time']);
+          $attended = hasCheckinInWindow($checkin_times, $c['start_time'], $c['end_time'] ?? null);
         ?>
-        <div class="sch-list-card sch-list-card--past">
-          <div class="sch-list-card-side"></div>
+        <div class="sch-list-card sch-list-card--past <?= $attended ? 'sch-list-card--attended' : 'sch-list-card--absent' ?>">
+          <div class="sch-list-card-side" style="<?= $attended ? 'background:rgba(34,197,94,.7)' : 'background:rgba(239,68,68,.5)' ?>"></div>
           <div class="sch-list-card-body">
             <div class="sch-list-card-top">
               <div>
@@ -441,9 +470,21 @@ $past_my     = array_filter($all_my, fn($c) => strtotime($c['start_time']) <  $n
             <div class="sch-list-card-foot">
               <div class="sch-list-dt">
                 <span><i class="fas fa-calendar"></i> <?= $dt->format('d/m/Y') ?></span>
-                <span><i class="fas fa-clock"></i> <?= $dt->format('H:i') ?></span>
+                <span><i class="fas fa-clock"></i> <?= $dt->format('H:i') ?>
+                  <?php if (!empty($c['end_time'])): ?>
+                    <span style="color:rgba(255,255,255,.35)">– <?= (new DateTime($c['end_time']))->format('H:i') ?></span>
+                  <?php endif; ?>
+                </span>
               </div>
-              <div class="sch-list-reg-badge" style="background:rgba(255,255,255,.05);color:rgba(255,255,255,.35);border:1px solid rgba(255,255,255,.08)"><i class="fas fa-check"></i> Đã hoàn thành</div>
+              <?php if ($attended): ?>
+                <div class="sch-list-reg-badge" style="background:rgba(34,197,94,.1);color:#4ade80;border:1px solid rgba(34,197,94,.3)">
+                  <i class="fas fa-circle-check"></i> Đã tham dự
+                </div>
+              <?php else: ?>
+                <div class="sch-list-reg-badge" style="background:rgba(239,68,68,.08);color:#f87171;border:1px solid rgba(239,68,68,.25)">
+                  <i class="fas fa-circle-xmark"></i> Vắng mặt
+                </div>
+              <?php endif; ?>
             </div>
           </div>
         </div>
