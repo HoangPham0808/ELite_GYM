@@ -165,6 +165,12 @@ document.addEventListener('click', e => {
   const classId = card.dataset.classId;
   if (!classId) return;
 
+  // Chỉ cho phép mở AI nếu lớp đã đăng ký
+  if (!card.classList.contains('sch-class-card--mine')) {
+    showToast('Bạn cần đăng ký lớp này trước khi sử dụng AI lên lịch tập', true);
+    return;
+  }
+
   const name     = card.querySelector('.sch-class-name')?.textContent?.trim() || '—';
   const time     = card.querySelector('.sch-class-time')?.textContent?.trim() || '—';
   const trainer  = card.querySelector('.sch-meta-row:nth-child(1)')?.textContent?.trim() || '';
@@ -290,8 +296,6 @@ document.getElementById('aiGenBtn')?.addEventListener('click', async () => {
   outputBox.innerHTML = '<div class="ai-loading"><div class="ai-spinner"></div>AI đang phân tích thiết bị phòng và tạo lịch tập...</div>';
 
   try {
-    // ── Gửi class_id + thông số user lên PHP proxy ──
-    // PHP sẽ tự query DB lấy thiết bị phòng rồi gọi Ollama
     const res = await fetch('ai_proxy.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -310,7 +314,6 @@ document.getElementById('aiGenBtn')?.addEventListener('click', async () => {
 
     if (!data.success) throw new Error(data.message || 'Lỗi từ server');
 
-    // Hiển thị thiết bị phòng phía trên lịch tập
     const equipHTML = data.equipment
       ? `<div class="ai-equipment-tag">
            <i class="fas fa-tools"></i>
@@ -325,7 +328,7 @@ document.getElementById('aiGenBtn')?.addEventListener('click', async () => {
       ⚠️ Lỗi AI: ${e.message}
       <br><small style="color:#888;margin-top:8px;display:block">
         Kiểm tra: Ollama đang chạy? (ollama serve)<br>
-        Model đã pull? (ollama pull llama3.2:3b)
+        Model đã pull? (ollama pull qwen2.5:3b)
       </small>
     </div>`;
   }
@@ -334,13 +337,148 @@ document.getElementById('aiGenBtn')?.addEventListener('click', async () => {
   btn.innerHTML = '<i class="fas fa-bolt"></i> Tạo lại';
 });
 
-/* ── MARKDOWN → HTML ───────────────────────────────────────────── */
+/* ══════════════════════════════════
+   MARKDOWN → HTML (universal parser)
+   Xử lý được cả 2 format:
+   1. Cache/JSONL: "Tên bài [thiết bị] • sets×reps • nghỉ Xs • ~N kcal"
+   2. Ollama raw:  "**Tên bài:** 3×5", "SET 1:", "- Tên bài: chi tiết"
+══════════════════════════════════ */
 function aiMarkdownToHTML(md) {
-  return md
-    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-    .replace(/^## (.+)$/gm,  '<h3>$1</h3>')
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/^- (.+)$/gm, '<li>$1</li>')
-    .replace(/(<li>.*?<\/li>\n?)+/gs, m => '<ul>' + m + '</ul>')
-    .split('\n').filter(l => l.trim()).join('\n');
+  const sectionColors = {
+    '🔥': { bg: 'rgba(239,68,68,0.08)',  border: '#ef4444' },
+    '💪': { bg: 'rgba(212,160,23,0.08)', border: '#d4a017' },
+    '🧘': { bg: 'rgba(34,197,94,0.08)',  border: '#22c55e' },
+    '📊': { bg: 'rgba(99,102,241,0.08)', border: '#6366f1' },
+  };
+
+  const lines = md.split('\n');
+  let html = '';
+  let inSection = false, isSummary = false;
+  let currentTitle = '', currentColor = null;
+  let sectionItems = [];
+
+  /* ── Normalize một dòng bài tập về object {name, equip, details[]} ── */
+  function parseLine(raw) {
+    // Bỏ prefix bullet / số thứ tự
+    let line = raw
+      .replace(/^[-*•·]\s*/, '')
+      .replace(/^\d+\.\s*/, '')
+      .replace(/\*\*/g, '')   // bỏ bold markdown
+      .trim();
+
+    if (!line) return null;
+
+    // Bỏ qua các dòng chú thích / hướng dẫn
+    // Bỏ qua dòng hướng dẫn/chú thích, KHÔNG lọc 'Ví dụ' vì cache dùng format đó
+    if (/^(mỗi bài|lưu ý|note|set \d+:)/i.test(line)) return null;
+    if (line.startsWith('(') && line.endsWith(')')) return null;
+
+    // Chuẩn hoá 'Ví dụ 1:', 'Ví dụ:' → bỏ prefix, giữ phần bài tập thực
+    line = line.replace(/^ví dụ\s*\d*\s*:\s*/i, '').trim();
+    if (!line) return null;
+
+    /* Format 1 (JSONL cache): "Tên [thiết bị] • chi tiết • chi tiết"
+       Dấu phân cách: • hoặc · */
+    const hasBulletSep = /[•·]/.test(line);
+
+    if (hasBulletSep) {
+      const parts     = line.split(/\s*[•·]\s*/);
+      const namePart  = parts[0].trim();
+      const nameClean = namePart.replace(/\[.*?\]/g, '').replace(/:\s*$/, '').trim();
+      const equip     = (namePart.match(/\[(.+?)\]/) || [])[1] || '';
+      const details   = parts.slice(1).map(d => d.trim()).filter(Boolean);
+      return { name: nameClean, equip, details };
+    }
+
+    /* Format 2 (Ollama raw): "Tên bài: sets×reps • nghỉ" hoặc "Tên bài (thiết bị): ..."  */
+    const colonIdx = line.indexOf(':');
+    if (colonIdx > 0 && colonIdx < 60) {
+      const namePart  = line.slice(0, colonIdx).trim();
+      const restPart  = line.slice(colonIdx + 1).trim();
+      // Kiểm tra có phải tên bài thật không (không phải label như "SET 1", "Tổng kcal")
+      if (!/^(set|tổng|total|lời khuyên|đạt)/i.test(namePart)) {
+        const nameClean = namePart.replace(/\(.*?\)/g, '').replace(/\[.*?\]/g, '').trim();
+        const equip     = (namePart.match(/[\(\[](.+?)[\)\]]/) || [])[1] || '';
+        const details   = restPart
+          ? restPart.split(/[,;•·|]/).map(d => d.trim()).filter(Boolean)
+          : [];
+        return { name: nameClean, equip, details };
+      }
+    }
+
+    /* Format 3: dòng thuần text, không có dấu phân cách */
+    const nameClean = line.replace(/\[.*?\]/g, '').replace(/\(.*?\)/g, '').replace(/:\s*$/, '').trim();
+    const equip     = (line.match(/\[(.+?)\]/) || [])[1] || '';
+    return { name: nameClean, equip, details: [] };
+  }
+
+  /* ── Render một card bài tập ── */
+  function renderCard(item) {
+    return `<div class="ai-exercise-card">
+      <div class="ai-exercise-name">${item.name}</div>
+      ${item.equip ? `<div class="ai-exercise-equip"><i class="fas fa-dumbbell"></i> ${item.equip}</div>` : ''}
+      ${item.details.length ? `<div class="ai-exercise-details">${item.details.map(d => `<span class="ai-detail-chip">${d}</span>`).join('')}</div>` : ''}
+    </div>`;
+  }
+
+  /* ── Flush section hiện tại ra HTML ── */
+  function flushSection() {
+    if (!currentTitle) return;
+    const c = currentColor || { bg: 'rgba(255,255,255,0.04)', border: '#555' };
+
+    if (isSummary) {
+      // Phần TỔNG KẾT: gộp tất cả text, split theo | hoặc xuống dòng
+      const joined = sectionItems.join(' | ');
+      const parts  = joined
+        .split(/[|\n]/)
+        .map(s => s.replace(/\*\*/g, '').trim())
+        .filter(Boolean);
+      html += `<div class="ai-section" style="background:${c.bg};border-left:3px solid ${c.border}">
+        <div class="ai-section-title">${currentTitle}</div>
+        <div class="ai-summary-chips">${parts.map(p => `<div class="ai-chip">${p}</div>`).join('')}</div>
+      </div>`;
+    } else {
+      const cards = sectionItems
+        .map(raw => parseLine(raw))
+        .filter(Boolean)
+        .map(renderCard)
+        .join('');
+
+      html += `<div class="ai-section" style="background:${c.bg};border-left:3px solid ${c.border}">
+        <div class="ai-section-title">${currentTitle}</div>
+        <div class="ai-exercise-list">${cards || '<p style="color:#888;font-size:13px;padding:8px 0">Không có dữ liệu</p>'}</div>
+      </div>`;
+    }
+
+    sectionItems = []; isSummary = false; currentColor = null; currentTitle = '';
+  }
+
+  /* ── Duyệt từng dòng ── */
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) continue;
+
+    // Heading section (### hoặc ##)
+    if (/^#{2,3}\s/.test(line)) {
+      flushSection();
+      currentTitle = line.replace(/^#+\s*/, '').trim();
+      inSection    = true;
+      isSummary    = /📊|tổng kết/i.test(currentTitle);
+      currentColor = null;
+      for (const [emoji, cfg] of Object.entries(sectionColors)) {
+        if (currentTitle.includes(emoji)) { currentColor = cfg; break; }
+      }
+      continue;
+    }
+
+    // Dòng "SET N:" của Ollama → bỏ qua (không phải bài tập)
+    if (/^set\s+\d+\s*:/i.test(line)) continue;
+
+    if (inSection) {
+      sectionItems.push(line);
+    }
+  }
+  flushSection();
+
+  return html || `<div style="padding:12px;color:#ccc;white-space:pre-wrap;font-size:13px">${md}</div>`;
 }

@@ -663,3 +663,62 @@ body {
   .gender-row  { flex-direction: column; }
   .rating-cats { grid-template-columns: 1fr; }
 }
+
+/* ── Login Button (admin side – desktop) ────────── */
+.login-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 11px 16px;
+  margin-top: 4px;
+  background: transparent;
+  border: 1px solid var(--border2);
+  color: var(--text2);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: .06em;
+  text-decoration: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: border-color .2s, color .2s, background .2s;
+}
+.login-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(232,255,0,.06);
+}
+.login-btn i { font-size: 13px; }
+
+/* ── Login Button (mobile brand bar) ───────────── */
+.mobile-brand {
+  justify-content: space-between !important;
+  align-items: center;
+}
+.mobile-brand-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.login-btn-mobile {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  background: transparent;
+  border: 1px solid var(--border2);
+  color: var(--text2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: .05em;
+  text-decoration: none;
+  border-radius: var(--radius);
+  white-space: nowrap;
+  transition: border-color .2s, color .2s, background .2s;
+}
+.login-btn-mobile:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(232,255,0,.06);
+}

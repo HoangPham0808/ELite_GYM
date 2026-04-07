@@ -520,9 +520,8 @@ function refreshQR() {
 }
 
 async function confirmPayment() {
+    // Gọi nội bộ từ polling — không cần nút thủ công
     if (!currentInvoiceId) return;
-    const btn = document.querySelector('.btn-qr-confirm');
-    if (btn) btn.disabled = true;
 
     const body = new FormData();
     body.append('action',     'confirm_payment');
@@ -539,11 +538,9 @@ async function confirmPayment() {
             openSuccess(selectedPlan?.plan_name);
         } else {
             showToast(d.message || 'Lỗi xác nhận', 'error');
-            if (btn) btn.disabled = false;
         }
     } catch(e) {
         showToast('Lỗi kết nối', 'error');
-        if (btn) btn.disabled = false;
     }
 }
 

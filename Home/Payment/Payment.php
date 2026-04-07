@@ -289,9 +289,7 @@ if ($active_plan) {
     </div>
 
     <div class="qr-actions">
-      <button class="btn-qr-confirm" onclick="confirmPayment()">
-        <i class="fas fa-check"></i> Đã chuyển khoản xong
-      </button>
+      <!-- btn-qr-confirm ẩn, xác nhận tự động qua polling -->
       <button class="btn-qr-refresh" onclick="refreshQR()">
         <i class="fas fa-redo"></i> Làm mới QR
       </button>

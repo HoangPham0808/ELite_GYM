@@ -809,3 +809,74 @@ body {
 /* Make card clickable visual cue */
 .sch-class-card { cursor: pointer; }
 .sch-class-card:hover { box-shadow: 0 0 0 1px rgba(212,160,23,.3); }
+
+/* ══════════════════════════════════
+   AI PLAN — LAYOUT ĐẸP
+══════════════════════════════════ */
+.ai-section {
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+}
+.ai-section-title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: #e5e7eb;
+  margin-bottom: 10px;
+}
+.ai-exercise-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ai-exercise-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.ai-exercise-name {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #f3f4f6;
+  margin-bottom: 4px;
+}
+.ai-exercise-equip {
+  font-size: 11.5px;
+  color: #d4a017;
+  margin-bottom: 6px;
+}
+.ai-exercise-equip i {
+  margin-right: 4px;
+  font-size: 10px;
+}
+.ai-exercise-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.ai-detail-chip {
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 20px;
+  padding: 2px 9px;
+  font-size: 11px;
+  color: #d1d5db;
+  white-space: nowrap;
+}
+/* TỔNG KẾT */
+.ai-summary-chips {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ai-chip {
+  background: rgba(255,255,255,0.06);
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: 12.5px;
+  color: #e5e7eb;
+  border: 1px solid rgba(255,255,255,0.08);
+}

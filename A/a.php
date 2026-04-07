@@ -155,7 +155,6 @@ $form_url = "$proto://$host$path";
     <img id="qrImg" src="" alt="QR Code" class="qr-img"/>
     <div class="qr-pulse"></div>
   </div>
-
   <div class="url-chip" id="urlChip">
     <i class="fas fa-link"></i>
     <span id="urlText"><?= htmlspecialchars($form_url) ?></span>
@@ -176,6 +175,10 @@ $form_url = "$proto://$host$path";
       <span class="astat-l">Tổng KH</span>
     </div>
   </div>
+
+  <a href="../Internal/Index/Login/Login.php" class="login-btn">
+    <i class="fas fa-sign-in-alt"></i> Đăng nhập hệ thống
+  </a>
 </div>
 
 <!-- ══ FORM SIDE ══ -->
@@ -183,8 +186,13 @@ $form_url = "$proto://$host$path";
 
   <!-- Mobile brand header -->
   <div class="mobile-brand">
-    <span class="brand-bracket">[</span>EG<span class="brand-bracket">]</span>
-    <span class="brand-sub">ELITE GYM</span>
+    <div class="mobile-brand-left">
+      <span class="brand-bracket">[</span>EG<span class="brand-bracket">]</span>
+      <span class="brand-sub">ELITE GYM</span>
+    </div>
+    <a href="../Home/Schedule/Schedule.php" class="login-btn-mobile">
+      <i class="fas fa-sign-in-alt"></i> Đăng nhập
+    </a>
   </div>
 
   <div class="form-card" id="formCard">
