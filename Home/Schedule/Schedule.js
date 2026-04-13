@@ -297,8 +297,31 @@ function aiCalcBMI() {
   document.getElementById(id)?.addEventListener('change', aiCalcBMI);
 });
 
+/* ── SNAP BURN TARGET về preset cố định theo BMI + gender + duration ──
+   Mục đích: để cache JSONL hit được, tránh mỗi người TDEE khác → miss cache
+   Preset khớp với generate_data.py (Nam gốc, Nữ × 0.85)
+─────────────────────────────────────────────────────────────────────── */
+function snapBurnTarget(bmi, gender, durationMin) {
+  // Preset Nam theo [dur45, dur60, dur90]
+  const presets = [
+    { maxBmi: 18.5, burns: { 45: 150, 60: 200, 90: 280 } },  // Thiếu cân
+    { maxBmi: 23.0, burns: { 45: 280, 60: 380, 90: 520 } },  // Bình thường
+    { maxBmi: 25.0, burns: { 45: 320, 60: 430, 90: 580 } },  // Thừa cân
+    { maxBmi: 30.0, burns: { 45: 360, 60: 480, 90: 640 } },  // Béo phì I
+    { maxBmi: 99.0, burns: { 45: 380, 60: 500, 90: 660 } },  // Béo phì II
+  ];
+  // Làm tròn duration về mốc gần nhất [45, 60, 90]
+  const durKey = [45, 60, 90].reduce((a, b) =>
+    Math.abs(b - durationMin) < Math.abs(a - durationMin) ? b : a
+  );
+  const bucket = presets.find(p => bmi < p.maxBmi) || presets[presets.length - 1];
+  let burn = bucket.burns[durKey] || bucket.burns[60];
+  if (gender === 'female' || gender === 'Nữ') burn = Math.round(burn * 0.85);
+  return burn;
+}
+
 /* ── GENERATE ──────────────────────────────────────────────────── */
-document.getElementById('aiGenBtn')?.addEventListener('click', async () => {
+document.getElementById('aiGenBtn')?.addEventListener('click', () => {
   const bmiData = aiCalcBMI();
   if (!bmiData || !_aiCurrentClass) return;
 
@@ -307,152 +330,220 @@ document.getElementById('aiGenBtn')?.addEventListener('click', async () => {
     lose_fat: 'Giảm mỡ', build_muscle: 'Tăng cơ',
     endurance: 'Tăng sức bền', maintain: 'Duy trì thể hình'
   };
-  const goalText = goalMap[goalRaw] || goalRaw;
-
+  const goalText  = goalMap[goalRaw] || goalRaw;
   const genderMap = { male: 'Nam', female: 'Nữ' };
 
-  const btn = document.getElementById('aiGenBtn');
-  btn.disabled = true;
+  const bmiFloat = parseFloat(bmiData.bmi);
+
+  // Parse duration từ time string "12:00–14:00"
+  let durationMin = 60;
+  if (_aiCurrentClass.time) {
+    const m = _aiCurrentClass.time.match(/(\d{1,2}):(\d{2})\s*[–\-]\s*(\d{1,2}):(\d{2})/);
+    if (m) {
+      durationMin = (parseInt(m[3]) * 60 + parseInt(m[4])) - (parseInt(m[1]) * 60 + parseInt(m[2]));
+      if (durationMin <= 0) durationMin = 60;
+    }
+  }
+  const burnSnapped = snapBurnTarget(bmiFloat, bmiData.gender, durationMin);
+
+  const btn       = document.getElementById('aiGenBtn');
+  const outputBox = document.getElementById('aiOutputBox');
+
+  btn.disabled  = true;
   btn.innerHTML = '<span class="ai-spinner" style="width:16px;height:16px;border-width:2px;display:inline-block"></span> Đang tạo...';
 
-  const outputBox = document.getElementById('aiOutputBox');
-  outputBox.innerHTML = '<div class="ai-loading"><div class="ai-spinner"></div>AI đang phân tích thiết bị phòng và tạo lịch tập...</div>';
+  // Xoá equipment tag cũ nếu có
+  document.getElementById('aiEquipmentTag')?.remove();
 
-  try {
-    const res = await fetch('ai_proxy.php', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        class_id:    parseInt(_aiCurrentClass.classId),
-        bmi:         parseFloat(bmiData.bmi),
-        bmi_cat:     bmiData.bmi_cat,
-        goal:        goalText,
-        burn_target: bmiData.burnTarget,
-        age:         bmiData.age,
-        gender:      genderMap[bmiData.gender] || 'Nam'
-      })
-    });
+  // ── Gọi streaming ─────────────────────────────────────────
+  fetchWorkoutStream(
+    {
+      class_id:    parseInt(_aiCurrentClass.classId),
+      bmi:         bmiFloat,
+      bmi_cat:     bmiData.bmi_cat,
+      goal:        goalText,
+      burn_target: burnSnapped,
+      age:         bmiData.age,
+      gender:      genderMap[bmiData.gender] || 'Nam',
+    },
+    outputBox,
 
-    const data = await res.json();
+    // onMeta: hiện equipment tag ngay khi nhận được
+    (meta) => {
+      if (meta.equipment) {
+        const tag     = document.createElement('div');
+        tag.id        = 'aiEquipmentTag';
+        tag.className = 'ai-equipment-tag';
+        tag.innerHTML = `<i class="fas fa-tools"></i>
+                         <span>Thiết bị phòng ${meta.room}: ${meta.equipment}</span>`;
+        outputBox.insertAdjacentElement('beforebegin', tag);
+      }
+    },
 
-    if (!data.success) throw new Error(data.message || 'Lỗi từ server');
+    // onDone: kiểm tra kcal + re-enable nút
+    (fullText) => {
+      clearTimeout(safetyTimer);
 
-    const equipHTML = data.equipment
-      ? `<div class="ai-equipment-tag">
-           <i class="fas fa-tools"></i>
-           <span>Thiết bị phòng ${data.room}: ${data.equipment}</span>
-         </div>`
-      : '';
+      const kcalMatch = fullText.match(/tổng\s*kcal\s*[:\-~≈]*\s*~?(\d+)/i);
+      const aiKcal    = kcalMatch ? parseInt(kcalMatch[1]) : null;
+      const kcalDiff  = aiKcal ? Math.abs(aiKcal - burnSnapped) / burnSnapped : 0;
 
-    outputBox.innerHTML = equipHTML + '<div class="ai-plan">' + aiMarkdownToHTML(data.text) + '</div>';
+      if (aiKcal && kcalDiff > 0.15) {
+        const icon  = aiKcal > burnSnapped ? '⚠️' : 'ℹ️';
+        const color = aiKcal > burnSnapped ? '#ef4444' : '#f59e0b';
+        const warn  = document.createElement('div');
+        warn.style.cssText = `background:${color}18;border:1px solid ${color}44;border-radius:8px;
+                               padding:10px 14px;margin-bottom:10px;font-size:12.5px;color:${color}`;
+        warn.innerHTML = `${icon} Lưu ý: AI tạo lịch ~${aiKcal.toLocaleString('vi-VN')} kcal,
+          mục tiêu của bạn là ${burnSnapped.toLocaleString('vi-VN')} kcal
+          (lệch ${Math.round(kcalDiff*100)}%). Nhấn <strong>Tạo lại</strong> nếu muốn kết quả sát hơn.`;
+        outputBox.insertAdjacentElement('afterbegin', warn);
+      }
 
-  } catch(e) {
-    outputBox.innerHTML = `<div style="color:#ef4444;padding:16px;font-size:13px">
-      ⚠️ Lỗi AI: ${e.message}
-      <br><small style="color:#888;margin-top:8px;display:block">
-        Kiểm tra: Ollama đang chạy? (ollama serve)<br>
-        Model đã pull? (ollama pull qwen2.5:3b)
-      </small>
-    </div>`;
-  }
+      btn.disabled  = false;
+      btn.innerHTML = '<i class="fas fa-bolt"></i> Tạo lại';
+    }
+  );
 
-  btn.disabled = false;
-  btn.innerHTML = '<i class="fas fa-bolt"></i> Tạo lại';
+  // Safety net: re-enable nút sau 120s nếu stream không kết thúc bình thường
+  const safetyTimer = setTimeout(() => {
+    btn.disabled  = false;
+    btn.innerHTML = '<i class="fas fa-bolt"></i> Tạo lại';
+  }, 120_000);
 });
 
 /* ══════════════════════════════════
-   MARKDOWN → HTML (universal parser)
-   Xử lý được cả 2 format:
-   1. Cache/JSONL: "Tên bài [thiết bị] • sets×reps • nghỉ Xs • ~N kcal"
-   2. Ollama raw:  "**Tên bài:** 3×5", "SET 1:", "- Tên bài: chi tiết"
+   MARKDOWN → HTML (universal parser v2)
+   Xử lý được TẤT CẢ format Ollama 1.5b có thể sinh ra:
+   F1. Cache:   "Tên [thiết bị] • sets×reps • nghỉ Xs • ~N kcal"
+   F2. Bold:    "**KHỞI ĐỘNG (5-8 phút) — tổng 61 kcal**" làm heading
+   F3. Dash:    "- Tên bài: sets×reps • nghỉ Xs • ~N kcal"
+   F4. Colon:   "Tên bài: 4 sets × 12 reps, nghỉ 60s, ~80 kcal"
+   F5. Mixed:   "**Tên bài** • chi tiết"
 ══════════════════════════════════ */
 function aiMarkdownToHTML(md) {
-  const sectionColors = {
+  const SECTION_CFG = {
     '🔥': { bg: 'rgba(239,68,68,0.08)',  border: '#ef4444' },
     '💪': { bg: 'rgba(212,160,23,0.08)', border: '#d4a017' },
     '🧘': { bg: 'rgba(34,197,94,0.08)',  border: '#22c55e' },
     '📊': { bg: 'rgba(99,102,241,0.08)', border: '#6366f1' },
   };
 
-  const lines = md.split('\n');
-  let html = '';
-  let inSection = false, isSummary = false;
-  let currentTitle = '', currentColor = null;
-  let sectionItems = [];
+  // Detect heading — nhận ### / ## / **TEXT** / TEXT viết hoa hoàn toàn có emoji section
+  function detectHeading(raw) {
+    let t = raw.trim();
 
-  /* ── Normalize một dòng bài tập về object {name, equip, details[]} ── */
+    // ### 🔥 KHỞI ĐỘNG ...  hoặc  ## TỔNG KẾT
+    if (/^#{2,4}\s/.test(t))
+      return t.replace(/^#+\s*/, '').replace(/\*\*/g, '').trim();
+
+    // **🔥 KHỞI ĐỘNG (5-8 phút) — tổng 61 kcal**
+    const boldFull = t.match(/^\*\*([^*]+)\*\*\s*$/);
+    if (boldFull) {
+      const inner = boldFull[1].trim();
+      if (/KHỞI ĐỘNG|BÀI TẬP CHÍNH|GIÃN CƠ|TỔNG KẾT|🔥|💪|🧘|📊/i.test(inner))
+        return inner;
+    }
+
+    // **KHỞI ĐỘNG** ở đầu dòng (không đóng ngay cuối)
+    const boldStart = t.match(/^\*\*(KHỞI ĐỘNG|BÀI TẬP CHÍNH|GIÃN CƠ|TỔNG KẾT)[^*]*\*\*/i);
+    if (boldStart) return t.replace(/\*\*/g, '').trim();
+
+    return null;
+  }
+
+  /* ── Parse một dòng bài tập → {name, equip, details[]} ── */
   function parseLine(raw) {
-    // Bỏ prefix bullet / số thứ tự
+    // Strip prefix: bullet, số, #### heading phụ
     let line = raw
-      .replace(/^[-*•·]\s*/, '')
-      .replace(/^\d+\.\s*/, '')
-      .replace(/\*\*/g, '')   // bỏ bold markdown
+      .replace(/^#{2,4}\s+/, '')        // bỏ #### Set 1:
+      .replace(/^[-*•·]\s*/, '')        // bỏ bullet
+      .replace(/^\d+\.\s*/, '')         // bỏ 1.
+      .replace(/\*\*/g, '')             // bỏ bold **
       .trim();
 
     if (!line) return null;
 
-    // Bỏ qua các dòng chú thích / hướng dẫn
-    // Bỏ qua dòng hướng dẫn/chú thích, KHÔNG lọc 'Ví dụ' vì cache dùng format đó
-    if (/^(mỗi bài|lưu ý|note|set \d+:)/i.test(line)) return null;
-    if (line.startsWith('(') && line.endsWith(')')) return null;
+    // Bỏ qua dòng mô tả / hướng dẫn format
+    if (/^(mỗi bài|lưu ý|note|ghi chú|\(.*\)$)/i.test(line)) return null;
+    if (/^set\s+\d+\s*:/i.test(line)) return null;
+    // Bỏ qua dòng chỉ là số kcal tổng
+    if (/^(tổng|total)\s*(kcal|calories)/i.test(line)) return null;
 
-    // Chuẩn hoá 'Ví dụ 1:', 'Ví dụ:' → bỏ prefix, giữ phần bài tập thực
+    // Chuẩn hoá 'Ví dụ 1:' → bỏ prefix
     line = line.replace(/^ví dụ\s*\d*\s*:\s*/i, '').trim();
     if (!line) return null;
 
-    /* Format 1 (JSONL cache): "Tên [thiết bị] • chi tiết • chi tiết"
-       Dấu phân cách: • hoặc · */
-    const hasBulletSep = /[•·]/.test(line);
-
-    if (hasBulletSep) {
+    /* ── FORMAT 1: có dấu • phân cách (cache JSONL) ── */
+    if (/[•·]/.test(line)) {
       const parts     = line.split(/\s*[•·]\s*/);
       const namePart  = parts[0].trim();
       const nameClean = namePart.replace(/\[.*?\]/g, '').replace(/:\s*$/, '').trim();
       const equip     = (namePart.match(/\[(.+?)\]/) || [])[1] || '';
       const details   = parts.slice(1).map(d => d.trim()).filter(Boolean);
-      return { name: nameClean, equip, details };
+      if (nameClean) return { name: nameClean, equip, details };
     }
 
-    /* Format 2 (Ollama raw): "Tên bài: sets×reps • nghỉ" hoặc "Tên bài (thiết bị): ..."  */
-    const colonIdx = line.indexOf(':');
-    if (colonIdx > 0 && colonIdx < 60) {
-      const namePart  = line.slice(0, colonIdx).trim();
-      const restPart  = line.slice(colonIdx + 1).trim();
-      // Kiểm tra có phải tên bài thật không (không phải label như "SET 1", "Tổng kcal")
-      if (!/^(set|tổng|total|lời khuyên|đạt)/i.test(namePart)) {
-        const nameClean = namePart.replace(/\(.*?\)/g, '').replace(/\[.*?\]/g, '').trim();
-        const equip     = (namePart.match(/[\(\[](.+?)[\)\]]/) || [])[1] || '';
-        const details   = restPart
-          ? restPart.split(/[,;•·|]/).map(d => d.trim()).filter(Boolean)
+    /* ── FORMAT 2: "Tên bài [equip]: detail, detail" hoặc "Tên (equip): detail" ── */
+    // Tìm colon đầu tiên không nằm trong [ ] hay ( )
+    const colonMatch = line.match(/^([^\[\(:]{2,55})(?:\s*[\[\(]([^\]\)]+)[\]\)])?\s*:\s*(.*)$/);
+    if (colonMatch) {
+      const namePart = colonMatch[1].trim();
+      const equip    = colonMatch[2]?.trim() || '';
+      const rest     = colonMatch[3]?.trim() || '';
+      // Không phải label tổng kết
+      if (!/^(tổng|total|lời khuyên|đạt|đảm)/i.test(namePart) && namePart.length > 1) {
+        const details = rest
+          ? rest.split(/[,;•·|]/).map(d => d.trim()).filter(d => d.length > 0)
           : [];
-        return { name: nameClean, equip, details };
+        return { name: namePart, equip, details };
       }
     }
 
-    /* Format 3: dòng thuần text, không có dấu phân cách */
+    /* ── FORMAT 3: plain text, không dấu phân cách ── */
     const nameClean = line.replace(/\[.*?\]/g, '').replace(/\(.*?\)/g, '').replace(/:\s*$/, '').trim();
-    const equip     = (line.match(/\[(.+?)\]/) || [])[1] || '';
+    const equip     = (line.match(/\[(.+?)\]/) || [])[1]
+                   || (line.match(/\(([A-Z][^)]{3,40})\)/) || [])[1]  // chỉ lấy tên thiết bị viết hoa
+                   || '';
+    if (nameClean.length < 2) return null;
     return { name: nameClean, equip, details: [] };
   }
 
-  /* ── Render một card bài tập ── */
+  /* ── Render card bài tập ── */
   function renderCard(item) {
+    // Phân loại chip: kcal chip có màu vàng, chip còn lại màu xám
+    const chipHTML = item.details.map(d => {
+      const isKcal = /kcal/i.test(d);
+      const style  = isKcal
+        ? 'background:rgba(212,160,23,0.12);border-color:rgba(212,160,23,0.3);color:#d4a017'
+        : '';
+      return `<span class="ai-detail-chip" style="${style}">${d}</span>`;
+    }).join('');
+
     return `<div class="ai-exercise-card">
       <div class="ai-exercise-name">${item.name}</div>
-      ${item.equip ? `<div class="ai-exercise-equip"><i class="fas fa-dumbbell"></i> ${item.equip}</div>` : ''}
-      ${item.details.length ? `<div class="ai-exercise-details">${item.details.map(d => `<span class="ai-detail-chip">${d}</span>`).join('')}</div>` : ''}
+      ${item.equip
+        ? `<div class="ai-exercise-equip"><i class="fas fa-dumbbell"></i> ${item.equip}</div>`
+        : ''}
+      ${item.details.length
+        ? `<div class="ai-exercise-details">${chipHTML}</div>`
+        : ''}
     </div>`;
   }
 
-  /* ── Flush section hiện tại ra HTML ── */
+  /* ── Flush section ra HTML ── */
+  let html = '';
+  let currentTitle = '', currentColor = null, isSummary = false;
+  let sectionItems = [];
+
   function flushSection() {
     if (!currentTitle) return;
     const c = currentColor || { bg: 'rgba(255,255,255,0.04)', border: '#555' };
 
     if (isSummary) {
-      // Phần TỔNG KẾT: gộp tất cả text, split theo | hoặc xuống dòng
-      const joined = sectionItems.join(' | ');
-      const parts  = joined
+      // TỔNG KẾT: mỗi phần tách bởi | hoặc newline → 1 chip
+      const allText = sectionItems.join(' ');
+      const parts   = allText
         .split(/[|\n]/)
         .map(s => s.replace(/\*\*/g, '').trim())
         .filter(Boolean);
@@ -466,42 +557,41 @@ function aiMarkdownToHTML(md) {
         .filter(Boolean)
         .map(renderCard)
         .join('');
-
       html += `<div class="ai-section" style="background:${c.bg};border-left:3px solid ${c.border}">
         <div class="ai-section-title">${currentTitle}</div>
         <div class="ai-exercise-list">${cards || '<p style="color:#888;font-size:13px;padding:8px 0">Không có dữ liệu</p>'}</div>
       </div>`;
     }
-
-    sectionItems = []; isSummary = false; currentColor = null; currentTitle = '';
+    sectionItems = []; currentColor = null; currentTitle = ''; isSummary = false;
   }
 
   /* ── Duyệt từng dòng ── */
-  for (const rawLine of lines) {
+  for (const rawLine of md.split('\n')) {
     const line = rawLine.trim();
     if (!line) continue;
 
-    // Heading section (### hoặc ##)
-    if (/^#{2,3}\s/.test(line)) {
+    const heading = detectHeading(line);
+    if (heading) {
       flushSection();
-      currentTitle = line.replace(/^#+\s*/, '').trim();
-      inSection    = true;
-      isSummary    = /📊|tổng kết/i.test(currentTitle);
+      currentTitle = heading;
+      isSummary    = /📊|tổng kết/i.test(heading);
       currentColor = null;
-      for (const [emoji, cfg] of Object.entries(sectionColors)) {
-        if (currentTitle.includes(emoji)) { currentColor = cfg; break; }
+      for (const [emoji, cfg] of Object.entries(SECTION_CFG)) {
+        if (heading.includes(emoji)) { currentColor = cfg; break; }
+      }
+      // Fallback màu nếu không có emoji nhưng là section quen thuộc
+      if (!currentColor) {
+        if (/khởi động/i.test(heading))    currentColor = SECTION_CFG['🔥'];
+        else if (/bài tập chính/i.test(heading)) currentColor = SECTION_CFG['💪'];
+        else if (/giãn cơ/i.test(heading)) currentColor = SECTION_CFG['🧘'];
+        else if (/tổng kết/i.test(heading)) currentColor = SECTION_CFG['📊'];
       }
       continue;
     }
 
-    // Dòng "SET N:" của Ollama → bỏ qua (không phải bài tập)
-    if (/^set\s+\d+\s*:/i.test(line)) continue;
-
-    if (inSection) {
-      sectionItems.push(line);
-    }
+    if (currentTitle) sectionItems.push(line);
   }
   flushSection();
 
-  return html || `<div style="padding:12px;color:#ccc;white-space:pre-wrap;font-size:13px">${md}</div>`;
+  return html || `<div style="padding:12px;color:#ccc;white-space:pre-wrap;font-size:13px;line-height:1.7">${md}</div>`;
 }

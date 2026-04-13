@@ -688,6 +688,7 @@ if (hamburger && mobileMenu) {
     </div>
   </div>
 </div>
+<script src="ai_stream.js"></script>
 <script src="Schedule.js"></script>
 </body>
 </html>

@@ -1,0 +1,9 @@
+[2026-04-09 22:23:05] === REQUEST START ===
+[2026-04-09 22:23:05] Auth OK: account_id=4
+[2026-04-09 22:23:05] Input: {"class_id":380,"bmi":19.6,"bmi_cat":"Bình thường","goal":"Giảm mỡ","burn_target":380,"age":22,"gender":"Nam"}
+[2026-04-09 22:23:05] Loading db.php...
+[2026-04-10 05:23:05] DB loaded. Querying class_id=380
+[2026-04-10 05:23:05] Room=A301 duration=120 equip=Adjustable Bench 1, Adjustable Bench 2, Adjustable Bench 3, Adjustable Bench 4, 
+[2026-04-10 05:23:05] Meta sent.
+[2026-04-10 05:23:05] API key: NOT SET
+[2026-04-10 05:23:05] ERROR: Chưa cấu hình Anthropic API key.

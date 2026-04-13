@@ -866,6 +866,32 @@ body {
   color: #d1d5db;
   white-space: nowrap;
 }
+/* Chip kcal — màu vàng nổi bật */
+.ai-detail-chip--kcal {
+  background: rgba(212,160,23,0.12);
+  border-color: rgba(212,160,23,0.3);
+  color: #d4a017;
+  font-weight: 600;
+}
+/* Equipment tag hiển thị phía trên output */
+.ai-equipment-tag {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: #888;
+  line-height: 1.6;
+}
+.ai-equipment-tag i {
+  color: #d4a017;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
 /* TỔNG KẾT */
 .ai-summary-chips {
   display: flex;
