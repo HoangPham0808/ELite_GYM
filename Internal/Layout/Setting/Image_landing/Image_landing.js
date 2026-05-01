@@ -106,12 +106,15 @@ uploadForm?.addEventListener('submit', async e => {
 /* ══ BUILD CARD ══════════════════════════════════════════════════ */
 function buildCard(img) {
   const card = document.createElement('div');
-  card.className = 'img-card' + (img.is_active == 0 ? ' inactive' : '');
+  card.className  = 'img-card' + (img.is_active == 0 ? ' inactive' : '');
   card.dataset.id     = img.image_id;
   card.dataset.active = img.is_active;
+  card.dataset.name   = img.image_name;
   card.draggable      = true;
 
-  const isOn = img.is_active == 1;
+  const isOn        = img.is_active == 1;
+  const isProtected = img.image_name === 'Logo_ELITY';
+
   card.innerHTML = `
     <div class="img-thumb-wrap">
       <img src="${escHtml(img.file_url)}" alt="${escHtml(img.image_name)}" loading="lazy"/>
@@ -122,7 +125,10 @@ function buildCard(img) {
     <div class="img-info">
       <div class="img-name-row">
         <span class="img-name" title="${escHtml(img.image_name)}">${escHtml(img.image_name)}</span>
-        <button class="btn-rename" title="Đổi tên"><i class="fas fa-pen"></i></button>
+        ${!isProtected
+          ? `<button class="btn-rename" title="Đổi tên"><i class="fas fa-pen"></i></button>`
+          : `<span class="badge-protected" title="Ảnh hệ thống"><i class="fas fa-lock"></i> Ảnh hệ thống</span>`
+        }
       </div>
       <div class="img-meta">
         <span>${img.file_ext || '?'}</span>
@@ -134,8 +140,15 @@ function buildCard(img) {
       <span>${escHtml(img.file_url)}</span>
     </div>
     <div class="img-actions">
-      <button class="btn-toggle ${isOn?'on':'off'}">${isOn?'<i class="fas fa-eye-slash"></i> Ẩn':'<i class="fas fa-eye"></i> Hiện'}</button>
+      <button class="btn-replace" title="Thay bằng ảnh mới (xóa ảnh cũ)">
+        <i class="fas fa-image"></i> Thay ảnh
+      </button>
+      ${!isProtected ? `
+      <button class="btn-toggle ${isOn?'on':'off'}">
+        ${isOn?'<i class="fas fa-eye-slash"></i> Ẩn':'<i class="fas fa-eye"></i> Hiện'}
+      </button>
       <button class="btn-del" title="Xóa ảnh"><i class="fas fa-trash-alt"></i></button>
+      ` : ''}
     </div>`;
 
   return card;
@@ -272,7 +285,59 @@ document.getElementById('renameInput')?.addEventListener('keydown', e => {
   if (e.key === 'Escape') document.getElementById('renameCancel').click();
 });
 
-/* ══ DRAG-DROP SORT ══════════════════════════════════════════════ */
+/* ══ REPLACE IMAGE ═══════════════════════════════════════════════ */
+let replaceTarget = null;
+const replaceFileInput = document.getElementById('replaceFileInput');
+
+replaceFileInput?.addEventListener('change', async () => {
+  const file = replaceFileInput.files[0];
+  if (!file || !replaceTarget) return;
+
+  const card = replaceTarget;
+  const btn  = card.querySelector('.btn-replace');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang thay...'; }
+
+  const fd = new FormData();
+  fd.append('action', 'replace');
+  fd.append('image_id', card.dataset.id);
+  fd.append('image', file);
+
+  try {
+    const res  = await fetch(API, { method: 'POST', body: fd });
+    const data = await res.json();
+    if (data.ok) {
+      // Cập nhật ảnh trên card ngay lập tức
+      const imgEl = card.querySelector('.img-thumb-wrap img');
+      if (imgEl) imgEl.src = data.file_url + '?t=' + Date.now(); // cache-bust
+
+      // Cập nhật URL row
+      const urlSpan = card.querySelector('.img-url-row span');
+      if (urlSpan) urlSpan.textContent = data.file_url;
+
+      // Cập nhật meta
+      const metas = card.querySelectorAll('.img-meta span');
+      if (metas[0]) metas[0].textContent = data.file_ext || '';
+      if (metas[1]) metas[1].textContent = data.file_size_fmt || '';
+
+      showToast(data.msg, 'success');
+    } else {
+      showToast(data.msg || 'Thay ảnh thất bại.', 'error');
+    }
+  } catch {
+    showToast('Lỗi kết nối server.', 'error');
+  }
+
+  if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-image"></i> Thay ảnh'; }
+  replaceFileInput.value = '';
+  replaceTarget = null;
+});
+
+function openReplace(card) {
+  replaceTarget = card;
+  replaceFileInput.click();
+}
+
+
 let dragSrc = null;
 
 function rebindDrag() {
@@ -347,19 +412,20 @@ document.getElementById('saveOrderBtn')?.addEventListener('click', async () => {
 // Bind event cho TẤT CẢ card — cả card PHP render lẫn card JS thêm mới
 function initAllCards() {
   document.querySelectorAll('.img-card').forEach(card => {
-    // Tránh bind trùng
     if (card.dataset.bound === '1') return;
     card.dataset.bound = '1';
 
-    const btnToggle = card.querySelector('.btn-toggle');
-    const btnDel    = card.querySelector('.btn-del');
-    const btnRename = card.querySelector('.btn-rename');
-    const urlRow    = card.querySelector('.img-url-row');
+    const btnToggle  = card.querySelector('.btn-toggle');
+    const btnDel     = card.querySelector('.btn-del');
+    const btnRename  = card.querySelector('.btn-rename');
+    const btnReplace = card.querySelector('.btn-replace');
+    const urlRow     = card.querySelector('.img-url-row');
 
-    if (btnToggle) btnToggle.addEventListener('click', () => toggleImage(card));
-    if (btnDel)    btnDel.addEventListener('click',    () => deleteImage(card));
-    if (btnRename) btnRename.addEventListener('click', () => openRename(card));
-    if (urlRow)    urlRow.addEventListener('click', () => {
+    if (btnToggle)  btnToggle.addEventListener('click',  () => toggleImage(card));
+    if (btnDel)     btnDel.addEventListener('click',     () => deleteImage(card));
+    if (btnRename)  btnRename.addEventListener('click',  () => openRename(card));
+    if (btnReplace) btnReplace.addEventListener('click', () => openReplace(card));
+    if (urlRow)     urlRow.addEventListener('click', () => {
       const url = urlRow.querySelector('span')?.textContent?.trim();
       if (url) navigator.clipboard.writeText(url).then(() => showToast('Đã sao chép URL!', 'info'));
     });

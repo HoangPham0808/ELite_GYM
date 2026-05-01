@@ -35,13 +35,13 @@ function createParticle(container) {
         position: absolute;
         width: ${size}px;
         height: ${size}px;
-        background: radial-gradient(circle, rgba(255, 215, 0, 0.8), transparent);
+        background: radial-gradient(circle, rgba(227, 28, 37, 0.8), transparent);
         border-radius: 50%;
         left: ${startX}px;
         top: ${startY}px;
         pointer-events: none;
         animation: float-particle ${duration}s ease-in-out ${delay}s infinite;
-        box-shadow: 0 0 ${size * 3}px rgba(255, 215, 0, 0.5);
+        box-shadow: 0 0 ${size * 3}px rgba(227, 28, 37, 0.5);
     `;
     
     container.appendChild(particle);
@@ -487,7 +487,7 @@ function createButtonParticles(button) {
             position: fixed;
             width: ${size}px;
             height: ${size}px;
-            background: radial-gradient(circle, #FFD700, transparent);
+            background: radial-gradient(circle, #e31c25, transparent);
             border-radius: 50%;
             left: ${rect.left + rect.width / 2}px;
             top: ${rect.top + rect.height / 2}px;
@@ -585,7 +585,7 @@ function createSuccessRipple() {
         width: 0;
         height: 0;
         border-radius: 50%;
-        background: radial-gradient(circle, rgba(255, 215, 0, 0.3), transparent);
+        background: radial-gradient(circle, rgba(227, 28, 37, 0.3), transparent);
         transform: translate(-50%, -50%);
         animation: success-ripple 1s ease-out;
         pointer-events: none;
@@ -682,7 +682,7 @@ function showNotification(message, type = 'info') {
     const colors = {
         success: 'rgba(0, 255, 136, 0.2)',
         error: 'rgba(255, 68, 68, 0.2)',
-        info: 'rgba(255, 215, 0, 0.2)'
+        info: 'rgba(227, 28, 37, 0.2)'
     };
     
     notification.style.cssText = `
@@ -691,7 +691,7 @@ function showNotification(message, type = 'info') {
         right: 20px;
         padding: 15px 25px;
         background: ${colors[type] || colors.info};
-        border: 2px solid ${type === 'success' ? '#00FF88' : type === 'error' ? '#FF4444' : '#FFD700'};
+        border: 2px solid ${type === 'success' ? '#00FF88' : type === 'error' ? '#FF4444' : '#e31c25'};
         border-radius: 12px;
         color: #fff;
         font-weight: 600;
@@ -757,6 +757,6 @@ document.addEventListener('visibilitychange', function() {
 // CONSOLE MESSAGE
 // ================================
 
-console.log('%c🏋️ ELITE FITNESS GYM - REGISTER 🏋️', 'color: #FFD700; font-size: 20px; font-weight: bold; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);');
-console.log('%cPremium Black & Gold Design', 'color: #FFC107; font-size: 14px;');
+console.log('%c🏋️ ELITE FITNESS GYM - REGISTER 🏋️', 'color: #e31c25; font-size: 20px; font-weight: bold; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);');
+console.log('%cElite Red & Black Design', 'color: #e31c25; font-size: 14px;');
 console.log('%cVersion 1.0.0 - Join the Elite!', 'color: #999; font-size: 12px;');

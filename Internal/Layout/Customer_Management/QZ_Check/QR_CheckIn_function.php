@@ -112,6 +112,50 @@ if ($action === 'get_checkin_info') {
         }
     }
 
+    // ── Lịch tập hôm nay của khách ──────────────────────────
+    $stmt = $conn->prepare("
+        SELECT
+            tc.class_id,
+            tc.class_name,
+            tc.start_time,
+            tc.end_time,
+            gr.room_name,
+            e.full_name AS trainer_name
+        FROM ClassRegistration cr
+        JOIN TrainingClass tc ON tc.class_id = cr.class_id
+        LEFT JOIN GymRoom gr   ON gr.room_id   = tc.room_id
+        LEFT JOIN Employee e   ON e.employee_id = tc.trainer_id
+        WHERE cr.customer_id = ?
+          AND DATE(tc.start_time) = CURDATE()
+        ORDER BY tc.start_time ASC
+    ");
+    $stmt->bind_param('i', $id);
+    $stmt->execute();
+    $today_classes = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+    // ── Server-side: tự động checkout nếu lớp đã kết thúc ──
+    // Kiểm tra khách đang trong gym nhưng lớp cuối đã hết giờ
+    if ($currentlyIn && !empty($today_classes)) {
+        $latest_end = null;
+        foreach ($today_classes as $cls) {
+            if (!$latest_end || $cls['end_time'] > $latest_end) {
+                $latest_end = $cls['end_time'];
+            }
+        }
+        // Nếu giờ kết thúc lớp cuối đã qua → auto checkout
+        if ($latest_end && strtotime($latest_end) < time()) {
+            $auto = $conn->prepare("
+                INSERT INTO GymCheckIn (customer_id, type, check_time, recorded_by)
+                VALUES (?, 'checkout', ?, 0)
+            ");
+            $auto->bind_param('is', $id, $latest_end);
+            $auto->execute();
+            $currentlyIn = false;
+            // Cập nhật last_checkout
+            $today['last_checkout'] = $latest_end;
+        }
+    }
+
     jsonOut([
         'success'       => true,
         'customer'      => $customer,
@@ -121,6 +165,7 @@ if ($action === 'get_checkin_info') {
         'last_checkin'  => $today['last_checkin']  ?? null,
         'last_checkout' => $today['last_checkout'] ?? null,
         'currently_in'  => $currentlyIn,
+        'today_classes' => $today_classes,
     ]);
 }
 
@@ -170,6 +215,41 @@ if ($action === 'do_checkin') {
         $pkgChk->execute();
         if ($pkgChk->get_result()->fetch_assoc()['c'] == 0) {
             jsonOut(['success' => false, 'message' => 'Gói tập đã hết hạn hoặc chưa đăng ký!']);
+        }
+
+        // ── Kiểm tra có lịch tập đang diễn ra không ──────────
+        $clsChk = $conn->prepare("
+            SELECT tc.class_id, tc.class_name, tc.start_time, tc.end_time
+            FROM ClassRegistration cr
+            JOIN TrainingClass tc ON tc.class_id = cr.class_id
+            WHERE cr.customer_id = ?
+              AND DATE(tc.start_time) = CURDATE()
+              AND NOW() BETWEEN tc.start_time AND tc.end_time
+            LIMIT 1
+        ");
+        $clsChk->bind_param('i', $customer_id);
+        $clsChk->execute();
+        $ongoingClass = $clsChk->get_result()->fetch_assoc();
+        if (!$ongoingClass) {
+            // Kiểm tra có lớp sắp tới không để đưa ra thông báo cụ thể
+            $nextCls = $conn->prepare("
+                SELECT TIME_FORMAT(tc.start_time, '%H:%i') AS start_hm
+                FROM ClassRegistration cr
+                JOIN TrainingClass tc ON tc.class_id = cr.class_id
+                WHERE cr.customer_id = ?
+                  AND DATE(tc.start_time) = CURDATE()
+                  AND tc.start_time > NOW()
+                ORDER BY tc.start_time ASC
+                LIMIT 1
+            ");
+            $nextCls->bind_param('i', $customer_id);
+            $nextCls->execute();
+            $next = $nextCls->get_result()->fetch_assoc();
+            if ($next) {
+                jsonOut(['success' => false, 'message' => "Chưa đến giờ tập — lớp bắt đầu lúc {$next['start_hm']}"]);
+            } else {
+                jsonOut(['success' => false, 'message' => 'Không có lịch tập nào đang diễn ra hôm nay!']);
+            }
         }
     } else {
         // checkout — phải đã check-in trước

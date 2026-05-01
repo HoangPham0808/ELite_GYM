@@ -89,6 +89,14 @@ $slide_imgs = $conn->query("
     ORDER BY sort_order ASC, image_id ASC
 ")->fetch_all(MYSQLI_ASSOC);
 
+// ── Lấy logo từ DB (ảnh tên Logo_ELITY) ─────────────────────────
+$logo_row = $conn->query("
+    SELECT file_url FROM landing_images
+    WHERE image_name = 'Logo_ELITY'
+    LIMIT 1
+")->fetch_assoc();
+$logo_url = $logo_row ? htmlspecialchars($logo_row['file_url']) : '';
+
 // First image for hero background
 $hero_img = !empty($slide_imgs) ? htmlspecialchars($slide_imgs[0]['file_url']) : '';
 
@@ -203,11 +211,15 @@ $type_icon_map = [
 <header class="nav" id="nav">
   <div class="nav-inner">
     <a href="index.php" class="nav-logo">
-      <svg class="hex-logo" viewBox="0 0 44 44">
-        <polygon points="22,2 40,12 40,32 22,42 4,32 4,12" fill="none" stroke="#cc0000" stroke-width="1.8"/>
-        <text x="50%" y="56%" dominant-baseline="middle" text-anchor="middle" fill="#cc0000" font-size="12" font-weight="800" font-family="Barlow Condensed">EG</text>
-      </svg>
-      <div class="nav-brand"><span class="nb-main">ELITE</span><span class="nb-sub">GYM</span></div>
+      <?php if ($logo_url): ?>
+        <img src="<?= $logo_url ?>" alt="Elite Gym Logo" class="nav-logo-img"/>
+      <?php else: ?>
+        <svg class="hex-logo" viewBox="0 0 44 44">
+          <polygon points="22,2 40,12 40,32 22,42 4,32 4,12" fill="none" stroke="#cc0000" stroke-width="1.8"/>
+          <text x="50%" y="56%" dominant-baseline="middle" text-anchor="middle" fill="#cc0000" font-size="12" font-weight="800" font-family="Barlow Condensed">EG</text>
+        </svg>
+        <div class="nav-brand"><span class="nb-main">ELITE</span><span class="nb-sub">GYM</span></div>
+      <?php endif; ?>
     </a>
     <nav class="nav-links">
       <?php if ($is_customer): ?>
@@ -559,12 +571,13 @@ $type_icon_map = [
     </div>
   </div>
   <div class="gallery-inner">
+    <?php $visible_imgs = array_values(array_filter($slide_imgs, fn($img) => $img['image_name'] !== 'Logo_ELITY')); ?>
     <div class="slideshow-wrap reveal" id="slideshowWrap">
       <div class="slide-progress"><div class="slide-progress-bar" id="slideProgressBar"></div></div>
-      <div class="slide-counter"><span id="slideCur">1</span> / <?= count($slide_imgs) ?></div>
+      <div class="slide-counter"><span id="slideCur">1</span> / <?= count($visible_imgs) ?></div>
       <button class="slide-autoplay-btn" id="autoplayBtn"><i class="fas fa-pause" id="autoplayIcon"></i></button>
 
-      <?php foreach($slide_imgs as $si => $img): ?>
+      <?php foreach($visible_imgs as $si => $img): ?>
       <div class="slide <?= $si === 0 ? 'active' : '' ?>" data-index="<?= $si ?>">
         <img src="<?= htmlspecialchars($img['file_url']) ?>" alt="<?= htmlspecialchars($img['image_name']) ?>" loading="<?= $si < 2 ? 'eager' : 'lazy' ?>"/>
         <div class="slide-caption">
@@ -577,14 +590,14 @@ $type_icon_map = [
       <button class="slide-prev" id="slidePrev"><i class="fas fa-chevron-left"></i></button>
       <button class="slide-next" id="slideNext"><i class="fas fa-chevron-right"></i></button>
       <div class="slide-dots" id="slideDots">
-        <?php foreach($slide_imgs as $si => $img): ?>
+        <?php foreach($visible_imgs as $si => $img): ?>
         <button class="dot <?= $si === 0 ? 'active' : '' ?>" data-i="<?= $si ?>"></button>
         <?php endforeach; ?>
       </div>
     </div>
-    <?php if (count($slide_imgs) > 1): ?>
+    <?php if (count($visible_imgs) > 1): ?>
     <div class="slide-thumbs" id="slideThumbs">
-      <?php foreach($slide_imgs as $si => $img): ?>
+      <?php foreach($visible_imgs as $si => $img): ?>
       <div class="slide-thumb <?= $si === 0 ? 'active' : '' ?>" data-i="<?= $si ?>">
         <img src="<?= htmlspecialchars($img['file_url']) ?>" alt="<?= htmlspecialchars($img['image_name']) ?>" loading="lazy"/>
       </div>
@@ -847,11 +860,15 @@ $type_icon_map = [
     <div class="footer-grid">
       <div class="fg-brand">
         <a href="index.php" class="nav-logo" style="margin-bottom:14px;display:inline-flex">
-          <svg class="hex-logo" viewBox="0 0 44 44">
-            <polygon points="22,2 40,12 40,32 22,42 4,32 4,12" fill="none" stroke="#cc0000" stroke-width="1.8"/>
-            <text x="50%" y="56%" dominant-baseline="middle" text-anchor="middle" fill="#cc0000" font-size="12" font-weight="800" font-family="Barlow Condensed">EG</text>
-          </svg>
-          <div class="nav-brand"><span class="nb-main">ELITE</span><span class="nb-sub">GYM</span></div>
+          <?php if ($logo_url): ?>
+            <img src="<?= $logo_url ?>" alt="Elite Gym Logo" class="nav-logo-img"/>
+          <?php else: ?>
+            <svg class="hex-logo" viewBox="0 0 44 44">
+              <polygon points="22,2 40,12 40,32 22,42 4,32 4,12" fill="none" stroke="#cc0000" stroke-width="1.8"/>
+              <text x="50%" y="56%" dominant-baseline="middle" text-anchor="middle" fill="#cc0000" font-size="12" font-weight="800" font-family="Barlow Condensed">EG</text>
+            </svg>
+            <div class="nav-brand"><span class="nb-main">ELITE</span><span class="nb-sub">GYM</span></div>
+          <?php endif; ?>
         </a>
         <p>Phòng tập thể hình cao cấp — lớp tập đa dạng, HLV chuyên nghiệp, thiết bị hiện đại.</p>
         <div class="socials">

@@ -1,5 +1,15 @@
 <?php
 session_start();
+
+// ── Lấy logo từ DB ───────────────────────────────────────────
+require_once __DIR__ . '/../../../Database/db.php';
+$logo_row = isset($conn) ? $conn->query("
+    SELECT file_url FROM landing_images
+    WHERE image_name = 'Logo_ELITY'
+    LIMIT 1
+")->fetch_assoc() : null;
+$logo_url = $logo_row ? htmlspecialchars($logo_row['file_url']) : '';
+
 $step = isset($_GET['step']) ? (int)$_GET['step'] : 1;
 
 // Only allow access to step 2 if OTP session exists
@@ -106,94 +116,8 @@ $page_title = $titles[$step] ?? 'QUÊN MẬT KHẨU';
     <title><?php echo $page_title; ?> - Elite Fitness Gym</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Exo+2:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&family=Barlow+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="Forgot_Password.css">
-    <style>
-        /* OTP Input Styles */
-        .otp-wrapper {
-            display: flex;
-            gap: 12px;
-            justify-content: center;
-            margin: 20px 0;
-        }
-        .otp-input {
-            width: 52px;
-            height: 60px;
-            text-align: center;
-            font-size: 1.6rem;
-            font-family: 'Orbitron', sans-serif;
-            font-weight: 700;
-            border: 2px solid rgba(255, 215, 0, 0.3);
-            border-radius: 10px;
-            background: rgba(255, 255, 255, 0.05);
-            color: #FFD700;
-            outline: none;
-            transition: all 0.3s ease;
-            caret-color: #FFD700;
-        }
-        .otp-input:focus {
-            border-color: #FFD700;
-            background: rgba(255, 215, 0, 0.08);
-            box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
-        }
-        .otp-input.filled {
-            border-color: #FFD700;
-            background: rgba(255, 215, 0, 0.1);
-        }
-        .otp-masked-email {
-            text-align: center;
-            color: rgba(255,255,255,0.6);
-            font-size: 0.9rem;
-            margin-bottom: 8px;
-        }
-        .otp-masked-email strong {
-            color: #FFD700;
-        }
-        .otp-countdown {
-            text-align: center;
-            font-size: 0.85rem;
-            color: rgba(255,255,255,0.5);
-            margin-top: 12px;
-        }
-        .otp-countdown span {
-            color: #FFD700;
-            font-weight: 700;
-        }
-        .resend-btn {
-            background: none;
-            border: none;
-            color: #FFD700;
-            cursor: pointer;
-            font-size: 0.85rem;
-            text-decoration: underline;
-            display: none;
-            margin: 8px auto 0;
-            padding: 0;
-        }
-        .resend-btn:hover { opacity: 0.8; }
-        .step-indicator {
-            display: flex;
-            justify-content: center;
-            gap: 8px;
-            margin-bottom: 24px;
-        }
-        .step-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: rgba(255,215,0,0.25);
-            transition: all 0.3s;
-        }
-        .step-dot.active {
-            background: #FFD700;
-            box-shadow: 0 0 8px rgba(255,215,0,0.6);
-            width: 28px;
-            border-radius: 5px;
-        }
-        .step-dot.done {
-            background: rgba(255,215,0,0.6);
-        }
-    </style>
 </head>
 <body>
     <div class="particles-container" id="particles"></div>
@@ -208,16 +132,11 @@ $page_title = $titles[$step] ?? 'QUÊN MẬT KHẨU';
             <div class="forgot-header">
                 <div class="logo-container">
                     <div class="logo-icon">
-                        <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M50 10L90 30V70L50 90L10 70V30L50 10Z" stroke="url(#gold-gradient)" stroke-width="3" fill="none"/>
-                            <circle cx="50" cy="50" r="15" fill="url(#gold-gradient)"/>
-                            <defs>
-                                <linearGradient id="gold-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                                    <stop offset="0%" style="stop-color:#FFD700;stop-opacity:1" />
-                                    <stop offset="100%" style="stop-color:#FFA500;stop-opacity:1" />
-                                </linearGradient>
-                            </defs>
-                        </svg>
+                        <?php if ($logo_url): ?>
+                            <img src="<?= $logo_url ?>" alt="Elite Gym Logo">
+                        <?php else: ?>
+                            <img src="../../../Home/ELITY.png" alt="Elite Gym Logo">
+                        <?php endif; ?>
                     </div>
                 </div>
                 <h1 class="glitch" data-text="<?php echo $page_title; ?>"><?php echo $page_title; ?></h1>

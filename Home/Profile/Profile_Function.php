@@ -216,24 +216,30 @@ function sendChangePasswordOtp(string $toEmail, string $otp): bool {
         $mail->Subject = '[Elite Fitness] - Mã OTP Đổi Mật Khẩu';
         $mail->Body = "
         <html>
-        <body style='font-family:Arial,sans-serif;background:#111;color:#fff;padding:30px;'>
-          <div style='max-width:480px;margin:auto;background:#1a1a1a;border-radius:12px;padding:32px;border:1px solid rgba(255,215,0,.3);'>
-            <div style='text-align:center;margin-bottom:24px;'>
-              <h2 style='color:#FFD700;font-size:1.5rem;margin:0;'>⚡ ELITE FITNESS GYM</h2>
-              <p style='color:rgba(255,255,255,.6);margin:4px 0 0;'>Xác nhận đổi mật khẩu</p>
+        <body style='font-family:Arial,sans-serif;background:#0a0a0a;color:#fff;padding:30px;margin:0;'>
+          <div style='max-width:480px;margin:auto;background:#111111;border-radius:4px;padding:0;overflow:hidden;border:1px solid rgba(204,0,0,.3);'>
+            <!-- Header -->
+            <div style='background:#cc0000;padding:20px 32px;'>
+              <h2 style='color:#fff;font-size:1.6rem;margin:0;font-weight:900;letter-spacing:2px;text-transform:uppercase;'>ELITE GYM</h2>
+              <p style='color:rgba(255,255,255,.75);margin:4px 0 0;font-size:.85rem;letter-spacing:1px;text-transform:uppercase;'>Xác nhận đổi mật khẩu</p>
             </div>
-            <p style='color:rgba(255,255,255,.85);'>Chúng tôi nhận được yêu cầu đổi mật khẩu từ tài khoản của bạn.</p>
-            <div style='text-align:center;margin:28px 0;'>
-              <div style='display:inline-block;background:rgba(255,215,0,.1);border:2px solid #FFD700;border-radius:12px;padding:16px 40px;'>
-                <span style='font-size:2.5rem;font-weight:900;letter-spacing:12px;color:#FFD700;'>{$otp}</span>
+            <!-- Body -->
+            <div style='padding:32px;'>
+              <p style='color:rgba(255,255,255,.85);margin:0 0 24px;line-height:1.6;'>Chúng tôi nhận được yêu cầu đổi mật khẩu từ tài khoản của bạn. Sử dụng mã OTP bên dưới để xác nhận.</p>
+              <div style='text-align:center;margin:28px 0;'>
+                <div style='display:inline-block;background:rgba(204,0,0,.1);border:2px solid #cc0000;border-radius:4px;padding:18px 44px;'>
+                  <span style='font-size:2.6rem;font-weight:900;letter-spacing:14px;color:#fff;font-family:monospace;'>{$otp}</span>
+                </div>
               </div>
+              <div style='background:rgba(204,0,0,.08);border-left:3px solid #cc0000;border-radius:2px;padding:12px 16px;margin-bottom:24px;'>
+                <p style='color:#ff6666;font-weight:700;margin:0;font-size:.875rem;'>⏱ Mã có hiệu lực trong <strong>5 phút</strong>. Không chia sẻ mã này cho bất kỳ ai.</p>
+              </div>
+              <hr style='border:none;border-top:1px solid rgba(255,255,255,.08);margin:0 0 20px;'>
+              <p style='color:rgba(255,255,255,.35);font-size:.78rem;margin:0;'>
+                Nếu bạn không thực hiện yêu cầu này, hãy bỏ qua email này.<br>
+                © 2026 Elite Fitness Gym. All rights reserved.
+              </p>
             </div>
-            <p style='color:#FFD700;font-weight:bold;text-align:center;'>⏱ Mã có hiệu lực trong <strong>5 phút</strong>.</p>
-            <hr style='border:none;border-top:1px solid rgba(255,255,255,.1);margin:20px 0;'>
-            <p style='color:rgba(255,255,255,.4);font-size:.8rem;text-align:center;'>
-              Nếu bạn không thực hiện yêu cầu này, hãy bỏ qua email này.<br>
-              © 2026 Elite Fitness Gym
-            </p>
           </div>
         </body></html>";
         $mail->AltBody = "Mã OTP đổi mật khẩu: {$otp} (hiệu lực 5 phút)";

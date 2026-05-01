@@ -165,6 +165,15 @@ function buildScannerModal() {
           <div class="ri-item"><div class="ri-label"><i class="fas fa-clock"></i> Check-in gần nhất</div><div class="ri-val" id="resLastIn">—</div></div>
           <div class="ri-item"><div class="ri-label"><i class="fas fa-door-open"></i> Check-out gần nhất</div><div class="ri-val" id="resLastOut">—</div></div>
         </div>
+
+        <!-- Lịch tập hôm nay -->
+        <div id="resScheduleWrap" style="display:none;margin:10px 0 4px;border-top:1px solid rgba(212,160,23,0.15);padding-top:10px;">
+          <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.35);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">
+            <i class="fas fa-calendar-day" style="color:#d4a017;margin-right:5px;"></i>Lịch tập hôm nay
+          </div>
+          <div id="resScheduleList"></div>
+        </div>
+
         <div class="result-actions">
           <button class="btn-checkin-confirm"  id="btnDoCheckIn"  onclick="doCheckIn()"><i class="fas fa-sign-in-alt"></i> CHECK IN</button>
           <button class="btn-checkout-confirm" id="btnDoCheckOut" onclick="doCheckOut()"><i class="fas fa-sign-out-alt"></i> CHECK OUT</button>
@@ -186,6 +195,34 @@ function buildScannerModal() {
   </div>
 </div>`;
 }
+
+/* ── CSS lịch tập được inject động ── */
+(function injectScheduleCSS() {
+    if (document.getElementById('qr-schedule-style')) return;
+    const s = document.createElement('style');
+    s.id = 'qr-schedule-style';
+    s.textContent = `
+.sch-item {
+    display:flex;justify-content:space-between;align-items:center;
+    padding:8px 10px;border-radius:9px;margin-bottom:6px;
+    background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);
+    font-size:12px;gap:8px;
+}
+.sch-item.sch-ongoing  { background:rgba(34,197,94,0.08); border-color:rgba(34,197,94,0.25); }
+.sch-item.sch-upcoming { background:rgba(212,160,23,0.06); border-color:rgba(212,160,23,0.2); }
+.sch-item.sch-done     { background:rgba(255,255,255,0.02); border-color:rgba(255,255,255,0.05); opacity:.6; }
+.sch-item-left { flex:1;min-width:0; }
+.sch-name { font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px; }
+.sch-meta { color:rgba(255,255,255,0.35);font-size:11px;margin-top:2px; }
+.sch-item-right { text-align:right;flex-shrink:0; }
+.sch-time { font-weight:700;color:#d4a017;font-size:12px; }
+.sch-status { font-size:10px;margin-top:2px; }
+.sch-ongoing  .sch-status { color:#22c55e; }
+.sch-upcoming .sch-status { color:#f59e0b; }
+.sch-done     .sch-status { color:rgba(255,255,255,0.3); }
+    `;
+    document.head.appendChild(s);
+})();
 
 function buildQRCodeModal() {
     return `
@@ -501,20 +538,93 @@ function renderResult(d) {
 
     el('resLastIn').textContent  = d.last_checkin  ? formatDateTime(d.last_checkin)  : '—';
     el('resLastOut').textContent = d.last_checkout ? formatDateTime(d.last_checkout) : '—';
-    el('btnDoCheckIn').disabled  = (d.pkg_status === 'none' || d.pkg_status === 'expired');
+
+    // ── Check-in chỉ được phép khi đang trong khung giờ lịch tập ──
+    const now = new Date();
+    const hasOngoingClass = (d.today_classes || []).some(cls => {
+        const start = new Date(cls.start_time);
+        const end   = new Date(cls.end_time);
+        return now >= start && now <= end;
+    });
+    const pkgInvalid = (d.pkg_status === 'none' || d.pkg_status === 'expired');
+
+    // Disable CHECK IN nếu: gói hết hạn, hoặc không có lớp đang diễn ra, hoặc đang trong gym rồi
+    el('btnDoCheckIn').disabled  = pkgInvalid || !hasOngoingClass || d.currently_in;
     el('btnDoCheckOut').disabled = !d.currently_in;
+
+    // Tooltip giải thích lý do disable
+    const btnIn = el('btnDoCheckIn');
+    if (pkgInvalid) {
+        btnIn.title = 'Gói tập đã hết hạn hoặc chưa đăng ký';
+    } else if (d.currently_in) {
+        btnIn.title = 'Khách đang trong gym';
+    } else if (!hasOngoingClass) {
+        const upcoming = (d.today_classes || []).filter(cls => new Date(cls.start_time) > now);
+        if (upcoming.length > 0) {
+            const nextTime = formatTimeStr(upcoming[0].start_time);
+            btnIn.title = `Chưa đến giờ tập — lớp bắt đầu lúc ${nextTime}`;
+        } else if ((d.today_classes || []).length > 0) {
+            btnIn.title = 'Tất cả lớp hôm nay đã kết thúc';
+        } else {
+            btnIn.title = 'Không có lịch tập hôm nay';
+        }
+    } else {
+        btnIn.title = '';
+    }
+
+    // ── Hiển thị lịch tập hôm nay ──────────────────────────
+    const schedWrap = el('resScheduleWrap');
+    const schedList = el('resScheduleList');
+    if (d.today_classes && d.today_classes.length > 0) {
+        schedWrap.style.display = 'block';
+        schedList.innerHTML = d.today_classes.map(cls => {
+            const now = new Date();
+            const start = new Date(cls.start_time);
+            const end   = new Date(cls.end_time);
+            let statusCls = 'sch-upcoming';
+            let statusTxt = 'Sắp diễn ra';
+            if (now >= start && now <= end) { statusCls = 'sch-ongoing';  statusTxt = 'Đang diễn ra'; }
+            if (now > end)                  { statusCls = 'sch-done';     statusTxt = 'Đã kết thúc'; }
+            return `<div class="sch-item ${statusCls}">
+              <div class="sch-item-left">
+                <div class="sch-name">${cls.class_name}</div>
+                <div class="sch-meta"><i class="fas fa-door-open"></i> ${cls.room_name} &nbsp;|&nbsp; <i class="fas fa-user-tie"></i> ${cls.trainer_name || '—'}</div>
+              </div>
+              <div class="sch-item-right">
+                <div class="sch-time">${formatTimeStr(cls.start_time)}–${formatTimeStr(cls.end_time)}</div>
+                <div class="sch-status">${statusTxt}</div>
+              </div>
+            </div>`;
+        }).join('');
+    } else {
+        schedWrap.style.display = 'none';
+        schedList.innerHTML = '';
+    }
+
     el('qrResult').classList.add('visible');
     flashScanStatus('Tìm thấy: ' + c.full_name, 'found');
+}
+
+function formatTimeStr(dtStr) {
+    if (!dtStr) return '—';
+    const d = new Date(dtStr);
+    return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
 }
 
 // ===================================================
 // CHECK IN / OUT
 // ===================================================
+
+// Map lưu timer auto-checkout: { customer_id → timeoutId }
+const autoCheckoutTimers = {};
+
 async function doCheckIn()  { if (qrResultData) await sendCheckin('checkin'); }
 async function doCheckOut() { if (qrResultData) await sendCheckin('checkout'); }
 
 async function sendCheckin(type) {
-    const cid = qrResultData.customer.customer_id;
+    const cid      = qrResultData.customer.customer_id;
+    const classes  = qrResultData.today_classes || [];
+
     showQRLoading(true, type === 'checkin' ? 'Đang ghi check-in...' : 'Đang ghi check-out...');
     try {
         const fd = new FormData();
@@ -531,6 +641,54 @@ async function sendCheckin(type) {
             el('successOverlay').classList.add('show');
             addToLog(qrResultData.customer, type, new Date());
             showToast(d.message || label, 'success');
+
+            // ── AUTO-CHECKOUT: đặt timer theo giờ kết thúc lớp ──
+            if (type === 'checkin' && classes.length > 0) {
+                // Hủy timer cũ nếu có
+                if (autoCheckoutTimers[cid]) clearTimeout(autoCheckoutTimers[cid]);
+
+                // Tìm lớp đang diễn ra hoặc sắp diễn ra gần nhất
+                const now = Date.now();
+                let targetClass = null;
+                let minDiff = Infinity;
+                for (const cls of classes) {
+                    const endMs = new Date(cls.end_time).getTime();
+                    if (endMs > now) {
+                        const diff = endMs - now;
+                        if (diff < minDiff) { minDiff = diff; targetClass = cls; }
+                    }
+                }
+
+                if (targetClass) {
+                    const delayMs  = new Date(targetClass.end_time).getTime() - now;
+                    const endLabel = formatTimeStr(targetClass.end_time);
+                    console.log(`[AutoCheckout] ${qrResultData.customer.full_name} → checkout lúc ${endLabel} (sau ${Math.round(delayMs/60000)} phút)`);
+
+                    autoCheckoutTimers[cid] = setTimeout(async () => {
+                        console.log(`[AutoCheckout] Tự động checkout ${qrResultData?.customer?.full_name || 'CID:'+cid}`);
+                        try {
+                            const fd2 = new FormData();
+                            fd2.append('action', 'do_checkin');
+                            fd2.append('customer_id', cid);
+                            fd2.append('type', 'checkout');
+                            const r2 = await fetch(QR_API, { method: 'POST', body: fd2, headers: FETCH_HEADERS });
+                            const d2 = await r2.json();
+                            if (d2.success) {
+                                showToast(`⏰ Tự động check-out: ${d2.customer?.full_name || 'ID:'+cid} (${endLabel})`, 'success');
+                                addToLog(d2.customer || { full_name: 'ID:'+cid, customer_id: cid }, 'checkout', new Date());
+                            }
+                        } catch(e) { console.error('[AutoCheckout] Lỗi:', e); }
+                        delete autoCheckoutTimers[cid];
+                    }, delayMs);
+                }
+            }
+
+            // Hủy timer nếu khách tự checkout
+            if (type === 'checkout' && autoCheckoutTimers[cid]) {
+                clearTimeout(autoCheckoutTimers[cid]);
+                delete autoCheckoutTimers[cid];
+            }
+
             setTimeout(() => { el('successOverlay').classList.remove('show'); resetScanResult(); }, 2200);
         } else {
             showToast(d.message || 'Có lỗi xảy ra', 'error');

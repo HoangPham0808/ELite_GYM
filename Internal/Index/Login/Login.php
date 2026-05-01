@@ -31,6 +31,15 @@ if (isset($_SESSION['account_id'])) {
     }
 }
 
+// ── Lấy logo từ DB ───────────────────────────────────────────
+require_once __DIR__ . '/../../../Database/db.php';
+$logo_row = isset($conn) ? $conn->query("
+    SELECT file_url FROM landing_images
+    WHERE image_name = 'Logo_ELITY'
+    LIMIT 1
+")->fetch_assoc() : null;
+$logo_url = $logo_row ? htmlspecialchars($logo_row['file_url']) : '';
+
 $error_message = '';
 if (isset($_GET['error'])) {
     switch ($_GET['error']) {
@@ -57,7 +66,7 @@ if (isset($_GET['error'])) {
     <title>Đăng Nhập - Hệ Thống Quản Lý Phòng Tập Gym</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Exo+2:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&family=Barlow+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="Login.css">
 </head>
 <body>
@@ -78,21 +87,13 @@ if (isset($_GET['error'])) {
             <div class="login-header">
                 <div class="logo-container">
                     <div class="logo-icon">
-                        <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M50 10L90 30V70L50 90L10 70V30L50 10Z" stroke="url(#gold-gradient)" stroke-width="3" fill="none"/>
-                            <circle cx="50" cy="50" r="15" fill="url(#gold-gradient)"/>
-                            <defs>
-                                <linearGradient id="gold-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                                    <stop offset="0%" style="stop-color:#FFD700;stop-opacity:1" />
-                                    <stop offset="100%" style="stop-color:#FFA500;stop-opacity:1" />
-                                </linearGradient>
-                            </defs>
-                        </svg>
+                        <?php if ($logo_url): ?>
+                            <img src="<?= $logo_url ?>" alt="Elite Gym Logo">
+                        <?php else: ?>
+                            <img src="../../../Home/ELITY.png" alt="Elite Gym Logo">
+                        <?php endif; ?>
                     </div>
                 </div>
-                <h1 class="glitch" data-text="ĐĂNG NHẬP HỆ THỐNG">ĐĂNG NHẬP HỆ THỐNG</h1>
-                <p class="subtitle">QUẢN LÝ PHÒNG TẬP GYM ELITE</p>
-                <div class="header-line"></div>
             </div>
 
             <?php if (!empty($error_message)): ?>

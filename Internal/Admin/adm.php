@@ -26,10 +26,7 @@ $initials    = mb_strtoupper(mb_substr($full_name, 0, 1));
         <aside class="sidebar">
             <div class="sidebar-logo-wrap">
                 <div class="logo-hex">
-                    <svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
-                        <polygon points="30,2 56,16 56,44 30,58 4,44 4,16" fill="none" stroke="#d4a017" stroke-width="2.5"/>
-                        <text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle" fill="#d4a017" font-size="18" font-weight="800" font-family="Barlow Condensed">EG</text>
-                    </svg>
+                    <img src="../../Home/ELITY.png" alt="Elite Gym Logo">
                 </div>
                 <div class="logo-text">
                     <span class="brand-name">ELITE GYM</span>

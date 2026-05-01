@@ -279,6 +279,82 @@ if ($action === 'list') {
     exit;
 }
 
+// ════════════════════════════════════════════════════════════════
+//  ACTION: replace (thay ảnh mới — xóa file cũ, lưu file mới)
+// ════════════════════════════════════════════════════════════════
+if ($action === 'replace') {
+    $image_id = (int)($_POST['image_id'] ?? 0);
+
+    if (!$image_id || empty($_FILES['image']['tmp_name'])) {
+        echo json_encode(['ok' => false, 'msg' => 'Thiếu image_id hoặc file ảnh.']);
+        exit;
+    }
+
+    // Lấy thông tin ảnh cũ
+    $stmt = $conn->prepare("SELECT file_name FROM landing_images WHERE image_id = ?");
+    $stmt->bind_param("i", $image_id);
+    $stmt->execute();
+    $row = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    if (!$row) {
+        echo json_encode(['ok' => false, 'msg' => 'Không tìm thấy ảnh trong DB.']);
+        exit;
+    }
+
+    $tmp  = $_FILES['image']['tmp_name'];
+    $orig = basename($_FILES['image']['name']);
+    $mime = mime_content_type($tmp);
+    $size = (int)$_FILES['image']['size'];
+    $ext  = strtolower(pathinfo($orig, PATHINFO_EXTENSION));
+
+    if (!in_array($mime, $ALLOWED_MIME) || !in_array($ext, $ALLOWED_EXT)) {
+        echo json_encode(['ok' => false, 'msg' => 'Định dạng không hợp lệ (chỉ JPG, PNG, WEBP, GIF).']);
+        exit;
+    }
+    if ($size > MAX_SIZE) {
+        echo json_encode(['ok' => false, 'msg' => 'File vượt quá 5 MB.']);
+        exit;
+    }
+
+    // Tên file mới an toàn + unique
+    $base     = preg_replace('/[^a-zA-Z0-9_-]/', '_', pathinfo($orig, PATHINFO_FILENAME));
+    $filename = $base . '_' . uniqid() . '.' . $ext;
+    $dest     = UPLOAD_DIR . $filename;
+    $url      = UPLOAD_URL . $filename;
+
+    if (!move_uploaded_file($tmp, $dest)) {
+        echo json_encode(['ok' => false, 'msg' => 'Không thể lưu file mới vào server.']);
+        exit;
+    }
+
+    // Xóa file cũ khỏi disk
+    $oldPath = UPLOAD_DIR . $row['file_name'];
+    if (file_exists($oldPath) && is_file($oldPath)) {
+        @unlink($oldPath);
+    }
+
+    // Cập nhật DB (chỉ đổi file, giữ nguyên image_name và sort_order)
+    $fpath = UPLOAD_DIR . $filename;
+    $stmt2 = $conn->prepare("
+        UPDATE landing_images
+        SET file_name = ?, file_path = ?, file_url = ?, file_size = ?, file_ext = ?
+        WHERE image_id = ?
+    ");
+    $stmt2->bind_param("sssisi", $filename, $fpath, $url, $size, $ext, $image_id);
+    $stmt2->execute();
+    $stmt2->close();
+
+    echo json_encode([
+        'ok'       => true,
+        'file_url' => $url,
+        'file_ext' => strtoupper($ext),
+        'file_size_fmt' => round($size / 1024) . ' KB',
+        'msg'      => 'Đã thay ảnh thành công.',
+    ]);
+    exit;
+}
+
 // ── Action không hợp lệ ─────────────────────────────────────────
 echo json_encode(['ok' => false, 'msg' => "Action '$action' không hợp lệ."]);
 exit;

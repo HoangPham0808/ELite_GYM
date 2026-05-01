@@ -212,7 +212,9 @@ $active = array_sum(array_column($images, 'is_active'));
       <div class="img-card <?= $isOn ? '' : 'inactive' ?>"
            draggable="true"
            data-id="<?= (int)$img['image_id'] ?>"
-           data-active="<?= (int)$img['is_active'] ?>">
+           data-active="<?= (int)$img['is_active'] ?>"
+           data-name="<?= htmlspecialchars($img['image_name']) ?>"
+           <?= $img['image_name'] === 'Logo_ELITY' ? 'data-protected="1"' : '' ?>>
 
         <!-- ── Thumbnail ── -->
         <div class="img-thumb-wrap">
@@ -242,10 +244,16 @@ $active = array_sum(array_column($images, 'is_active'));
                   title="<?= htmlspecialchars($img['image_name']) ?>">
               <?= htmlspecialchars($img['image_name']) ?>
             </span>
+            <?php if ($img['image_name'] !== 'Logo_ELITY'): ?>
             <button class="btn-rename"
                     title="Sửa tên hiển thị của ảnh này">
               <i class="fas fa-pen"></i>
             </button>
+            <?php else: ?>
+            <span class="badge-protected" title="Ảnh hệ thống — không thể đổi tên hoặc xóa">
+              <i class="fas fa-lock"></i> Ảnh hệ thống
+            </span>
+            <?php endif; ?>
           </div>
           <div class="img-meta">
             <span><?= $fext ?></span>
@@ -260,8 +268,12 @@ $active = array_sum(array_column($images, 'is_active'));
           <span><?= htmlspecialchars($img['file_url']) ?></span>
         </div>
 
-        <!-- ── Nút Ẩn/Hiện & Xóa ── -->
+        <!-- ── Nút Thay ảnh / Ẩn-Hiện / Xóa ── -->
         <div class="img-actions">
+          <button class="btn-replace" title="Thay bằng ảnh mới (xóa ảnh cũ)">
+            <i class="fas fa-image"></i> Thay ảnh
+          </button>
+          <?php if ($img['image_name'] !== 'Logo_ELITY'): ?>
           <button class="btn-toggle <?= $isOn ? 'on' : 'off' ?>">
             <?php if ($isOn): ?>
               <i class="fas fa-eye-slash"></i> Ẩn khỏi slideshow
@@ -272,6 +284,7 @@ $active = array_sum(array_column($images, 'is_active'));
           <button class="btn-del" title="Xóa ảnh vĩnh viễn">
             <i class="fas fa-trash-alt"></i>
           </button>
+          <?php endif; ?>
         </div>
 
       </div><!-- /img-card -->
@@ -305,6 +318,11 @@ $active = array_sum(array_column($images, 'is_active'));
 
 <!-- ══ TOAST ══ -->
 <div class="toast" id="toast"></div>
+
+<!-- Hidden input dùng để thay ảnh -->
+<input type="file" id="replaceFileInput"
+       accept="image/jpeg,image/png,image/webp,image/gif"
+       style="display:none"/>
 
 <!-- ══ JS ══ -->
 <script src="Image_landing.js"></script>

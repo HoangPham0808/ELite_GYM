@@ -10,6 +10,14 @@ if (!isset($_SESSION['account_id']) || ($_SESSION['role'] ?? '') !== 'Customer')
 
 require_once '../../Database/db.php';
 
+// ── Lấy logo từ DB (giống index.php) ─────────────────────────
+$logo_row = $conn->query("
+    SELECT file_url FROM landing_images
+    WHERE image_name = 'Logo_ELITY'
+    LIMIT 1
+")->fetch_assoc();
+$logo_url = $logo_row ? htmlspecialchars($logo_row['file_url']) : '';
+
 $account_id = (int)$_SESSION['account_id'];
 $active_tab = $_GET['tab']     ?? 'info';
 $pw_step    = (int)($_GET['pw_step'] ?? 0); // 1 = passwords, 2 = OTP
@@ -167,7 +175,7 @@ if ($pw_step === 2 && !empty($_SESSION['chpw_email'])) {
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
-<link rel="stylesheet" href="fontawesome/css/all.min.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer"/>
 <link rel="stylesheet" href="Profile.css"/>
 </head>
 <body>
@@ -176,11 +184,15 @@ if ($pw_step === 2 && !empty($_SESSION['chpw_email'])) {
 <nav class="nav">
   <div class="nav-inner">
     <a href="../index.php" class="nav-logo">
-      <svg class="hex-logo" viewBox="0 0 44 44">
-        <polygon points="22,2 40,12 40,32 22,42 4,32 4,12" fill="none" stroke="#d4a017" stroke-width="1.8"/>
-        <text x="50%" y="56%" dominant-baseline="middle" text-anchor="middle" fill="#d4a017" font-size="12" font-weight="800" font-family="Barlow Condensed">EG</text>
-      </svg>
-      <div class="nav-brand"><span class="nb-main">ELITE</span><span class="nb-sub">GYM</span></div>
+      <?php if ($logo_url): ?>
+        <img src="<?= $logo_url ?>" alt="Elite Gym Logo" class="nav-logo-img"/>
+      <?php else: ?>
+        <svg class="hex-logo" viewBox="0 0 44 44">
+          <polygon points="22,2 40,12 40,32 22,42 4,32 4,12" fill="none" stroke="#cc0000" stroke-width="1.8"/>
+          <text x="50%" y="56%" dominant-baseline="middle" text-anchor="middle" fill="#cc0000" font-size="12" font-weight="800" font-family="Barlow Condensed">EG</text>
+        </svg>
+        <div class="nav-brand"><span class="nb-main">ELITE</span><span class="nb-sub">GYM</span></div>
+      <?php endif; ?>
     </a>
     <div class="nav-spacer"></div>
     <a href="../index.php" class="nav-back"><i class="fas fa-arrow-left"></i> Trang chủ</a>

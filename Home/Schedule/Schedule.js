@@ -226,12 +226,34 @@ function openAIModal(cls) {
     pkgTag.style.display = 'none';
   }
 
-  // Reset output về trạng thái ban đầu
-  document.getElementById('aiOutputBox').innerHTML = `
-    <div class="ai-output-empty">
-      <i class="fas fa-dumbbell"></i>
-      <p>Nhập thông số cơ thể và nhấn<br><strong>Tạo lịch tập AI</strong> để bắt đầu</p>
-    </div>`;
+  const outputBox = document.getElementById('aiOutputBox');
+
+  // Xoá equipment tag cũ
+  document.getElementById('aiEquipmentTag')?.remove();
+  // Ẩn nút lưu cũ
+  document.getElementById('aiSaveBtn')?.remove();
+
+  // Thử load lịch tập đã lưu từ localStorage
+  const saved = aiLoadWorkout(cls.classId);
+  if (saved) {
+    // Hiện lịch đã lưu + badge "Đã lưu"
+    outputBox.innerHTML = '<div class="ai-plan">' + aiMarkdownToHTML(saved.text) + '</div>';
+    if (saved.equipment) {
+      const tag     = document.createElement('div');
+      tag.id        = 'aiEquipmentTag';
+      tag.className = 'ai-equipment-tag';
+      tag.innerHTML = `<i class="fas fa-tools"></i><span>Thiết bị phòng ${saved.room || ''}: ${saved.equipment}</span>`;
+      outputBox.insertAdjacentElement('beforebegin', tag);
+    }
+    // Hiện nút lưu ở trạng thái "đã lưu"
+    aiShowSaveBtn(outputBox, saved.text, true);
+  } else {
+    outputBox.innerHTML = `
+      <div class="ai-output-empty">
+        <i class="fas fa-dumbbell"></i>
+        <p>Nhập thông số cơ thể và nhấn<br><strong>Tạo lịch tập AI</strong> để bắt đầu</p>
+      </div>`;
+  }
 
   aiCalcBMI();
 
@@ -320,6 +342,77 @@ function snapBurnTarget(bmi, gender, durationMin) {
   return burn;
 }
 
+/* ══════════════════════════════════
+   WORKOUT SAVE / LOAD (localStorage)
+   Key: workout_<accountId>_<classId>
+   Value: { text, equipment, room, savedAt }
+══════════════════════════════════ */
+function _workoutKey(classId) {
+  const uid = window.CURRENT_ACCOUNT_ID || 'guest';
+  return `workout_${uid}_${classId}`;
+}
+
+function aiSaveWorkout(classId, text, equipment, room) {
+  try {
+    localStorage.setItem(_workoutKey(classId), JSON.stringify({
+      text, equipment, room,
+      savedAt: Date.now(),
+    }));
+    return true;
+  } catch(e) {
+    console.warn('Lưu lịch tập thất bại:', e);
+    return false;
+  }
+}
+
+function aiLoadWorkout(classId) {
+  try {
+    const raw = localStorage.getItem(_workoutKey(classId));
+    return raw ? JSON.parse(raw) : null;
+  } catch(e) { return null; }
+}
+
+/**
+ * Hiện nút Lưu bên dưới outputBox.
+ * @param {Element} outputBox
+ * @param {string}  fullText     - markdown text cần lưu
+ * @param {boolean} alreadySaved - true → hiện trạng thái "Đã lưu" ngay
+ */
+function aiShowSaveBtn(outputBox, fullText, alreadySaved = false) {
+  // Xoá nút cũ nếu có
+  document.getElementById('aiSaveBtn')?.remove();
+
+  const btn = document.createElement('button');
+  btn.id        = 'aiSaveBtn';
+  btn.className = 'ai-save-btn' + (alreadySaved ? ' ai-save-btn--saved' : '');
+  btn.innerHTML = alreadySaved
+    ? '<i class="fas fa-check-circle"></i> Đã lưu'
+    : '<i class="fas fa-bookmark"></i> Lưu lịch tập';
+
+  btn.addEventListener('click', () => {
+    // Lấy meta từ equipment tag hiện tại
+    const equipTag  = document.getElementById('aiEquipmentTag');
+    const equipText = equipTag?.querySelector('span')?.textContent || '';
+    // Parse "Thiết bị phòng A301: Bench 1, ..." → equipment
+    const colonIdx  = equipText.indexOf(':');
+    const room      = colonIdx > 0 ? equipText.slice(11, colonIdx).trim() : '';
+    const equipment = colonIdx > 0 ? equipText.slice(colonIdx + 1).trim() : equipText;
+
+    const ok = aiSaveWorkout(_aiCurrentClass.classId, fullText, equipment, room);
+    if (ok) {
+      btn.className = 'ai-save-btn ai-save-btn--saved';
+      btn.innerHTML = '<i class="fas fa-check-circle"></i> Đã lưu';
+      // Toast xác nhận
+      showToast('✅ Đã lưu lịch tập thành công!');
+    } else {
+      showToast('❌ Lưu thất bại. Trình duyệt có thể đã chặn localStorage.', true);
+    }
+  });
+
+  // Chèn ngay sau outputBox
+  outputBox.insertAdjacentElement('afterend', btn);
+}
+
 /* ── GENERATE ──────────────────────────────────────────────────── */
 document.getElementById('aiGenBtn')?.addEventListener('click', () => {
   const bmiData = aiCalcBMI();
@@ -352,8 +445,9 @@ document.getElementById('aiGenBtn')?.addEventListener('click', () => {
   btn.disabled  = true;
   btn.innerHTML = '<span class="ai-spinner" style="width:16px;height:16px;border-width:2px;display:inline-block"></span> Đang tạo...';
 
-  // Xoá equipment tag cũ nếu có
+  // Xoá equipment tag + nút lưu cũ
   document.getElementById('aiEquipmentTag')?.remove();
+  document.getElementById('aiSaveBtn')?.remove();
 
   // ── Gọi streaming ─────────────────────────────────────────
   fetchWorkoutStream(
@@ -402,6 +496,9 @@ document.getElementById('aiGenBtn')?.addEventListener('click', () => {
 
       btn.disabled  = false;
       btn.innerHTML = '<i class="fas fa-bolt"></i> Tạo lại';
+
+      // Hiện nút Lưu (chưa lưu — bản mới vừa tạo)
+      aiShowSaveBtn(outputBox, fullText, false);
     }
   );
 

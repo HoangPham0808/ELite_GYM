@@ -151,6 +151,14 @@ function hasCheckinInWindow(array $checkin_times, string $start, ?string $end): 
 $now_ts      = time();
 $upcoming_my = array_filter($all_my, fn($c) => strtotime($c['start_time']) >= $now_ts);
 $past_my     = array_filter($all_my, fn($c) => strtotime($c['start_time']) <  $now_ts);
+
+// ── Lấy logo từ DB ────────────────────────────────────────────
+$logo_row = $conn->query("
+    SELECT file_url FROM landing_images
+    WHERE image_name = 'Logo_ELITY'
+    LIMIT 1
+")->fetch_assoc();
+$logo_url = $logo_row ? htmlspecialchars($logo_row['file_url']) : '';
 ?>
 <!DOCTYPE html>
 <html lang="vi">
@@ -176,11 +184,15 @@ $past_my     = array_filter($all_my, fn($c) => strtotime($c['start_time']) <  $n
 <header class="nav scrolled" id="nav">
   <div class="nav-inner">
     <a href="../index.php" class="nav-logo">
-      <svg class="hex-logo" viewBox="0 0 44 44">
-        <polygon points="22,2 40,12 40,32 22,42 4,32 4,12" fill="none" stroke="#cc0000" stroke-width="1.8"/>
-        <text x="50%" y="56%" dominant-baseline="middle" text-anchor="middle" fill="#cc0000" font-size="12" font-weight="800" font-family="Barlow Condensed">EG</text>
-      </svg>
-      <div class="nav-brand"><span class="nb-main">ELITE</span><span class="nb-sub">GYM</span></div>
+      <?php if ($logo_url): ?>
+        <img src="<?= $logo_url ?>" alt="Elite Gym Logo" class="nav-logo-img"/>
+      <?php else: ?>
+        <svg class="hex-logo" viewBox="0 0 44 44">
+          <polygon points="22,2 40,12 40,32 22,42 4,32 4,12" fill="none" stroke="#cc0000" stroke-width="1.8"/>
+          <text x="50%" y="56%" dominant-baseline="middle" text-anchor="middle" fill="#cc0000" font-size="12" font-weight="800" font-family="Barlow Condensed">EG</text>
+        </svg>
+        <div class="nav-brand"><span class="nb-main">ELITE</span><span class="nb-sub">GYM</span></div>
+      <?php endif; ?>
     </a>
     <nav class="nav-links">
       <a href="../index.php">Trang chủ</a>
@@ -510,11 +522,15 @@ $past_my     = array_filter($all_my, fn($c) => strtotime($c['start_time']) <  $n
     <div class="footer-grid">
       <div class="fg-brand">
         <a href="../index.php" class="nav-logo" style="margin-bottom:14px;display:inline-flex">
-          <svg class="hex-logo" viewBox="0 0 44 44">
-            <polygon points="22,2 40,12 40,32 22,42 4,32 4,12" fill="none" stroke="#cc0000" stroke-width="1.8"/>
-            <text x="50%" y="56%" dominant-baseline="middle" text-anchor="middle" fill="#cc0000" font-size="12" font-weight="800" font-family="Barlow Condensed">EG</text>
-          </svg>
-          <div class="nav-brand"><span class="nb-main">ELITE</span><span class="nb-sub">GYM</span></div>
+          <?php if ($logo_url): ?>
+            <img src="<?= $logo_url ?>" alt="Elite Gym Logo" class="nav-logo-img"/>
+          <?php else: ?>
+            <svg class="hex-logo" viewBox="0 0 44 44">
+              <polygon points="22,2 40,12 40,32 22,42 4,32 4,12" fill="none" stroke="#cc0000" stroke-width="1.8"/>
+              <text x="50%" y="56%" dominant-baseline="middle" text-anchor="middle" fill="#cc0000" font-size="12" font-weight="800" font-family="Barlow Condensed">EG</text>
+            </svg>
+            <div class="nav-brand"><span class="nb-main">ELITE</span><span class="nb-sub">GYM</span></div>
+          <?php endif; ?>
         </a>
         <p>Phòng tập thể hình cao cấp — lớp tập đa dạng, HLV chuyên nghiệp, thiết bị hiện đại.</p>
         <div class="socials">
@@ -688,6 +704,9 @@ if (hamburger && mobileMenu) {
     </div>
   </div>
 </div>
+<script>
+  window.CURRENT_ACCOUNT_ID = <?= (int)$_SESSION['account_id'] ?>;
+</script>
 <script src="ai_stream.js"></script>
 <script src="Schedule.js"></script>
 </body>

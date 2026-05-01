@@ -186,3 +186,32 @@
 [2026-03-31 02:33:56] Dang ky: plan_id=11 | start=2028-04-24 | end=2028-10-24 | months=6
 [2026-03-31 02:33:56] Da dang ky goi tap cho invoice #51
 [2026-03-31 02:33:56] === Done ===
+[2026-04-13 20:58:52] === Webhook called ===
+[2026-04-13 20:58:52] Method: POST
+[2026-04-13 20:58:52] Auth header: Apikey elitegym_PAY
+[2026-04-13 20:58:52] API Key OK
+[2026-04-13 20:58:52] Raw body: {"gateway":"MBBank","transactionDate":"2026-04-14 10:00:00","accountNumber":"0981015808","subAccount":null,"code":null,"content":"SHOPEEPAY CHUYEN TIEN 123456 Scan QR ELITEGYM HD99","transferType":"in","transferAmount":5555,"referenceCode":"TEST001","accumulated":0,"id":99999999}
+[2026-04-13 20:58:52] transferType: in
+[2026-04-13 20:58:52] Content: SHOPEEPAY CHUYEN TIEN 123456 Scan QR ELITEGYM HD99 | Amount: 5555
+[2026-04-13 20:58:52] Invoice ID extracted: #99
+[2026-04-13 20:58:52] Trying DB path: C:\wamp64\www\PHP\ELite_GYM\Internal\Admin/../../Database/db.php | FOUND
+[2026-04-13 20:58:52] Using DB: C:\wamp64\www\PHP\ELite_GYM\Internal\Admin/../../Database/db.php
+[2026-04-14 03:58:52] DB connected OK
+[2026-04-14 03:58:52] Invoice #99 KHONG TON TAI trong DB
+[2026-04-13 21:00:52] === Webhook called ===
+[2026-04-13 21:00:52] Method: POST
+[2026-04-13 21:00:52] Auth header: Apikey elitegym_PAY
+[2026-04-13 21:00:52] API Key OK
+[2026-04-13 21:00:52] Raw body: {"gateway":"MBBank","transactionDate":"2026-04-14 04:00:00","accountNumber":"0981015808","subAccount":null,"code":null,"content":"SHOPEEPAY CHUYEN TIEN 2043796553464410112 Scan QR ELITEGYM HD59","transferType":"in","description":"BankAPINotify SHOPEEPAY CHUYEN TIEN 2043796553464410112 Scan QR ELITEGYM HD59","transferAmount":300000,"referenceCode":"FT26104278203880","accumulated":0,"id":50342092}
+[2026-04-13 21:00:52] transferType: in
+[2026-04-13 21:00:52] Content: SHOPEEPAY CHUYEN TIEN 2043796553464410112 Scan QR ELITEGYM HD59 | Amount: 300000
+[2026-04-13 21:00:52] Invoice ID extracted: #59
+[2026-04-13 21:00:52] Trying DB path: C:\wamp64\www\PHP\ELite_GYM\Internal\Admin/../../Database/db.php | FOUND
+[2026-04-13 21:00:52] Using DB: C:\wamp64\www\PHP\ELite_GYM\Internal\Admin/../../Database/db.php
+[2026-04-14 04:00:52] DB connected OK
+[2026-04-14 04:00:52] Invoice #59 found. Status: Pending | Amount in DB: 300000.00
+[2026-04-14 04:00:52] Kiem tra so tien OK: 300000 >= 300000
+[2026-04-14 04:00:52] Invoice #59 cap nhat Paid thanh cong!
+[2026-04-14 04:00:52] Dang ky: plan_id=5 | start=2026-05-14 | end=2026-06-14 | months=1
+[2026-04-14 04:00:52] Da dang ky goi tap cho invoice #59
+[2026-04-14 04:00:52] === Done ===
