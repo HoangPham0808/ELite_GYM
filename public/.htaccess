@@ -1,0 +1,6 @@
+RewriteEngine On
+RewriteBase /PHP/ELite_GYM/public/
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php?url=$1 [QSA,L]

@@ -1,0 +1,1 @@
+<?php /** Layout sidebar admin */ ?>

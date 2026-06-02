@@ -1,0 +1,975 @@
+// ===== CONFIG =====
+function employeeApiUrl() {
+    return (window.ELITE_BASE || '') + '/api/admin/employee';
+}
+var API_URL = employeeApiUrl();
+var currentPage = 1;
+var LIMIT = 15;
+var deleteTargetId = null;
+var searchTimer = null;
+var selectedIds = new Set(); // IDs đang được chọn để xóa hàng loạt
+
+// State for salary modal
+var salaryMonthlySalary = 0;  // lương tháng cố định
+var salaryBaseCalc = 0;       // = monthly_salary (base)
+
+// ===== DOM READY =====
+function initEmployeeModule() {
+    if (!document.getElementById('searchInput')) return;
+
+    API_URL = employeeApiUrl();
+    loadStats();
+    loadEmployees();
+
+    const now = new Date();
+    const fSalaryMonth = document.getElementById('fSalaryMonth');
+    const fSalaryYear  = document.getElementById('fSalaryYear');
+    if (fSalaryMonth) fSalaryMonth.value = now.getMonth() + 1;
+    if (fSalaryYear)  fSalaryYear.value  = now.getFullYear();
+
+    document.getElementById('searchInput').addEventListener('input', () => {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => { currentPage = 1; loadEmployees(); }, 350);
+    });
+
+    const genderFilter = document.getElementById('genderFilter');
+    const sortFilter   = document.getElementById('sortFilter');
+    if (genderFilter) genderFilter.addEventListener('change', () => { currentPage = 1; loadEmployees(); });
+    if (sortFilter)   sortFilter.addEventListener('change', () => { currentPage = 1; loadEmployees(); });
+
+    ['fHoTen','fNgaySinh','fGioiTinh','fChucVu','fSoDienThoai','fEmail',
+     'fNgayVaoLam','fLuongCoBanEmp','fDiaChi','fTenDangNhap','fMatKhau'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('input', () => setFieldError(id, false));
+        if (el) el.addEventListener('change', () => setFieldError(id, false));
+    });
+
+    ['fPhuCap','fThuong','fKhauTru'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('input', updateSalaryPreview);
+    });
+}
+runWhenReady(initEmployeeModule);
+
+// ===== LOAD STATS =====
+async function loadStats() {
+    try {
+        const res = await fetch(`${employeeApiUrl()}?action=get_stats`, {
+            credentials: 'same-origin',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        });
+        const d = await res.json();
+        if (!d.success) return;
+        document.getElementById('statTotal').textContent     = d.total;
+        document.getElementById('statActive').textContent    = d.active;
+        document.getElementById('statNewMonth').textContent  = d.new_month;
+        document.getElementById('statAvgSalary').textContent = d.avg_salary ? formatMoneyShort(d.avg_salary) : '—';
+    } catch(e) { console.error(e); }
+}
+
+// ===== LOAD EMPLOYEES TABLE =====
+async function loadEmployees() {
+    const search = document.getElementById('searchInput').value.trim();
+    const gender = document.getElementById('genderFilter').value;
+    const sort   = document.getElementById('sortFilter').value;
+
+    setTableLoading(true);
+
+    try {
+        const url = `${API_URL}?action=get_employees&page=${currentPage}&limit=${LIMIT}`
+            + `&search=${encodeURIComponent(search)}`
+            + `&gender=${encodeURIComponent(gender)}`
+            + `&sort=${sort}`;
+
+        const res = await fetch(url, {
+            credentials: 'same-origin',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        });
+        const d   = await res.json();
+
+        if (!d.success) { showToast('Lỗi tải dữ liệu', 'error'); return; }
+
+        renderTable(d.data);
+        renderPagination(d.total, d.totalPages);
+        document.getElementById('tableTotal').textContent = `${d.total} employees`;
+    } catch(e) {
+        showToast('Không thể kết nối server', 'error');
+    } finally {
+        setTableLoading(false);
+    }
+}
+
+function setTableLoading(state) {
+    if (state) {
+        document.getElementById('employeeTbody').innerHTML =
+            `<tr><td colspan="10" style="text-align:center;padding:40px;color:#9ca3af">
+                <i class="fas fa-spinner fa-spin" style="font-size:24px"></i>
+             </td></tr>`;
+    }
+}
+
+// ===== RENDER TABLE =====
+function renderTable(employees) {
+    const tbody = document.getElementById('employeeTbody');
+
+    if (!employees.length) {
+        tbody.innerHTML = `<tr><td colspan="10">
+            <div class="empty-state">
+                <i class="fas fa-users-slash"></i>
+                <p>Không tìm thấy employees nào</p>
+            </div>
+        </td></tr>`;
+        updateSelectAllCheckbox();
+        return;
+    }
+
+    tbody.innerHTML = employees.map(emp => {
+        const isFemale = emp.gender === 'Female';
+        const initials = getInitials(emp.full_name);
+        const isChecked = selectedIds.has(emp.employee_id);
+
+        const genderBadge = emp.gender === 'Male'
+            ? `<span class="gender-badge male"><i class="fas fa-mars"></i> Nam</span>`
+            : emp.gender === 'Female'
+            ? `<span class="gender-badge female"><i class="fas fa-venus"></i> Nữ</span>`
+            : emp.gender === 'Other'
+            ? `<span class="gender-badge other"><i class="fas fa-genderless"></i> Khác</span>`
+            : `<span style="color:#9ca3af">—</span>`;
+
+        const luongThang = emp.monthly_salary && parseFloat(emp.monthly_salary) > 0
+            ? `<span style="color:#d4a017;font-weight:600">${formatMoneyShort(emp.monthly_salary)}/tháng</span>`
+            : `<span style="color:#9ca3af">—</span>`;
+
+        const chucVuBadge = emp.position === 'Receptionist'
+            ? `<span class="role-badge receptionist"><i class="fas fa-concierge-bell"></i> Receptionist</span>`
+            : emp.position === 'Personal Trainer'
+            ? `<span class="role-badge trainer"><i class="fas fa-dumbbell"></i> HLV</span>`
+            : `<span style="color:#9ca3af">—</span>`;
+
+        return `<tr class="${isChecked ? 'row-selected' : ''}" data-emp-id="${emp.employee_id}">
+            <td class="td-checkbox">
+                <label class="checkbox-wrap">
+                    <input type="checkbox" class="row-checkbox" value="${emp.employee_id}"
+                        ${isChecked ? 'checked' : ''}
+                        onchange="onRowCheckbox(this, ${emp.employee_id})">
+                    <span class="checkmark"></span>
+                </label>
+            </td>
+            <td>
+                <div class="emp-name-cell">
+                    <div class="emp-avatar ${isFemale ? 'female' : ''}">${initials}</div>
+                    <div style="min-width:0">
+                        <div class="emp-name-text">${escHtml(emp.full_name)}</div>
+                        <div class="emp-id-text">#${emp.employee_id}</div>
+                    </div>
+                </div>
+            </td>
+            <td>${chucVuBadge}</td>
+            <td>${genderBadge}</td>
+            <td class="cell-muted">${formatDate(emp.date_of_birth)}</td>
+            <td>${emp.phone ? escHtml(emp.phone) : '<span class="cell-muted">—</span>'}</td>
+            <td class="cell-sm">${emp.email ? escHtml(emp.email) : '<span class="cell-muted">—</span>'}</td>
+            <td>${luongThang}</td>
+            <td>
+                <div class="action-group">
+                    <button class="btn-action-sm" title="Xem chi tiết" onclick="openDetail(${emp.employee_id})"><i class="fas fa-eye"></i></button>
+                    <button class="btn-action-sm" title="Chỉnh sửa" onclick="openEdit('${escJson(emp)}')"><i class="fas fa-pen"></i></button>
+                    <button class="btn-action-sm salary" title="Kết toán lương" onclick="openSalaryModal(${emp.employee_id}, '${escHtml(emp.full_name)}', '${emp.gender || ''}')"><i class="fas fa-coins"></i></button>
+                    <button class="btn-action-sm attend" title="Chấm công nhanh" onclick="openQuickAttModal(${emp.employee_id}, '${escHtml(emp.full_name)}', '${emp.gender || ''}')"><i class="fas fa-fingerprint"></i></button>
+                    <button class="btn-action-sm delete" title="Xóa" onclick="confirmDelete(${emp.employee_id}, '${escHtml(emp.full_name)}')"><i class="fas fa-trash"></i></button>
+                </div>
+            </td>
+        </tr>`;
+    }).join('');
+
+    updateSelectAllCheckbox();
+    updateBulkBar();
+}
+
+// ===== CHECKBOX LOGIC =====
+function onRowCheckbox(cb, empId) {
+    if (cb.checked) {
+        selectedIds.add(empId);
+        cb.closest('tr').classList.add('row-selected');
+    } else {
+        selectedIds.delete(empId);
+        cb.closest('tr').classList.remove('row-selected');
+    }
+    updateSelectAllCheckbox();
+    updateBulkBar();
+}
+
+function toggleSelectAll(cb) {
+    const boxes = document.querySelectorAll('.row-checkbox');
+    boxes.forEach(box => {
+        const id = parseInt(box.value);
+        if (cb.checked) {
+            selectedIds.add(id);
+            box.checked = true;
+            box.closest('tr').classList.add('row-selected');
+        } else {
+            selectedIds.delete(id);
+            box.checked = false;
+            box.closest('tr').classList.remove('row-selected');
+        }
+    });
+    updateBulkBar();
+}
+
+function updateSelectAllCheckbox() {
+    const cb = document.getElementById('selectAllCheckbox');
+    if (!cb) return;
+    const boxes = document.querySelectorAll('.row-checkbox');
+    if (boxes.length === 0) { cb.checked = false; cb.indeterminate = false; return; }
+    const checkedCount = [...boxes].filter(b => b.checked).length;
+    if (checkedCount === 0) { cb.checked = false; cb.indeterminate = false; }
+    else if (checkedCount === boxes.length) { cb.checked = true; cb.indeterminate = false; }
+    else { cb.checked = false; cb.indeterminate = true; }
+}
+
+function updateBulkBar() {
+    const bar = document.getElementById('bulkActionBar');
+    const countEl = document.getElementById('bulkSelectedCount');
+    if (!bar) return;
+    if (selectedIds.size > 0) {
+        bar.classList.add('visible');
+        countEl.textContent = selectedIds.size;
+    } else {
+        bar.classList.remove('visible');
+    }
+}
+
+function clearSelection() {
+    selectedIds.clear();
+    document.querySelectorAll('.row-checkbox').forEach(cb => {
+        cb.checked = false;
+        cb.closest('tr').classList.remove('row-selected');
+    });
+    updateSelectAllCheckbox();
+    updateBulkBar();
+}
+
+// ===== BULK DELETE =====
+function confirmBulkDelete() {
+    if (selectedIds.size === 0) return;
+    document.getElementById('bulkDeleteCount').textContent = selectedIds.size;
+    document.getElementById('confirmBulkModal').classList.add('active');
+}
+
+function closeBulkConfirmModal() {
+    document.getElementById('confirmBulkModal').classList.remove('active');
+}
+
+async function doBulkDelete() {
+    if (selectedIds.size === 0) return;
+    const ids = [...selectedIds];
+
+    const body = new FormData();
+    body.append('action', 'bulk_delete_employees');
+    ids.forEach(id => body.append('ids[]', id));
+
+    try {
+        const res  = await fetch(API_URL, { method: 'POST', body });
+        const data = await res.json();
+        closeBulkConfirmModal();
+        if (data.success) {
+            showToast(data.message, 'success');
+            selectedIds.clear();
+            loadEmployees();
+            loadStats();
+        } else {
+            showToast(data.message || 'Có lỗi xảy ra', 'error');
+            if (data.skipped && data.skipped > 0) {
+                selectedIds.clear();
+                loadEmployees();
+            }
+        }
+    } catch(e) {
+        showToast('Lỗi kết nối server', 'error');
+        closeBulkConfirmModal();
+    }
+}
+
+// ===== PAGINATION =====
+function renderPagination(total, totalPages) {
+    const info = document.getElementById('paginationInfo');
+    const container = document.getElementById('paginationControls');
+    const from = Math.min((currentPage - 1) * LIMIT + 1, total);
+    const to   = Math.min(currentPage * LIMIT, total);
+    info.textContent = total > 0 ? `Hiển thị ${from}–${to} trong ${total} employees` : 'Không có dữ liệu';
+
+    let html = `<button class="btn-page" onclick="goPage(${currentPage - 1})" ${currentPage <= 1 ? 'disabled' : ''}>
+        <i class="fas fa-chevron-left"></i>
+    </button>`;
+
+    const start = Math.max(1, currentPage - 2);
+    const end   = Math.min(totalPages, start + 4);
+    for (let i = start; i <= end; i++) {
+        html += `<button class="btn-page ${i === currentPage ? 'active' : ''}" onclick="goPage(${i})">${i}</button>`;
+    }
+
+    html += `<button class="btn-page" onclick="goPage(${currentPage + 1})" ${currentPage >= totalPages ? 'disabled' : ''}>
+        <i class="fas fa-chevron-right"></i>
+    </button>`;
+    container.innerHTML = html;
+}
+
+function goPage(p) {
+    if (p < 1) return;
+    currentPage = p;
+    loadEmployees();
+}
+
+// ===== ADD MODAL =====
+function openAddModal() {
+    document.getElementById('modalTitle').textContent = 'Thêm employees mới';
+    document.getElementById('employeeId').value       = '';
+    document.getElementById('fHoTen').value           = '';
+    document.getElementById('fNgaySinh').value        = '';
+    document.getElementById('fGioiTinh').value        = '';
+    document.getElementById('fChucVu').value          = '';
+    document.getElementById('fSoDienThoai').value     = '';
+    document.getElementById('fEmail').value           = '';
+    document.getElementById('fNgayVaoLam').value      = '';
+    document.getElementById('fTenDangNhap').value     = '';
+    document.getElementById('fMatKhau').value         = '';
+    document.getElementById('fDiaChi').value          = '';
+    document.getElementById('fLuongCoBanEmp').value   = '';
+
+    // Chế độ thêm mới: tài khoản bắt buộc
+    document.getElementById('accountRequiredBadge').style.display = '';
+    document.getElementById('usernameRequired').style.display = '';
+    document.getElementById('passwordGroup').style.display = '';
+    document.getElementById('editAccountNote').style.display = 'none';
+    document.getElementById('pwHint').style.display = '';
+    document.getElementById('accountSectionTitle').textContent = 'Tài khoản đăng nhập (bắt buộc)';
+
+    document.getElementById('employeeModal').classList.add('active');
+    setTimeout(() => document.getElementById('fHoTen').focus(), 100);
+}
+
+// ===== EDIT MODAL =====
+window.openEdit = function(encoded) {
+    let emp;
+    try { emp = JSON.parse(decodeURIComponent(encoded)); } catch(e) { return; }
+
+    document.getElementById('modalTitle').textContent = 'Chỉnh sửa employees';
+    document.getElementById('employeeId').value       = emp.employee_id;
+    document.getElementById('fHoTen').value           = emp.full_name || '';
+    document.getElementById('fNgaySinh').value        = emp.date_of_birth || '';
+    document.getElementById('fGioiTinh').value        = emp.gender || '';
+    document.getElementById('fChucVu').value          = emp.position || '';
+    document.getElementById('fSoDienThoai').value     = emp.phone || '';
+    document.getElementById('fEmail').value           = emp.email || '';
+    document.getElementById('fNgayVaoLam').value      = emp.hire_date || '';
+    document.getElementById('fTenDangNhap').value     = emp.username || '';
+    document.getElementById('fMatKhau').value         = '';
+    document.getElementById('fDiaChi').value          = emp.address || '';
+    document.getElementById('fLuongCoBanEmp').value   = emp.monthly_salary || '';
+
+    // Chế độ sửa: tài khoản không bắt buộc
+    document.getElementById('accountRequiredBadge').style.display = 'none';
+    document.getElementById('usernameRequired').style.display = 'none';
+    document.getElementById('passwordGroup').style.display = 'none';
+    document.getElementById('editAccountNote').style.display = '';
+    document.getElementById('accountSectionTitle').textContent = 'Tài khoản đăng nhập';
+
+    document.getElementById('employeeModal').classList.add('active');
+    setTimeout(() => document.getElementById('fHoTen').focus(), 100);
+};
+
+function closeEmployeeModal() {
+    document.getElementById('employeeModal').classList.remove('active');
+    clearAllErrors();
+}
+
+// ===== FIELD VALIDATION HELPERS =====
+function setFieldError(id, hasError) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (hasError) {
+        el.classList.add('field-error');
+    } else {
+        el.classList.remove('field-error');
+    }
+}
+
+function clearAllErrors() {
+    document.querySelectorAll('.field-error').forEach(el => el.classList.remove('field-error'));
+}
+
+// ===== SAVE EMPLOYEE =====
+async function saveEmployee() {
+    const id          = document.getElementById('employeeId').value;
+    const hoTen       = document.getElementById('fHoTen').value.trim();
+    const ngaySinh    = document.getElementById('fNgaySinh').value;
+    const gioiTinh    = document.getElementById('fGioiTinh').value;
+    const chucVu      = document.getElementById('fChucVu').value;
+    const soDienThoai = document.getElementById('fSoDienThoai').value.trim();
+    const email       = document.getElementById('fEmail').value.trim();
+    const ngayVaoLam  = document.getElementById('fNgayVaoLam').value;
+    const tenDangNhap = document.getElementById('fTenDangNhap').value.trim();
+    const matKhau     = document.getElementById('fMatKhau').value;
+    const diaChi      = document.getElementById('fDiaChi').value.trim();
+    const luongCoBan  = document.getElementById('fLuongCoBanEmp').value;
+
+    // --- Validate tất cả các trường ---
+    clearAllErrors();
+    let firstErrorId = null;
+    const errors = [];
+
+    function flagError(fieldId, msg) {
+        setFieldError(fieldId, true);
+        errors.push(msg);
+        if (!firstErrorId) firstErrorId = fieldId;
+    }
+
+    if (!hoTen)       flagError('fHoTen',       'Vui lòng nhập họ và tên');
+    if (!ngaySinh)    flagError('fNgaySinh',    'Vui lòng chọn ngày sinh');
+    if (!gioiTinh)    flagError('fGioiTinh',    'Vui lòng chọn giới tính');
+    if (!chucVu)      flagError('fChucVu',       'Vui lòng chọn chức vụ');
+    if (!soDienThoai) flagError('fSoDienThoai', 'Vui lòng nhập số điện thoại');
+    if (!email)       flagError('fEmail',        'Vui lòng nhập email');
+    if (!ngayVaoLam)  flagError('fNgayVaoLam',  'Vui lòng chọn ngày vào làm');
+    if (!luongCoBan || parseFloat(luongCoBan) <= 0)
+                      flagError('fLuongCoBanEmp','Vui lòng nhập lương cơ bản');
+    if (!diaChi)      flagError('fDiaChi',       'Vui lòng nhập địa chỉ');
+
+    // Khi thêm mới: bắt buộc tên đăng nhập
+    if (!id) {
+        if (!tenDangNhap) {
+            flagError('fTenDangNhap', 'Tên đăng nhập là bắt buộc khi thêm mới');
+        } else if (tenDangNhap.length < 3) {
+            flagError('fTenDangNhap', 'Tên đăng nhập phải có ít nhất 3 ký tự');
+        }
+    }
+
+    if (errors.length > 0) {
+        showToast(errors[0], 'warning');
+        if (firstErrorId) document.getElementById(firstErrorId)?.focus();
+        return;
+    }
+
+    const body = new FormData();
+    body.append('action', id ? 'update_employee' : 'add_employee');
+    if (id) body.append('id', id);
+    body.append('full_name', hoTen);
+    body.append('date_of_birth', ngaySinh);
+    body.append('gender', gioiTinh);
+    body.append('position', chucVu);
+    body.append('phone', soDienThoai);
+    body.append('email', email);
+    body.append('hire_date', ngayVaoLam);
+    body.append('username', tenDangNhap);
+    body.append('password', matKhau);
+    body.append('address', diaChi);
+    body.append('monthly_salary', luongCoBan || 0);
+
+    try {
+        const res  = await fetch(API_URL, { method: 'POST', body });
+        const data = await res.json();
+        if (data.success) {
+            showToast(data.message, 'success');
+            closeEmployeeModal();
+            loadEmployees();
+            loadStats();
+        } else {
+            showToast(data.message, 'error');
+        }
+    } catch(e) {
+        showToast('Lỗi kết nối server', 'error');
+    }
+}
+
+// ===== TOGGLE PASSWORD VISIBILITY =====
+function togglePassword() {
+    const input = document.getElementById('fMatKhau');
+    const icon  = document.getElementById('pwEyeIcon');
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.className = 'fas fa-eye-slash';
+    } else {
+        input.type = 'password';
+        icon.className = 'fas fa-eye';
+    }
+}
+
+// ===== CONFIRM DELETE =====
+function confirmDelete(id, name) {
+    deleteTargetId = id;
+    document.getElementById('deleteEmployeeName').textContent = name;
+    document.getElementById('confirmModal').classList.add('active');
+}
+
+function closeConfirmModal() {
+    document.getElementById('confirmModal').classList.remove('active');
+    deleteTargetId = null;
+}
+
+async function doDelete() {
+    if (!deleteTargetId) return;
+    const body = new FormData();
+    body.append('action', 'delete_employee');
+    body.append('id', deleteTargetId);
+
+    try {
+        const res  = await fetch(API_URL, { method: 'POST', body });
+        const data = await res.json();
+        if (data.success) {
+            showToast(data.message, 'success');
+            closeConfirmModal();
+            loadEmployees();
+            loadStats();
+        } else {
+            showToast(data.message, 'error');
+            closeConfirmModal();
+        }
+    } catch(e) {
+        showToast('Lỗi kết nối', 'error');
+    }
+}
+
+// ===== DETAIL MODAL =====
+async function openDetail(id) {
+    document.getElementById('detailModal').classList.add('active');
+    document.getElementById('detailContent').innerHTML =
+        `<div style="text-align:center;padding:40px;color:#9ca3af">
+            <i class="fas fa-spinner fa-spin" style="font-size:28px"></i>
+         </div>`;
+
+    try {
+        const res = await fetch(`${API_URL}?action=get_detail&id=${id}`);
+        const d   = await res.json();
+        if (!d.success) {
+            document.getElementById('detailContent').innerHTML = '<p style="color:#f87171;padding:20px">Lỗi tải dữ liệu</p>';
+            return;
+        }
+        renderDetail(d);
+    } catch(e) {
+        document.getElementById('detailContent').innerHTML = '<p style="color:#f87171;padding:20px">Lỗi kết nối</p>';
+    }
+}
+
+function renderDetail(d) {
+    const emp = d.employee;
+    const isFemale = emp.gender === 'Female';
+    const initials  = getInitials(emp.full_name);
+    const gioiTinhLabel = emp.gender === 'Male' ? 'Nam' : emp.gender === 'Female' ? 'Nữ' : emp.gender === 'Other' ? 'Khác' : '—';
+    const chucVuLabel   = emp.position || '—';
+    const chucVuColor   = emp.position === 'Personal Trainer' ? '#d4a017' : emp.position === 'Receptionist' ? '#60a5fa' : '#9ca3af';
+
+    const salaryHtml = d.salaries && d.salaries.length
+        ? `<table class="salary-table">
+            <thead><tr><th>Month</th><th>Hours</th><th>Base</th><th>Allowance</th><th>Bonus</th><th>Deduction</th><th>Net Salary</th></tr></thead>
+            <tbody>${d.salaries.map(s => `<tr>
+                <td>${s.month}/${s.year}</td>
+                <td style="color:#9ca3af">${s.base_salary ? formatMoneyShort(s.base_salary) : '—'}</td>
+                <td>${formatMoneyShort(s.allowance)}</td>
+                <td style="color:#34d399">${formatMoneyShort(s.bonus)}</td>
+                <td style="color:#f87171">${formatMoneyShort(s.deduction)}</td>
+                <td style="color:#d4a017;font-weight:700">${formatMoney(s.net_salary)}</td>
+            </tr>`).join('')}</tbody>
+           </table>`
+        : `<p style="color:#9ca3af;font-size:13px;padding:8px 0">No payroll records found</p>`;
+
+    document.getElementById('detailContent').innerHTML = `
+        <div class="detail-emp-header">
+            <div class="detail-emp-avatar ${isFemale ? 'female' : ''}">${initials}</div>
+            <div>
+                <div class="detail-emp-name">${escHtml(emp.full_name)}</div>
+                <div class="detail-emp-id">Employee ID: #${emp.employee_id}</div>
+                ${emp.username ? `<div style="font-size:13px;color:#9ca3af"><i class="fas fa-user-circle" style="margin-right:5px"></i>${escHtml(emp.username)}</div>` : ''}
+            </div>
+        </div>
+
+        <div class="detail-section">
+            <h4><i class="fas fa-info-circle"></i> Personal Info</h4>
+            <div class="detail-grid">
+                <div class="detail-item">
+                    <label>Position</label>
+                    <span style="color:${chucVuColor};font-weight:600">${chucVuLabel}</span>
+                </div>
+                <div class="detail-item">
+                    <label>Gender</label>
+                    <span>${gioiTinhLabel}</span>
+                </div>
+                <div class="detail-item">
+                    <label>Date of Birth</label>
+                    <span>${formatDate(emp.date_of_birth)}</span>
+                </div>
+                <div class="detail-item">
+                    <label>Phone</label>
+                    <span>${emp.phone || '—'}</span>
+                </div>
+                <div class="detail-item">
+                    <label>Email</label>
+                    <span>${emp.email ? escHtml(emp.email) : '—'}</span>
+                </div>
+                <div class="detail-item">
+                    <label>Hire Date</label>
+                    <span>${formatDate(emp.hire_date)}</span>
+                </div>
+                <div class="detail-item">
+                    <label>Seniority</label>
+                    <span>${calcSeniority(emp.hire_date)}</span>
+                </div>
+                <div class="detail-item">
+                    <label>Lương tháng</label>
+                    <span style="color:#d4a017;font-weight:600">${emp.monthly_salary && parseFloat(emp.monthly_salary) > 0 ? formatMoney(emp.monthly_salary) + '/tháng' : '—'}</span>
+                </div>
+                <div class="detail-item" style="grid-column:1/-1">
+                    <label>Address</label>
+                    <span>${emp.address ? escHtml(emp.address) : '—'}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="detail-section">
+            <h4><i class="fas fa-coins"></i> Payroll (${d.salaries ? d.salaries.length : 0} most recent months)</h4>
+            ${salaryHtml}
+        </div>
+    `;
+}
+
+function closeDetailModal() {
+    document.getElementById('detailModal').classList.remove('active');
+}
+
+// ===== SALARY MODAL =====
+function openSalaryModal(empId, empName, gioiTinh) {
+    // Reset state
+    salaryMonthlySalary = 0;
+    salaryBaseCalc      = 0;
+
+    document.getElementById('salaryEmpId').value = empId;
+
+    const isFemale = gioiTinh === 'Female';
+    const initials  = getInitials(empName);
+    document.getElementById('salaryEmpInfo').innerHTML = `
+        <div class="modal-emp-avatar ${isFemale ? 'female' : ''}">${initials}</div>
+        <div>
+            <div class="modal-emp-name">${escHtml(empName)}</div>
+            <div class="modal-emp-sub">Employee ID: #${empId}</div>
+        </div>`;
+
+    document.getElementById('salaryModalTitle').innerHTML =
+        `<i class="fas fa-calculator" style="color:#d4a017;margin-right:8px"></i>Kết toán lương — ${escHtml(empName)}`;
+
+    // Default tháng/năm
+    const now = new Date();
+    document.getElementById('fSalaryMonth').value = now.getMonth() + 1;
+    document.getElementById('fSalaryYear').value  = now.getFullYear();
+
+    // Reset phụ cấp / thưởng / khấu trừ
+    document.getElementById('fPhuCap').value  = '0';
+    document.getElementById('fThuong').value  = '0';
+    document.getElementById('fKhauTru').value = '0';
+
+    // Hide step 2 & 3 and kết toán button
+    document.getElementById('salaryStepResult').style.display  = 'none';
+    document.getElementById('salaryStepAdjust').style.display  = 'none';
+    document.getElementById('btnKetToan').style.display        = 'none';
+
+    document.getElementById('salaryModal').classList.add('active');
+}
+
+function closeSalaryModal() {
+    document.getElementById('salaryModal').classList.remove('active');
+}
+
+// ===== FETCH & TÍNH LƯƠNG THÁNG =====
+async function fetchHoursWorked() {
+    const empId = document.getElementById('salaryEmpId').value;
+    const month = document.getElementById('fSalaryMonth').value;
+    const year  = document.getElementById('fSalaryYear').value;
+
+    const btn = document.querySelector('.btn-calc');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang tính...';
+
+    try {
+        const res = await fetch(`${API_URL}?action=get_hours_worked&employee_id=${empId}&month=${month}&year=${year}`);
+        const d   = await res.json();
+
+        if (!d.success) { showToast(d.message || 'Lỗi tải dữ liệu', 'error'); return; }
+
+        salaryMonthlySalary = d.monthly_salary || 0;
+        salaryBaseCalc      = d.tong_luong     || 0;
+
+        // Bước 2: Kết quả
+        document.getElementById('rsNgayCham').textContent  = d.days_present + ' ngày';
+        document.getElementById('rsTongGio').textContent   =
+            (d.tong_gio_hc > 0 ? d.tong_gio_hc.toFixed(1) + 'h HC' : '') +
+            (d.tong_gio_tc > 0 ? ' + ' + d.tong_gio_tc.toFixed(1) + 'h TC' : '') || '—';
+        document.getElementById('rsLuongGio').textContent  =
+            d.luong_gio > 0 ? formatMoneyShort(d.luong_gio) + '/h' : '—';
+        document.getElementById('rsLuongTinh').textContent = formatMoneyShort(salaryBaseCalc);
+
+        // Ghi chú chi tiết
+        const noteEl = document.getElementById('hoursNote');
+        if (salaryMonthlySalary === 0) {
+            noteEl.innerHTML = `<i class="fas fa-info-circle" style="color:#60a5fa"></i>
+                Nhân viên chưa có lương tháng. Vui lòng cập nhật trong thông tin nhân viên.`;
+            noteEl.style.display = 'block';
+        } else {
+            // Hiển thị bảng chi tiết ngày làm
+            let noteHtml = `
+                <div style="font-size:12px;color:#9ca3af;margin-bottom:6px">
+                    <i class="fas fa-info-circle" style="color:#d4a017;margin-right:4px"></i>
+                    Lương/giờ HC = ${formatMoney(salaryMonthlySalary)} ÷ ${d.working_days} ngày ÷ 8h
+                    = <strong style="color:#d4a017">${formatMoney(d.luong_gio)}/h</strong>
+                    ${d.days_late > 0 ? ` | <span style="color:#f87171">Đi muộn ${d.days_late} ngày (−50.000₫/ngày)</span>` : ''}
+                    ${d.days_sunday > 0 ? ` | <span style="color:#a78bfa">Làm CN ${d.days_sunday} ngày (×2)</span>` : ''}
+                </div>`;
+
+            if (d.detail_days && d.detail_days.length > 0) {
+                noteHtml += `<table style="width:100%;border-collapse:collapse;font-size:12px">
+                    <thead>
+                        <tr style="color:#9ca3af">
+                            <th style="text-align:left;padding:4px 6px">Ngày</th>
+                            <th style="text-align:center;padding:4px 6px">Giờ làm</th>
+                            <th style="text-align:center;padding:4px 6px">Loại</th>
+                            <th style="text-align:right;padding:4px 6px">Lương ngày</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+                d.detail_days.forEach(day => {
+                    const dt = day.date.split('-');
+                    const label = `${dt[2]}/${dt[1]}`;
+                    const tags = [];
+                    if (day.is_sunday) tags.push(`<span style="color:#a78bfa">CN×2</span>`);
+                    if (day.hours > 8)  tags.push(`<span style="color:#34d399">TC×1.5</span>`);
+                    if (day.is_late)    tags.push(`<span style="color:#f87171">Muộn−50k</span>`);
+                    noteHtml += `<tr style="border-top:1px solid rgba(0,0,0,0.06)">
+                        <td style="padding:4px 6px;color:#9ca3af">${label}</td>
+                        <td style="text-align:center;padding:4px 6px;color:#9ca3af">${day.hours}h</td>
+                        <td style="text-align:center;padding:4px 6px">${tags.join(' ') || '<span style="color:#9ca3af">HC</span>'}</td>
+                        <td style="text-align:right;padding:4px 6px;color:#d4a017;font-weight:600">${formatMoney(day.salary)}</td>
+                    </tr>`;
+                });
+                noteHtml += `</tbody></table>`;
+            }
+            noteEl.innerHTML = noteHtml;
+            noteEl.style.display = 'block';
+        }
+
+        document.getElementById('salaryStepResult').style.display = '';
+        document.getElementById('salaryStepAdjust').style.display = '';
+        document.getElementById('btnKetToan').style.display       = '';
+        updateSalaryPreview();
+
+    } catch(e) {
+        showToast('Lỗi kết nối server', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-calculator"></i> Tính lương từ chấm công';
+    }
+}
+
+// ===== UPDATE SALARY PREVIEW =====
+function updateSalaryPreview() {
+    const allowance  = parseFloat(document.getElementById('fPhuCap').value)  || 0;
+    const bonus  = parseFloat(document.getElementById('fThuong').value)  || 0;
+    const deduction  = parseFloat(document.getElementById('fKhauTru').value) || 0;
+    const total = Math.max(0, salaryBaseCalc + allowance + bonus - deduction);
+
+    document.getElementById('fmLuongTinh').textContent = formatMoney(salaryBaseCalc);
+    document.getElementById('fmPhuCap').textContent    = formatMoney(allowance);
+    document.getElementById('fmThuong').textContent    = formatMoney(bonus);
+    document.getElementById('fmKhauTru').textContent   = formatMoney(deduction);
+    document.getElementById('salaryPreview').textContent = formatMoney(total);
+}
+
+// ===== SAVE SALARY =====
+async function saveSalary() {
+    const empId     = document.getElementById('salaryEmpId').value;
+    const month     = document.getElementById('fSalaryMonth').value;
+    const year      = document.getElementById('fSalaryYear').value;
+    const allowance = parseFloat(document.getElementById('fPhuCap').value)  || 0;
+    const bonus     = parseFloat(document.getElementById('fThuong').value)  || 0;
+    const deduction = parseFloat(document.getElementById('fKhauTru').value) || 0;
+    const netSalary = Math.max(0, salaryBaseCalc + allowance + bonus - deduction);
+
+    if (salaryMonthlySalary === 0) {
+        showToast('Vui lòng tải lương tháng trước', 'warning');
+        return;
+    }
+
+    const body = new FormData();
+    body.append('action',      'save_salary');
+    body.append('employee_id', empId);
+    body.append('month',       month);
+    body.append('year',        year);
+    body.append('base_salary', salaryBaseCalc);
+    body.append('allowance',   allowance);
+    body.append('bonus',       bonus);
+    body.append('deduction',   deduction);
+    body.append('net_salary',  netSalary);
+
+    try {
+        const res  = await fetch(API_URL, { method: 'POST', body });
+        const data = await res.json();
+        if (data.success) {
+            showToast(data.message, 'success');
+            closeSalaryModal();
+            loadStats();
+        } else {
+            showToast(data.message, 'error');
+        }
+    } catch(e) {
+        showToast('Lỗi kết nối server', 'error');
+    }
+}
+
+// ===== TOAST =====
+function showToast(message, type = 'success') {
+    const icons = { success: 'fa-check-circle', error: 'fa-times-circle', warning: 'fa-exclamation-triangle' };
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `<i class="fas ${icons[type] || icons.success}"></i><span>${message}</span>`;
+    container.appendChild(toast);
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.4s';
+        setTimeout(() => toast.remove(), 400);
+    }, 3000);
+}
+
+// ===== HELPERS =====
+function formatDate(str) {
+    if (!str || str === '0000-00-00') return '—';
+    const d = new Date(str);
+    if (isNaN(d)) return '—';
+    return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+}
+
+function formatMoney(val) {
+    if (!val && val !== 0) return '0 ₫';
+    return Number(val).toLocaleString('vi-VN') + ' ₫';
+}
+
+function formatMoneyShort(val) {
+    const n = Number(val);
+    if (!n) return '0 ₫';
+    if (n >= 1_000_000) return (n / 1_000_000).toFixed(1).replace('.0','') + 'tr ₫';
+    if (n >= 1_000)     return (n / 1_000).toFixed(0) + 'k ₫';
+    return n + ' ₫';
+}
+
+function getInitials(name) {
+    if (!name) return '?';
+    const parts = name.trim().split(' ');
+    return parts[parts.length - 1].charAt(0).toUpperCase();
+}
+
+function calcSeniority(dateStr) {
+    if (!dateStr || dateStr === '0000-00-00') return '—';
+    const start = new Date(dateStr);
+    if (isNaN(start)) return '—';
+    const now   = new Date();
+    const months = (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth());
+    if (months < 1)  return 'Dưới 1 tháng';
+    if (months < 12) return `${months} tháng`;
+    const years = Math.floor(months / 12);
+    const rem   = months % 12;
+    return rem > 0 ? `${years} năm ${rem} tháng` : `${years} năm`;
+}
+
+function escHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g,'&amp;')
+        .replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;')
+        .replace(/'/g,'&#039;');
+}
+
+function escJson(obj) {
+    return encodeURIComponent(JSON.stringify(obj));
+}
+
+// ===== QUICK ATTENDANCE MODAL =====
+var ATT_API = (window.ELITE_BASE || '') + '/api/admin/employee-attendance';
+
+function openQuickAttModal(empId, empName, gioiTinh) {
+    document.getElementById('qAttEmpId').value = empId;
+
+    const isFemale = gioiTinh === 'Female';
+    const initials  = getInitials(empName);
+    const today     = new Date().toISOString().split('T')[0];
+
+    document.getElementById('quickAttTitle').innerHTML =
+        `<i class="fas fa-fingerprint" style="color:#d4a017;margin-right:8px"></i>Chấm công — ${escHtml(empName)}`;
+
+    document.getElementById('qAttEmpInfo').innerHTML = `
+        <div class="modal-emp-avatar ${isFemale ? 'female' : ''}">${initials}</div>
+        <div>
+            <div class="modal-emp-name">${escHtml(empName)}</div>
+            <div class="modal-emp-sub">Employee ID: #${empId}</div>
+        </div>`;
+
+    document.getElementById('qAttDate').value   = today;
+    document.getElementById('qAttStatus').value = 'Present';
+    document.getElementById('qAttGioVao').value = '08:00';
+    document.getElementById('qAttGioRa').value  = '';
+    qOnStatusChange();
+    document.getElementById('quickAttModal').classList.add('active');
+}
+
+function closeQuickAttModal() {
+    document.getElementById('quickAttModal').classList.remove('active');
+}
+
+function qOnStatusChange() {
+    const status = document.getElementById('qAttStatus').value;
+    const show = (status === 'Present' || status === 'Late');
+    document.getElementById('qGioVaoGroup').style.display = show ? '' : 'none';
+    document.getElementById('qGioRaGroup').style.display  = show ? '' : 'none';
+}
+
+async function saveQuickAtt() {
+    const empId     = document.getElementById('qAttEmpId').value;
+    const ngay      = document.getElementById('qAttDate').value;
+    const trangThai = document.getElementById('qAttStatus').value;
+    const gioVao    = document.getElementById('qAttGioVao').value;
+    const gioRa     = document.getElementById('qAttGioRa').value;
+
+    if (!ngay) { showToast('Vui lòng chọn ngày', 'warning'); return; }
+
+    const body = new FormData();
+    body.append('action', 'add_attendance');
+    body.append('employee_id', empId);
+    body.append('work_date', ngay);
+    body.append('status', trangThai);
+    body.append('check_in', gioVao);
+    body.append('check_out', gioRa);
+
+    try {
+        const res  = await fetch(ATT_API, { method: 'POST', body });
+        const data = await res.json();
+        if (data.success) {
+            showToast(data.message, 'success');
+            closeQuickAttModal();
+        } else {
+            showToast(data.message, 'error');
+        }
+    } catch(e) {
+        showToast('Lỗi kết nối server', 'error');
+    }
+}
+
+// Close modal on overlay click
+document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('modal-overlay')) {
+        e.target.classList.remove('active');
+    }
+});
+
+// ESC to close
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
+    }
+});
