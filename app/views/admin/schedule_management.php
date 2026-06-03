@@ -61,15 +61,16 @@
     ?>
     <script>
         /* Injected by PHP — USER_ROLE drives all client-side role checks */
-        window.USER_ROLE  = '<?= $isAdmin ? "admin" : "trainer" ?>';
-        window.TRAINER_ID = <?= $sessionEmpId ?: 0 ?>;
+        window.ELITE_BASE  = '<?= BASE_URL ?>';
+        window.USER_ROLE   = '<?= $isAdmin ? "admin" : "trainer" ?>';
+        window.TRAINER_ID  = <?= $sessionEmpId ?: 0 ?>;
         window._DBG = {
             role:     '<?= htmlspecialchars($sessionRole,     ENT_QUOTES) ?>',
             position: '<?= htmlspecialchars($sessionPosition, ENT_QUOTES) ?>',
             empId:    <?= $sessionEmpId ?>,
             isAdmin:  <?= $isAdmin ? 'true' : 'false' ?>
         };
-        console.info('[Schedule] USER_ROLE='+window.USER_ROLE+' | position='+window._DBG.position+' | empId='+window._DBG.empId);
+        console.info('[Schedule] ELITE_BASE='+window.ELITE_BASE+' USER_ROLE='+window.USER_ROLE+' | position='+window._DBG.position+' | empId='+window._DBG.empId);
     </script>
 
     <!-- ROLE BANNER -->

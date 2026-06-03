@@ -91,6 +91,8 @@ class ScheduleController extends Controller
                 'message' => $ok ? 'Đã hủy đăng ký lớp' : 'Hủy thất bại, vui lòng thử lại',
                 'action'  => 'cancelled'
             ]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Dữ liệu không hợp lệ']);
         }
     }
 
@@ -274,118 +276,6 @@ class ScheduleController extends Controller
                 ]);
                 break;
 
-                if (!$class_name || !$start_time) {
-                    echo json_encode(['success' => false, 'message' => 'Tên lớp và giờ bắt đầu là bắt buộc']);
-                    exit;
-                }
-                if ($end_time && strtotime($end_time) <= strtotime($start_time)) {
-                    echo json_encode(['success' => false, 'message' => 'Giờ kết thúc phải lớn hơn giờ bắt đầu']);
-                    exit;
-                }
-
-                // Kiểm tra mở/đóng cửa phòng
-                if ($room_id) {
-                    $roomConflict = $this->checkRoomTimeRange($room_id, $start_time, $end_time);
-                    if ($roomConflict !== true) {
-                        echo json_encode(['success' => false, 'message' => $roomConflict]);
-                        exit;
-                    }
-                    // Kiểm tra phòng trùng giờ
-                    $conflict = $this->scheduleModel->checkRoomConflict($room_id, $start_time, $end_time);
-                    if ($conflict) {
-                        $cs = date('H:i', strtotime($conflict['start_time']));
-                        $ce = $conflict['end_time'] ? date('H:i', strtotime($conflict['end_time'])) : '?';
-                        echo json_encode(['success' => false, 'message' => "Phòng này đã có lớp \"{$conflict['class_name']}\" ({$cs}–{$ce}). Vui lòng chọn khung giờ không bị trùng."]);
-                        exit;
-                    }
-                }
-
-                $new_id = $this->scheduleModel->addSchedule($class_name, $trainer_id, $room_id, $start_time, $end_time);
-                echo json_encode($new_id
-                    ? ['success' => true, 'message' => 'Thêm buổi tập thành công', 'id' => $new_id]
-                    : ['success' => false, 'message' => 'Lỗi DB']);
-                break;
-
-            case 'update_schedule':
-                $id          = (int)($_POST['id'] ?? 0);
-                $class_name  = trim($_POST['class_name'] ?? '');
-                $trainer_id  = (int)($_POST['trainer_id'] ?? 0) ?: null;
-                $room_id     = (int)($_POST['room_id'] ?? 0) ?: null;
-                $start_time  = trim($_POST['start_time'] ?? '');
-                $end_time    = trim($_POST['end_time'] ?? '') ?: null;
-
-                if (!$id || !$class_name || !$start_time) {
-                    echo json_encode(['success' => false, 'message' => 'Dữ liệu không hợp lệ']);
-                    exit;
-                }
-                if ($end_time && strtotime($end_time) <= strtotime($start_time)) {
-                    echo json_encode(['success' => false, 'message' => 'Giờ kết thúc phải lớn hơn giờ bắt đầu']);
-                    exit;
-                }
-
-                // Kiểm tra mở/đóng cửa phòng
-                if ($room_id) {
-                    $roomConflict = $this->checkRoomTimeRange($room_id, $start_time, $end_time);
-                    if ($roomConflict !== true) {
-                        echo json_encode(['success' => false, 'message' => $roomConflict]);
-                        exit;
-                    }
-                    // Kiểm tra phòng trùng giờ
-                    $conflict = $this->scheduleModel->checkRoomConflict($room_id, $start_time, $end_time, $id);
-                    if ($conflict) {
-                        $cs = date('H:i', strtotime($conflict['start_time']));
-                        $ce = $conflict['end_time'] ? date('H:i', strtotime($conflict['end_time'])) : '?';
-                        echo json_encode(['success' => false, 'message' => "Phòng này đã có lớp \"{$conflict['class_name']}\" ({$cs}–{$ce}). Vui lòng chọn khung giờ không bị trùng."]);
-                        exit;
-                    }
-                }
-
-                $ok = $this->scheduleModel->updateSchedule($id, $class_name, $trainer_id, $room_id, $start_time, $end_time);
-                echo json_encode([
-                    'success' => $ok,
-                    'message' => $ok ? 'Cập nhật thành công' : 'Lỗi DB'
-                ]);
-                break;
-
-            case 'delete_schedule':
-                $id = (int)($_POST['id'] ?? 0);
-                $ok = $this->scheduleModel->deleteSchedule($id);
-                echo json_encode([
-                    'success' => $ok,
-                    'message' => $ok ? 'Đã xóa buổi tập' : 'Lỗi DB'
-                ]);
-                break;
-
-            case 'add_registration':
-                $class_id    = (int)($_POST['class_id'] ?? 0);
-                $customer_id = (int)($_POST['customer_id'] ?? 0);
-                if (!$class_id || !$customer_id) {
-                    echo json_encode(['success' => false, 'message' => 'Thiếu dữ liệu']);
-                    exit;
-                }
-                if ($this->scheduleModel->checkClassRegistrationExists($class_id, $customer_id)) {
-                    echo json_encode(['success' => false, 'message' => 'Khách hàng đã đăng ký lớp này']);
-                    exit;
-                }
-                $ok = $this->scheduleModel->registerClass($class_id, $customer_id);
-                echo json_encode([
-                    'success' => $ok,
-                    'message' => $ok ? 'Đăng ký thành công' : 'Lỗi DB'
-                ]);
-                break;
-
-            case 'delete_registration':
-                $id = (int)($_POST['id'] ?? 0);
-                $s = $this->scheduleModel->db->prepare("DELETE FROM ClassRegistration WHERE class_registration_id=?");
-                $s->bind_param('i', $id);
-                $ok = $s->execute();
-                $s->close();
-                echo json_encode([
-                    'success' => $ok,
-                    'message' => $ok ? 'Đã hủy đăng ký' : 'Lỗi DB'
-                ]);
-                break;
-
             case 'assign_trainer':
                 $class_id   = (int)($_POST['class_id'] ?? 0);
                 $trainer_id = (int)($_POST['trainer_id'] ?? 0);
@@ -400,11 +290,10 @@ class ScheduleController extends Controller
                     exit;
                 }
 
-                // Lấy end_time thật
-                $tcRes = $this->scheduleModel->db->query("SELECT DATE(start_time) AS class_date, start_time, end_time FROM TrainingClass WHERE class_id=$class_id LIMIT 1")->fetch_assoc();
-                $class_date = $tcRes['class_date'] ?? date('Y-m-d');
-                $start_time = $tcRes['start_time'];
-                $end_time   = $tcRes['end_time'];
+                // Lấy thông tin thời gian lớp từ dữ liệu đã có
+                $class_date = date('Y-m-d', strtotime($thisClass['start_time']));
+                $start_time = $thisClass['start_time'];
+                $end_time   = $thisClass['end_time'];
 
                 // Kiểm tra HLV trùng ca dạy
                 $conflict = $this->scheduleModel->checkTrainerConflict($trainer_id, $class_date, $start_time, $end_time, $class_id);
@@ -898,7 +787,7 @@ Tổng kcal: ~{$kcal_total} kcal | Đạt {$pct_achieved}% mục tiêu đốt ca
     // Helper kiểm tra giờ bắt đầu/kết thúc so với mở/đóng cửa của GymRoom
     private function checkRoomTimeRange(int $room_id, string $start_time, ?string $end_time): true|string
     {
-        $roomRow = $this->scheduleModel->db->query("SELECT room_name, open_time, close_time FROM GymRoom WHERE room_id=$room_id LIMIT 1")->fetch_assoc();
+        $roomRow = $this->scheduleModel->getRoomInfo($room_id);
         if ($roomRow) {
             $tStart = date('H:i:s', strtotime($start_time));
             $tEnd   = $end_time ? date('H:i:s', strtotime($end_time)) : null;

@@ -99,15 +99,40 @@ function resolveAssetJs(src) {
 function injectModuleHtml(html) {
     const doc = new DOMParser().parseFromString(html, 'text/html');
 
-    doc.querySelectorAll('link[rel="stylesheet"]').forEach(link => {
-        const href = resolveAssetCss(link.getAttribute('href'));
-        if (!href || href.includes('font-awesome')) return;
-        if (document.querySelector(`link[data-module-href="${href}"]`)) return;
-        const l = document.createElement('link');
-        l.rel = 'stylesheet';
-        l.href = href;
-        l.dataset.moduleHref = href;
-        document.head.appendChild(l);
+    // Load stylesheet links and preconnect hints from module fragments.
+    doc.querySelectorAll('link[rel="stylesheet"], link[rel="preconnect"], link[rel="preload"]').forEach(link => {
+        const rel = link.getAttribute('rel');
+        const href = link.getAttribute('href');
+        if (!href) return;
+
+        if (rel === 'stylesheet') {
+            const resolved = resolveAssetCss(href);
+            if (!resolved || resolved.includes('font-awesome')) return;
+            if (document.querySelector(`link[data-module-href="${resolved}"]`)) return;
+            const l = document.createElement('link');
+            l.rel = 'stylesheet';
+            l.href = resolved;
+            l.dataset.moduleHref = resolved;
+            document.head.appendChild(l);
+            return;
+        }
+
+        if (rel === 'preconnect' || rel === 'preload') {
+            if (document.querySelector(`link[rel="${rel}"][href="${href}"]`)) return;
+            const l = document.createElement('link');
+            l.rel = rel;
+            l.href = href;
+            if (link.hasAttribute('crossorigin')) {
+                l.crossOrigin = link.crossOrigin;
+            }
+            document.head.appendChild(l);
+        }
+    });
+
+    doc.querySelectorAll('style').forEach(style => {
+        const s = document.createElement('style');
+        s.textContent = style.textContent;
+        document.head.appendChild(s);
     });
 
     contentWrapper.innerHTML = doc.body ? doc.body.innerHTML : html;

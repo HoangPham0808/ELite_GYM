@@ -24,6 +24,21 @@ var _schBase = (window.ELITE_BASE && window.ELITE_BASE !== 'undefined')
 var API_SCHEDULE = _schBase + '/api/admin/schedule';
 var LIMIT = 10;
 
+async function fetchJson(url, options = {}) {
+    var res = await fetch(url, options);
+    var text = await res.text();
+    if (!res.ok) {
+        console.error('API request failed:', url, res.status, res.statusText, text);
+        throw new Error('API request failed with status ' + res.status);
+    }
+    try {
+        return JSON.parse(text);
+    } catch (err) {
+        console.error('Invalid JSON response from', url, 'status', res.status, 'body:', text);
+        throw err;
+    }
+}
+
 var currentView = 'calendar'; 
 var currentFilterRoom = '';
 var currentFilterClass = '';
@@ -106,8 +121,7 @@ window.loadListViewData = async function(page) {
             class_type: currentFilterClass
         });
 
-        var res = await fetch(API_SCHEDULE + '?' + params.toString(), { credentials: 'include' });
-        var d = await res.json();
+        var d = await fetchJson(API_SCHEDULE + '?' + params.toString(), { credentials: 'include' });
 
         if (d.success && d.data) {
             renderListTable(d.data);
@@ -129,14 +143,14 @@ window.initCalendar = function() {
 };
 
 function renderCalendarSkeleton() {
-    var calendarView = document.getElementById('calendarView');
-    if (!calendarView) return;
+    var calendarGrid = document.getElementById('calendarGrid');
+    if (!calendarGrid) return;
 
     var startOfWeek = getMonday(currentDate);
     var endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(startOfWeek.getDate() + 6);
     var dateRangeStr = 'Tuần: ' + formatDateDMY(startOfWeek) + ' – ' + formatDateDMY(endOfWeek);
-    var viewTitle = document.getElementById('viewTitleText');
+    var viewTitle = document.getElementById('calWeekTitle');
     if (viewTitle) viewTitle.textContent = dateRangeStr;
 
     var html = '<div class="cal-grid">' +
@@ -171,7 +185,7 @@ function renderCalendarSkeleton() {
     }
 
     html += '</div>';
-    calendarView.innerHTML = html;
+    calendarGrid.innerHTML = html;
 }
 
 window.initScheduleManagement = function() {
@@ -219,8 +233,7 @@ async function loadScheduleData() {
             class_type: currentFilterClass
         });
 
-        var res = await fetch(API_SCHEDULE + '?' + params.toString(), { credentials: 'include' });
-        var d = await res.json();
+        var d = await fetchJson(API_SCHEDULE + '?' + params.toString(), { credentials: 'include' });
         
         document.querySelectorAll('.cal-period-slot').forEach(function(slot) { slot.innerHTML = ''; });
 
@@ -334,24 +347,53 @@ window.navigateWeek = function(direction) {
 
 window.switchView = function(viewType) {
     currentView = viewType;
-    document.getElementById('btnViewCal').classList.toggle('active', viewType === 'calendar');
-    document.getElementById('btnViewList').classList.toggle('active', viewType === 'list');
+    document.getElementById('btnCalView').classList.toggle('active', viewType === 'calendar');
+    document.getElementById('btnListView').classList.toggle('active', viewType === 'list');
 
     if (viewType === 'calendar') {
-        document.getElementById('calendarView').style.display = 'block';
-        document.getElementById('listView').style.display = 'none';
-        document.getElementById('calNavControls').style.display = 'flex';
+        document.getElementById('view-calendar').style.display = 'block';
+        document.getElementById('view-list').style.display = 'none';
+        document.getElementById('calNav').style.display = 'flex';
         window.initCalendar();
     } else {
-        document.getElementById('calendarView').style.display = 'none';
-        document.getElementById('listView').style.display = 'block';
-        document.getElementById('calNavControls').style.display = 'none';
-        var viewTitle = document.getElementById('viewTitleText');
+        document.getElementById('view-calendar').style.display = 'none';
+        document.getElementById('view-list').style.display = 'block';
+        document.getElementById('calNav').style.display = 'none';
+        var viewTitle = document.getElementById('calWeekTitle');
         if (viewTitle) viewTitle.textContent = 'Danh sách toàn bộ lớp học tập';
         
         window.loadListViewData(1);
     }
 };
+
+window.switchCalMode = function(mode) {
+    var btnWeek = document.getElementById('btnSubWeek');
+    var btnRoom = document.getElementById('btnSubRoom');
+    var weekWrap = document.getElementById('weekGridWrap');
+    var roomWrap = document.getElementById('roomGridWrap');
+    var roomTabs = document.getElementById('roomDayTabs');
+
+    if (!btnWeek || !btnRoom || !weekWrap || !roomWrap || !roomTabs) return;
+
+    var weekMode = (mode === 'week');
+    btnWeek.classList.toggle('active', weekMode);
+    btnRoom.classList.toggle('active', !weekMode);
+    weekWrap.style.display = weekMode ? 'block' : 'none';
+    roomWrap.style.display = weekMode ? 'none' : 'block';
+    roomTabs.style.display = weekMode ? 'none' : 'flex';
+
+    if (!weekMode) {
+        roomTabs.innerHTML = '<button class="room-tab active">Theo phòng</button>';
+    }
+
+    loadScheduleData();
+};
+
+window.calNavPrev = function() { window.navigateWeek(-1); };
+window.calNavNext = function() { window.navigateWeek(1); };
+window.calGoToday = function() { window.navigateWeek(0); };
+window.openAddModal = function() { window.openAddScheduleModal(); };
+window.saveSchedule = function() { window.saveScheduleClass(); };
 
 window.filterRoomChanged = function(roomId) { currentFilterRoom = roomId; loadScheduleData(); };
 window.filterClassChanged = function(classType) { currentFilterClass = classType; loadScheduleData(); };
