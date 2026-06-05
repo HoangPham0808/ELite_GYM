@@ -12,7 +12,7 @@ class StatisticsController extends Controller
     public function api(): void
     {
         AuthMiddleware::requireRole(['Admin', 'Employee']);
-        $this->ensureSession();
+        ensureSession(); // helper from session_helper.php
 
         $action = $_GET['action'] ?? '';
 
@@ -57,7 +57,7 @@ class StatisticsController extends Controller
     public function apiOverview(): void
     {
         AuthMiddleware::requireRole(['Admin', 'Employee']);
-        $this->ensureSession();
+        ensureSession(); // helper from session_helper.php
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode([
             'success' => true,

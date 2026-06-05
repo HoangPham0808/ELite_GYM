@@ -1,3 +1,4 @@
+var debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
 var _facilityToday = () => new Date().toISOString().split('T')[0];
 function facilityApiUrl() {
     return (window.ELITE_BASE || '') + '/api/admin/facility';
@@ -46,7 +47,7 @@ if (document.readyState === 'loading') {
 }
 
 
-var debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
+
 var fmtMoney = v => v && v > 0 ? Number(v).toLocaleString('vi-VN') + '₫' : '—';
 var fmtDate  = d => (!d || d === '0000-00-00') ? '—' : d.split('-').reverse().join('/');
 var esc      = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');

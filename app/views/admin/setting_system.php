@@ -140,6 +140,14 @@ $admin_name = htmlspecialchars($_SESSION['full_name'] ?? $_SESSION['username'] ?
   </div>
 
 </div><!-- /page -->
+<script>
+  window.ELITE_BASE = "<?= BASE_URL ?>";
+  function runWhenReady(fn) {
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", fn);
+    } else { fn(); }
+  }
+</script>
 <script src="<?= asset('js/System.js') ?>"></script>
 </body>
 </html>

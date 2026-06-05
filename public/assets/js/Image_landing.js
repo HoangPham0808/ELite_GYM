@@ -431,7 +431,7 @@ function initAllCards() {
 }
 
 /* ══ ENTRY POINT ═════════════════════════════════════════════════ */
-document.addEventListener('DOMContentLoaded', () => {
+runWhenReady(() => {
   // Gán DOM vào biến sau khi DOM đã sẵn sàng
   fileInput       = document.getElementById('fileInput');
   dropZone        = document.getElementById('dropZone');

@@ -1,19 +1,12 @@
 <?php
 /**
- * management_statistics.php  — Elite Gym
- * Thiết kế lại: dữ liệu thực từ DB, layout hiện đại
+ * statistics.php — Elite Gym Admin Module (SPA Fragment)
+ * Không có HTML boilerplate — được inject vào content-wrapper của dashboard
  */
 ensureSession();
-// if (!isset($_SESSION['account_id'])) { header('Location: ../../login.php'); exit; }
+$db = Database::getInstance();
 
-// ── Helper: hỗ trợ cả PDO & mysqli ──────────────────────────
 function dbQuery($conn, string $sql, array $params = []): array {
-    if ($conn instanceof PDO) {
-        $st = $conn->prepare($sql);
-        $st->execute($params);
-        return $st->fetchAll(PDO::FETCH_ASSOC);
-    }
-    // mysqli
     if (empty($params)) {
         $res = $conn->query($sql);
         return $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
@@ -26,10 +19,10 @@ function dbQuery($conn, string $sql, array $params = []): array {
 }
 function dbVal($conn, string $sql, array $params = []) {
     $r = dbQuery($conn, $sql, $params);
-    return $r[0][array_key_first($r[0])] ?? 0;
+    return empty($r) ? 0 : reset($r[0]);
 }
 
-$conn = $pdo ?? $conn; // dùng PDO nếu có, fallback mysqli
+$conn = $db;
 
 $m = date('m'); $y = date('Y');
 
@@ -75,21 +68,11 @@ function fmtVND(float $n): string {
 $rev_max = max($rev_by_month) ?: 1;
 $months_vi = ['T1','T2','T3','T4','T5','T6','T7','T8','T9','T10','T11','T12'];
 ?>
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <title>Thống Kê &amp; Báo Cáo — Elite Gym</title>
-  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-  <link rel="stylesheet" href="<?= asset('css/management_statistics.css') ?>">
-</head>
-<body>
+<link rel="stylesheet" href="<?= asset('css/management_statistics.css') ?>">
 <div class="wrapper">
 
   <!-- ══ TOPBAR ════════════════════════════════════════════ -->
-  <header class="topbar">
+  <header class="topbar" style="display:none">
     <div class="topbar-left">
       <div class="brand-icon"><i class="fas fa-dumbbell"></i></div>
       <div>
@@ -461,5 +444,3 @@ $months_vi = ['T1','T2','T3','T4','T5','T6','T7','T8','T9','T10','T11','T12'];
 <div class="toast" id="toast"><i class="fas fa-check-circle"></i><span id="toastMsg"></span></div>
 
 <script src="<?= asset('js/management_statistics.js') ?>"></script>
-</body>
-</html>

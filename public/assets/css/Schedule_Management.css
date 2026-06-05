@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   Schedule_Management.css  — Elite Gym | Light Theme
+   Schedule_Management.css  — Elite Gym | Light Theme  v2.1
    Đồng nhất màu sắc với Account / Employee / Facilities
 ═══════════════════════════════════════════════════════════════ */
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
@@ -442,6 +442,9 @@ body{
 .pkg-tag.pkg-premium {background:var(--gold-dim);       color:var(--pkg-premium)}
 .pkg-tag.pkg-vip     {background:var(--purple-bg);      color:var(--pkg-vip)}
 .pkg-tag.pkg-student {background:var(--green-bg);       color:var(--pkg-student)}
+.pkg-tag.pkg-gold    {background:#fffbeb;                color:#92400e}
+.pkg-tag.pkg-diamond {background:#ede9fe;                color:#4c1d95}
+.pkg-tag.pkg-ruby    {background:#ffe4e6;                color:#9f1239}
 
 /* Trainer btn inside event */
 .cal-trainer-btn{
@@ -770,6 +773,70 @@ input[type="datetime-local"].form-control{color-scheme:light}
     margin-bottom:10px;padding-bottom:7px;border-bottom:1px solid var(--border-gold);
 }
 .sec-title-left{display:flex;align-items:center;gap:8px}
+/* ── CLASS DETAIL MODAL ────────────────────────────────────── */
+.detail-header-block{
+    border-radius:10px;background:var(--surface-2);
+    padding:14px 16px;margin-bottom:14px;
+    border-left-width:5px;border-left-style:solid;
+}
+.detail-title-main{
+    font-family:'Barlow Condensed',sans-serif;
+    font-size:20px;font-weight:700;color:var(--tp);
+    letter-spacing:.3px;margin-bottom:6px;
+}
+.detail-info-grid{
+    display:grid;grid-template-columns:1fr 1fr;
+    gap:8px;margin-bottom:14px;
+}
+.dig-card{
+    background:var(--surface-2);border:1px solid var(--border);
+    border-radius:8px;padding:9px 12px;
+    display:flex;flex-direction:column;gap:3px;
+}
+.dig-card .lbl{
+    font-size:10px;color:var(--tm);
+    text-transform:uppercase;letter-spacing:.6px;
+}
+.dig-card .val{
+    font-size:13px;font-weight:600;color:var(--tp);
+    display:flex;align-items:center;gap:5px;
+}
+.detail-section-heading{
+    display:flex;align-items:center;justify-content:space-between;
+    font-family:'Barlow Condensed',sans-serif;font-size:13px;
+    font-weight:700;color:var(--gold);letter-spacing:.8px;
+    text-transform:uppercase;margin-bottom:10px;
+    padding-bottom:7px;border-bottom:1px solid var(--border-gold);
+}
+.detail-member-table{
+    width:100%;border-collapse:collapse;font-size:12px;
+}
+.detail-member-table thead tr{
+    background:var(--surface-2);
+}
+.detail-member-table th{
+    padding:8px 10px;text-align:left;
+    font-size:10px;color:var(--tm);text-transform:uppercase;
+    letter-spacing:.5px;border-bottom:1px solid var(--border);
+    font-weight:600;
+}
+.detail-member-table td{
+    padding:8px 10px;border-bottom:1px solid var(--border);
+    vertical-align:middle;color:var(--tp);
+}
+.detail-member-table tbody tr:last-child td{border-bottom:none}
+.detail-member-table tbody tr:hover{background:var(--surface-2)}
+.error-msg{
+    padding:20px;text-align:center;
+    color:var(--red,#ef4444);font-size:13px;
+    display:flex;align-items:center;justify-content:center;gap:8px;
+}
+@media(max-width:600px){
+    .detail-info-grid{grid-template-columns:1fr}
+    .detail-member-table th:nth-child(3),
+    .detail-member-table td:nth-child(3){display:none}
+}
+
 .member-list{display:flex;flex-direction:column;gap:6px}
 .member-row{
     display:flex;align-items:center;gap:10px;
@@ -1215,3 +1282,15 @@ input[type="datetime-local"].form-control{color-scheme:light}
     .table-card{border:1px solid var(--border-md)}
     .strip-card{border:1px solid var(--border-md);background:var(--surface)}
 }
+
+/* ── Inline edit/delete buttons inside tg-event ── */
+.tg-event-edit,.tg-event-del{
+    border:none;background:rgba(255,255,255,.85);
+    width:18px;height:18px;border-radius:4px;
+    display:inline-flex;align-items:center;justify-content:center;
+    font-size:9px;cursor:pointer;transition:background .15s;
+    color:var(--ts);
+}
+.tg-event-del{background:rgba(220,38,38,.12);color:var(--red)}
+.tg-event-edit:hover{background:#fff}
+.tg-event-del:hover{background:rgba(220,38,38,.25)}

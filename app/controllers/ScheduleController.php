@@ -101,9 +101,27 @@ class ScheduleController extends Controller
     {
         AuthMiddleware::requireRole(['Admin', 'Employee']);
         ensureSession(); // helper from session_helper.php
+
+        // Suppress HTML error output immediately — must happen before any output
+        ini_set('display_errors', '0');
+        ini_set('display_startup_errors', '0');
+        error_reporting(E_ALL);
+
+        // Clean any previous output buffer (e.g. from framework bootstrapping)
+        while (ob_get_level() > 0) ob_end_clean();
+
         header('Content-Type: application/json; charset=utf-8');
 
-        $action = $_POST['action'] ?? $_GET['action'] ?? '';
+        // Custom error handler: convert PHP warnings/notices to exceptions
+        set_error_handler(function(int $errno, string $errstr, string $errfile, int $errline): bool {
+            if ($errno & (E_ERROR | E_WARNING | E_PARSE | E_CORE_ERROR | E_COMPILE_ERROR | E_USER_ERROR)) {
+                throw new \ErrorException($errstr, 0, $errno, $errfile, $errline);
+            }
+            return true; // suppress notices/deprecations
+        });
+
+        try {
+            $action = $_POST['action'] ?? $_GET['action'] ?? '';
 
         switch ($action) {
             case 'get_stats':
@@ -125,9 +143,19 @@ class ScheduleController extends Controller
                 echo json_encode(array_merge(['success' => true, 'page' => $page], $res));
                 break;
 
+            case 'get_day_schedules':
+                $date     = trim($_GET['date'] ?? date('Y-m-d'));
+                $room_id_f = trim($_GET['room_id'] ?? '');
+                // Reuse getWeekSchedules with single-day range
+                $rows = $this->scheduleModel->getWeekSchedules($date, $room_id_f, '', true);
+                echo json_encode(['success' => true, 'data' => $rows, 'date' => $date]);
+                break;
+
             case 'get_week_schedules':
                 $week_start = trim($_GET['week_start'] ?? date('Y-m-d', strtotime('monday this week')));
-                $rows = $this->scheduleModel->getWeekSchedules($week_start);
+                $room_id_f  = trim($_GET['room_id'] ?? '');
+                $class_type_f = trim($_GET['class_type'] ?? '');
+                $rows = $this->scheduleModel->getWeekSchedules($week_start, $room_id_f, $class_type_f);
                 echo json_encode([
                     'success'    => true,
                     'data'       => $rows,
@@ -159,11 +187,11 @@ class ScheduleController extends Controller
                 $customer_id = (int)($_POST['customer_id'] ?? 0);
                 if (!$class_id || !$customer_id) {
                     echo json_encode(['success' => false, 'message' => 'Thiếu dữ liệu']);
-                    exit;
+                    return;
                 }
                 if ($this->scheduleModel->checkClassRegistrationExists($class_id, $customer_id)) {
                     echo json_encode(['success' => false, 'message' => 'Khách hàng đã đăng ký lớp này']);
-                    exit;
+                    return;
                 }
                 $ok = $this->scheduleModel->addRegistration($class_id, $customer_id);
                 echo json_encode([
@@ -178,7 +206,7 @@ class ScheduleController extends Controller
                 $customer_id = (int)($_POST['customer_id'] ?? 0);
                 if (!$class_id || !$customer_id) {
                     echo json_encode(['success' => false, 'message' => 'Thiếu dữ liệu']);
-                    exit;
+                    return;
                 }
                 $ok = $this->scheduleModel->cancelRegistrationByClassAndCustomer($class_id, $customer_id);
                 echo json_encode([
@@ -195,35 +223,64 @@ class ScheduleController extends Controller
                 $start_time  = trim($_POST['start_time'] ?? '');
                 $end_time    = trim($_POST['end_time'] ?? '') ?: null;
                 $max_capacity = (int)($_POST['max_capacity'] ?? 0) ?: null;
+                $repeat_type = trim($_POST['repeat_type'] ?? 'none');
 
                 if (!$class_name || !$start_time) {
                     echo json_encode(['success' => false, 'message' => 'Tên lớp và giờ bắt đầu là bắt buộc']);
-                    exit;
+                    return;
                 }
                 if ($end_time && strtotime($end_time) <= strtotime($start_time)) {
                     echo json_encode(['success' => false, 'message' => 'Giờ kết thúc phải lớn hơn giờ bắt đầu']);
-                    exit;
+                    return;
                 }
 
-                if ($room_id) {
-                    $roomConflict = $this->checkRoomTimeRange($room_id, $start_time, $end_time);
-                    if ($roomConflict !== true) {
-                        echo json_encode(['success' => false, 'message' => $roomConflict]);
-                        exit;
+                // Build list of start times based on repeat_type
+                $schedule_times = [$start_time];
+                $end_times      = [$end_time];
+                $duration_secs  = ($end_time) ? (strtotime($end_time) - strtotime($start_time)) : 0;
+
+                if ($repeat_type === 'daily') {
+                    $end_of_month = strtotime(date('Y-m-t 23:59:59', strtotime($start_time)));
+                    $cur = strtotime($start_time) + 86400;
+                    while ($cur <= $end_of_month) {
+                        $schedule_times[] = date('Y-m-d H:i:s', $cur);
+                        $end_times[]      = $duration_secs ? date('Y-m-d H:i:s', $cur + $duration_secs) : null;
+                        $cur += 86400;
                     }
-                    $conflict = $this->scheduleModel->checkRoomConflict($room_id, $start_time, $end_time);
-                    if ($conflict) {
-                        $cs = date('H:i', strtotime($conflict['start_time']));
-                        $ce = $conflict['end_time'] ? date('H:i', strtotime($conflict['end_time'])) : '?';
-                        echo json_encode(['success' => false, 'message' => "Phòng này đã có lớp \"{$conflict['class_name']}\" ({$cs}–{$ce}). Vui lòng chọn khung giờ không bị trùng."]);
-                        exit;
+                } elseif ($repeat_type === 'weekly') {
+                    for ($w = 1; $w <= 3; $w++) {
+                        $cur = strtotime($start_time) + $w * 7 * 86400;
+                        $schedule_times[] = date('Y-m-d H:i:s', $cur);
+                        $end_times[]      = $duration_secs ? date('Y-m-d H:i:s', $cur + $duration_secs) : null;
                     }
                 }
 
-                $new_id = $this->scheduleModel->addSchedule($class_name, $trainer_id, $room_id, $start_time, $end_time, $max_capacity);
-                echo json_encode($new_id
-                    ? ['success' => true, 'message' => 'Thêm buổi tập thành công', 'id' => $new_id]
-                    : ['success' => false, 'message' => 'Lỗi DB']);
+                $created = 0;
+                $errors  = [];
+                foreach ($schedule_times as $i => $st) {
+                    $et = $end_times[$i];
+                    if ($room_id) {
+                        $roomConflict = $this->checkRoomTimeRange($room_id, $st, $et);
+                        if ($roomConflict !== true) { $errors[] = $roomConflict; continue; }
+                        $conflict = $this->scheduleModel->checkRoomConflict($room_id, $st, $et);
+                        if ($conflict) {
+                            $cs = date('H:i', strtotime($conflict['start_time']));
+                            $ce = $conflict['end_time'] ? date('H:i', strtotime($conflict['end_time'])) : '?';
+                            $errors[] = "Bỏ qua {$st}: phòng đã có lớp \"{$conflict['class_name']}\" ({$cs}–{$ce})";
+                            continue;
+                        }
+                    }
+                    $new_id = $this->scheduleModel->addSchedule($class_name, $trainer_id, $room_id, $st, $et, $max_capacity);
+                    if ($new_id) $created++;
+                }
+
+                if ($created === 0) {
+                    echo json_encode(['success' => false, 'message' => 'Không tạo được buổi tập nào. ' . implode('; ', $errors)]);
+                } else {
+                    $msg = "Đã thêm {$created} buổi tập thành công";
+                    if ($errors) $msg .= ' (' . count($errors) . ' bỏ qua do trùng lịch)';
+                    echo json_encode(['success' => true, 'message' => $msg, 'created' => $created]);
+                }
                 break;
 
             case 'update_class':
@@ -238,24 +295,24 @@ class ScheduleController extends Controller
 
                 if (!$id || !$class_name || !$start_time) {
                     echo json_encode(['success' => false, 'message' => 'Dữ liệu không hợp lệ']);
-                    exit;
+                    return;
                 }
                 if ($end_time && strtotime($end_time) <= strtotime($start_time)) {
                     echo json_encode(['success' => false, 'message' => 'Giờ kết thúc phải lớn hơn giờ bắt đầu']);
-                    exit;
+                    return;
                 }
                 if ($room_id) {
                     $roomConflict = $this->checkRoomTimeRange($room_id, $start_time, $end_time);
                     if ($roomConflict !== true) {
                         echo json_encode(['success' => false, 'message' => $roomConflict]);
-                        exit;
+                        return;
                     }
                     $conflict = $this->scheduleModel->checkRoomConflict($room_id, $start_time, $end_time, $id);
                     if ($conflict) {
                         $cs = date('H:i', strtotime($conflict['start_time']));
                         $ce = $conflict['end_time'] ? date('H:i', strtotime($conflict['end_time'])) : '?';
                         echo json_encode(['success' => false, 'message' => "Phòng này đã có lớp \"{$conflict['class_name']}\" ({$cs}–{$ce}). Vui lòng chọn khung giờ không bị trùng."]);
-                        exit;
+                        return;
                     }
                 }
 
@@ -281,13 +338,13 @@ class ScheduleController extends Controller
                 $trainer_id = (int)($_POST['trainer_id'] ?? 0);
                 if (!$class_id || !$trainer_id) {
                     echo json_encode(['success' => false, 'message' => 'Thiếu dữ liệu']);
-                    exit;
+                    return;
                 }
 
                 $thisClass = $this->scheduleModel->getClassInfo($class_id);
                 if (!$thisClass) {
                     echo json_encode(['success' => false, 'message' => 'Không tìm thấy buổi tập']);
-                    exit;
+                    return;
                 }
 
                 // Lấy thông tin thời gian lớp từ dữ liệu đã có
@@ -301,7 +358,7 @@ class ScheduleController extends Controller
                     $cs = date('H:i', strtotime($conflict['start_time']));
                     $ce = $conflict['end_time'] ? date('H:i', strtotime($conflict['end_time'])) : '?';
                     echo json_encode(['success' => false, 'message' => "HLV đã được phân công lớp \"{$conflict['class_name']}\" ({$cs}–{$ce}) trong khung giờ này."]);
-                    exit;
+                    return;
                 }
 
                 $ok = $this->scheduleModel->assignTrainer($class_id, $trainer_id);
@@ -316,7 +373,7 @@ class ScheduleController extends Controller
                 $trainer_id = (int)($_POST['trainer_id'] ?? 0);
                 if (!$class_id || !$trainer_id) {
                     echo json_encode(['success' => false, 'message' => 'Thiếu dữ liệu']);
-                    exit;
+                    return;
                 }
 
                 $ok = $this->scheduleModel->unassignTrainer($class_id, $trainer_id);
@@ -341,6 +398,17 @@ class ScheduleController extends Controller
 
             default:
                 echo json_encode(['success' => false, 'message' => 'Action không hợp lệ']);
+        }
+
+        } catch (\Throwable $e) {
+            // Catch any exception or error — return clean JSON, never HTML
+            http_response_code(200); // keep 200 so fetchJson doesn't throw on status check
+            echo json_encode([
+                'success' => false,
+                'message' => 'Lỗi server: ' . $e->getMessage() . ' (dòng ' . $e->getLine() . ')'
+            ]);
+        } finally {
+            restore_error_handler();
         }
     }
 

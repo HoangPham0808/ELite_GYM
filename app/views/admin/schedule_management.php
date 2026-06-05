@@ -313,17 +313,35 @@
         </div>
         <div class="modal-body">
             <input type="hidden" id="fRegLichId">
-            <div class="form-group full">
-                <label>Tìm khách hàng <span class="req">*</span></label>
-                <input type="text" id="fRegSearch" class="form-control" placeholder="Nhập tên hoặc SĐT..." autocomplete="off">
-                <div class="kh-dropdown" id="khDropdown"></div>
-            </div>
-            <div id="fRegSelected" class="selected-kh" style="display:none"></div>
             <input type="hidden" id="fRegKhId">
+
+            <div class="form-group full" style="margin-bottom:14px">
+                <label style="font-weight:600;margin-bottom:6px;display:block">
+                    Số điện thoại khách hàng <span style="color:red">*</span>
+                </label>
+                <div style="display:flex;gap:8px">
+                    <input type="tel" id="fRegPhone" class="form-control"
+                        placeholder="Nhập SĐT rồi nhấn Tìm..."
+                        style="flex:1;font-size:15px;letter-spacing:.5px"
+                        onkeydown="if(event.key==='Enter'){event.preventDefault();window.lookupCustomerByPhone()}"
+                        autocomplete="off">
+                    <button type="button" class="btn-primary"
+                        onclick="window.lookupCustomerByPhone()"
+                        style="white-space:nowrap;padding:0 16px;flex-shrink:0">
+                        <i class="fas fa-magnifying-glass"></i> Tìm
+                    </button>
+                </div>
+                <div id="fRegErrMsg" style="display:none;margin-top:8px;padding:8px 12px;background:#fef2f2;border:1px solid #fca5a5;border-radius:6px;color:#dc2626;font-size:13px">
+                </div>
+            </div>
+
+            <div id="fRegFoundBox" style="display:none;margin-top:4px"></div>
         </div>
         <div class="modal-footer">
             <button class="btn-secondary" onclick="closeModal('regModal')">Hủy</button>
-            <button class="btn-primary" onclick="saveRegistration()"><i class="fas fa-check"></i> Đăng ký</button>
+            <button class="btn-primary" onclick="saveRegistration()">
+                <i class="fas fa-check"></i> Đăng ký
+            </button>
         </div>
     </div>
 </div>

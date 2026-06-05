@@ -10,6 +10,16 @@ class Schedule extends Model
         return $result && $result->num_rows > 0;
     }
 
+    /** Wrapper around prepare() that logs errors instead of causing Fatal Errors. Returns mysqli_stmt or false. */
+    private function prepareStmt(string $sql)
+    {
+        $stmt = $this->db->prepare($sql);
+        if (!$stmt) {
+            error_log('[EliteGym] DB prepare failed: ' . $this->db->error . ' | SQL: ' . substr($sql, 0, 200));
+        }
+        return $stmt;
+    }
+
     private function buildWhereClause(array $conditions): string
     {
         return implode(' AND ', $conditions) ?: '1=1';
@@ -17,20 +27,18 @@ class Schedule extends Model
 
     public function getAdminStats(): array
     {
-        $total = (int)$this->db->query("SELECT COUNT(*) AS c FROM TrainingClass")->fetch_assoc()['c'];
-        $today = (int)$this->db->query("SELECT COUNT(*) AS c FROM TrainingClass WHERE DATE(start_time) = CURDATE()")->fetch_assoc()['c'];
-        $week = (int)$this->db->query("SELECT COUNT(*) AS c FROM TrainingClass WHERE start_time BETWEEN DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY) AND DATE_ADD(DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY), INTERVAL 6 DAY)")->fetch_assoc()['c'];
-        $regs = (int)$this->db->query("SELECT COUNT(*) AS c FROM ClassRegistration")->fetch_assoc()['c'];
-        $trainers = (int)$this->db->query("SELECT COUNT(DISTINCT trainer_id) AS c FROM TrainingClass WHERE trainer_id IS NOT NULL AND start_time <= NOW() AND (end_time IS NULL OR end_time >= NOW())")->fetch_assoc()['c'];
-        $upcoming = (int)$this->db->query("SELECT COUNT(*) AS c FROM TrainingClass WHERE start_time BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 24 HOUR)")->fetch_assoc()['c'];
+        $q = function(string $sql): int {
+            $res = $this->db->query($sql);
+            return ($res && ($row = $res->fetch_assoc())) ? (int)$row['c'] : 0;
+        };
 
         return [
-            'total' => $total,
-            'today' => $today,
-            'week' => $week,
-            'registered' => $regs,
-            'trainers' => $trainers,
-            'upcoming' => $upcoming,
+            'total'      => $q("SELECT COUNT(*) AS c FROM TrainingClass"),
+            'today'      => $q("SELECT COUNT(*) AS c FROM TrainingClass WHERE DATE(start_time) = CURDATE()"),
+            'week'       => $q("SELECT COUNT(*) AS c FROM TrainingClass WHERE start_time BETWEEN DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY) AND DATE_ADD(DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY), INTERVAL 6 DAY)"),
+            'registered' => $q("SELECT COUNT(*) AS c FROM ClassRegistration"),
+            'trainers'   => $q("SELECT COUNT(DISTINCT trainer_id) AS c FROM TrainingClass WHERE trainer_id IS NOT NULL AND start_time <= NOW() AND (end_time IS NULL OR end_time >= NOW())"),
+            'upcoming'   => $q("SELECT COUNT(*) AS c FROM TrainingClass WHERE start_time BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 24 HOUR)"),
         ];
     }
 
@@ -90,12 +98,15 @@ class Schedule extends Model
             LEFT JOIN PackageType pt ON pt.type_id = gr.package_type_id
             WHERE {$whereSql}";
 
-        $countStmt = $this->db->prepare($countSql);
-        if ($countStmt && $types !== '') {
+        $countStmt = $this->prepareStmt($countSql);
+        if (!$countStmt) {
+            return ['data' => [], 'total' => 0, 'totalPages' => 1];
+        }
+        if ($types !== '') {
             $countStmt->bind_param($types, ...$params);
         }
         $countStmt->execute();
-        $total = (int)$countStmt->get_result()->fetch_assoc()['total'];
+        $total = (int)($countStmt->get_result()->fetch_assoc()['total'] ?? 0);
         $countStmt->close();
 
         $sql = "SELECT
@@ -107,8 +118,8 @@ class Schedule extends Model
                 gr.room_name,
                 COALESCE(pt.type_name, 'Basic') AS package_name,
                 pt.type_name AS room_type_name,
-                pt.sort_order AS room_sort_order,
-                pt.color_code AS room_type_color,
+                COALESCE(pt.sort_order, 0) AS room_sort_order,
+                COALESCE(pt.color_code, '#888888') AS room_type_color,
                 tc.start_time,
                 tc.end_time,
                 COALESCE(gr.capacity, 20) AS max_capacity,
@@ -118,10 +129,10 @@ class Schedule extends Model
             LEFT JOIN GymRoom gr ON gr.room_id = tc.room_id
             LEFT JOIN PackageType pt ON pt.type_id = gr.package_type_id
             WHERE {$whereSql}
-            ORDER BY tc.start_time ASC
+            ORDER BY tc.start_time DESC
             LIMIT ? OFFSET ?";
 
-        $stmt = $this->db->prepare($sql);
+        $stmt = $this->prepareStmt($sql);
         $bindParams = $params;
         $bindTypes = $types . 'ii';
         $bindParams[] = $limit;
@@ -149,10 +160,27 @@ class Schedule extends Model
         ];
     }
 
-    public function getWeekSchedules(string $week_start): array
+    public function getWeekSchedules(string $week_start, string $room_id = '', string $class_type = '', bool $single_day = false): array
     {
         $start = date('Y-m-d', strtotime($week_start));
-        $end = date('Y-m-d', strtotime($week_start . ' +6 days'));
+        $end   = $single_day ? $start : date('Y-m-d', strtotime($week_start . ' +6 days'));
+
+        $where = ['tc.start_time BETWEEN ? AND ?'];
+        $params = [$start . ' 00:00:00', $end . ' 23:59:59'];
+        $types = 'ss';
+
+        if ($room_id !== '') {
+            $where[] = 'tc.room_id = ?';
+            $params[] = (int)$room_id;
+            $types .= 'i';
+        }
+        if ($class_type !== '') {
+            $where[] = 'pt.type_name LIKE ?';
+            $params[] = "%{$class_type}%";
+            $types .= 's';
+        }
+
+        $whereSql = implode(' AND ', $where);
         $sql = "SELECT
                 tc.class_id,
                 tc.class_name,
@@ -162,8 +190,8 @@ class Schedule extends Model
                 gr.room_name,
                 COALESCE(pt.type_name, 'Basic') AS package_name,
                 pt.type_name AS room_type_name,
-                pt.sort_order AS room_sort_order,
-                pt.color_code AS room_type_color,
+                COALESCE(pt.sort_order, 0) AS room_sort_order,
+                COALESCE(pt.color_code, '#888888') AS room_type_color,
                 tc.start_time,
                 tc.end_time,
                 COALESCE(gr.capacity, 20) AS max_capacity,
@@ -172,13 +200,12 @@ class Schedule extends Model
             LEFT JOIN Employee e ON e.employee_id = tc.trainer_id
             LEFT JOIN GymRoom gr ON gr.room_id = tc.room_id
             LEFT JOIN PackageType pt ON pt.type_id = gr.package_type_id
-            WHERE tc.start_time BETWEEN ? AND ?
+            WHERE {$whereSql}
             ORDER BY tc.start_time ASC";
 
-        $stmt = $this->db->prepare($sql);
-        $startTime = $start . ' 00:00:00';
-        $endTime = $end . ' 23:59:59';
-        $stmt->bind_param('ss', $startTime, $endTime);
+        $stmt = $this->prepareStmt($sql);
+        if (!$stmt) return [];
+        $stmt->bind_param($types, ...$params);
         $stmt->execute();
         $result = $stmt->get_result();
         $rows = [];
@@ -197,8 +224,9 @@ class Schedule extends Model
                 gr.room_name,
                 COALESCE(pt.type_name, 'Basic') AS package_name,
                 pt.type_name AS room_type_name,
-                pt.sort_order AS room_sort_order,
-                pt.color_code AS room_type_color
+                COALESCE(pt.sort_order, 0) AS room_sort_order,
+                COALESCE(pt.color_code, '#888888') AS room_type_color,
+                COALESCE(gr.capacity, 20) AS max_capacity
             FROM TrainingClass tc
             LEFT JOIN Employee e ON e.employee_id = tc.trainer_id
             LEFT JOIN GymRoom gr ON gr.room_id = tc.room_id
@@ -206,7 +234,8 @@ class Schedule extends Model
             WHERE tc.class_id = ?
             LIMIT 1";
 
-        $stmt = $this->db->prepare($sql);
+        $stmt = $this->prepareStmt($sql);
+        if (!$stmt) return null;
         $stmt->bind_param('i', $id);
         $stmt->execute();
         $class = $stmt->get_result()->fetch_assoc();
@@ -215,22 +244,31 @@ class Schedule extends Model
             return null;
         }
 
+        $regTimeCol  = $this->getRegTimeColumn();
+        $phoneCol    = $this->getCustomerPhoneColumn();
+        $accCol      = $this->getCustomerAccountColumn();
+        $accountJoin = $accCol ? "LEFT JOIN Account a ON a.account_id = c.{$accCol}" : '';
+        $usernameExpr = $accCol ? "COALESCE(a.username, '')" : "''";
+        $phoneAlias  = ($phoneCol !== 'NULL') ? "c.{$phoneCol} AS phone" : "NULL AS phone";
+
         $sql2 = "SELECT
                 cr.class_registration_id,
                 c.customer_id,
                 c.full_name,
-                COALESCE(c.username, '') AS username,
-                c.phone,
+                {$usernameExpr} AS username,
+                {$phoneAlias},
                 mp.plan_name AS package_name,
-                cr.registration_time
+                {$regTimeCol} AS registration_time
             FROM ClassRegistration cr
             JOIN Customer c ON c.customer_id = cr.customer_id
+            {$accountJoin}
             LEFT JOIN MembershipRegistration mr ON mr.customer_id = c.customer_id AND mr.status = 'active' AND mr.end_date >= CURDATE()
             LEFT JOIN MembershipPlan mp ON mp.plan_id = mr.plan_id
             WHERE cr.class_id = ?
             ORDER BY cr.class_registration_id ASC";
 
-        $stmt2 = $this->db->prepare($sql2);
+        $stmt2 = $this->prepareStmt($sql2);
+        if (!$stmt2) return ['class' => $class, 'enrolled_customers' => []];
         $stmt2->bind_param('i', $id);
         $stmt2->execute();
         $customers = [];
@@ -279,7 +317,8 @@ class Schedule extends Model
         }
 
         $sql = 'INSERT INTO TrainingClass (' . implode(', ', $fields) . ') VALUES (' . implode(', ', $placeholders) . ')';
-        $stmt = $this->db->prepare($sql);
+        $stmt = $this->prepareStmt($sql);
+        if (!$stmt) return false;
         $stmt->bind_param($types, ...$params);
         $ok = $stmt->execute();
         $id = $ok ? (int)$this->db->insert_id : false;
@@ -327,16 +366,43 @@ class Schedule extends Model
         $params[] = $id;
         $types .= 'i';
 
-        $stmt = $this->db->prepare($sql);
+        $stmt = $this->prepareStmt($sql);
+        if (!$stmt) return false;
         $stmt->bind_param($types, ...$params);
         $ok = $stmt->execute();
         $stmt->close();
         return $ok;
     }
 
+    /** Detect the actual timestamp column name in ClassRegistration table (varies by schema) */
+    private function getRegTimeColumn(): string
+    {
+        static $col = null;
+        if ($col !== null) return $col;
+        $candidates = ['registered_at', 'registration_time', 'created_at', 'reg_date', 'register_time'];
+        foreach ($candidates as $c) {
+            if ($this->hasColumn('ClassRegistration', $c)) {
+                $col = $c;
+                return $col;
+            }
+        }
+        $col = 'NULL'; // no timestamp column found — return NULL safely
+        return $col;
+    }
+
     public function deleteSchedule(int $id): bool
     {
-        $stmt = $this->db->prepare('DELETE FROM TrainingClass WHERE class_id = ?');
+        // Must delete child rows first to avoid FK constraint
+        // (ClassRegistration references TrainingClass.class_id)
+        $del1 = $this->prepareStmt('DELETE FROM ClassRegistration WHERE class_id = ?');
+        if ($del1) {
+            $del1->bind_param('i', $id);
+            $del1->execute();
+            $del1->close();
+        }
+
+        $stmt = $this->prepareStmt('DELETE FROM TrainingClass WHERE class_id = ?');
+        if (!$stmt) return false;
         $stmt->bind_param('i', $id);
         $ok = $stmt->execute();
         $stmt->close();
@@ -345,7 +411,10 @@ class Schedule extends Model
 
     public function getCustomerInfoByAccount(int $account_id): ?int
     {
-        $stmt = $this->db->prepare('SELECT customer_id FROM Customer WHERE account_id = ? LIMIT 1');
+        $accCol = $this->getCustomerAccountColumn();
+        if (!$accCol) return null; // no account FK column exists
+        $stmt = $this->prepareStmt("SELECT customer_id FROM Customer WHERE {$accCol} = ? LIMIT 1");
+        if (!$stmt) return null;
         $stmt->bind_param('i', $account_id);
         $stmt->execute();
         $row = $stmt->get_result()->fetch_assoc();
@@ -370,7 +439,8 @@ class Schedule extends Model
             WHERE tc.class_id = ?
             LIMIT 1";
 
-        $stmt = $this->db->prepare($sql);
+        $stmt = $this->prepareStmt($sql);
+        if (!$stmt) return null;
         $stmt->bind_param('i', $class_id);
         $stmt->execute();
         $row = $stmt->get_result()->fetch_assoc();
@@ -390,7 +460,8 @@ class Schedule extends Model
             ORDER BY pt.sort_order DESC
             LIMIT 1";
 
-        $stmt = $this->db->prepare($sql);
+        $stmt = $this->prepareStmt($sql);
+        if (!$stmt) return null;
         $stmt->bind_param('i', $customer_id);
         $stmt->execute();
         $row = $stmt->get_result()->fetch_assoc();
@@ -400,7 +471,8 @@ class Schedule extends Model
 
     public function checkClassRegistrationExists(int $class_id, int $customer_id): bool
     {
-        $stmt = $this->db->prepare('SELECT 1 FROM ClassRegistration WHERE class_id = ? AND customer_id = ? LIMIT 1');
+        $stmt = $this->prepareStmt('SELECT 1 FROM ClassRegistration WHERE class_id = ? AND customer_id = ? LIMIT 1');
+        if (!$stmt) return false;
         $stmt->bind_param('ii', $class_id, $customer_id);
         $stmt->execute();
         $exists = $stmt->get_result()->num_rows > 0;
@@ -410,11 +482,12 @@ class Schedule extends Model
 
     public function checkTimeSlotConflict(int $customer_id, string $start_time): ?array
     {
-        $stmt = $this->db->prepare("SELECT tc.class_id, tc.start_time AS time, DATE(tc.start_time) AS date
+        $stmt = $this->prepareStmt("SELECT tc.class_id, tc.start_time AS time, DATE(tc.start_time) AS date
             FROM ClassRegistration cr
             JOIN TrainingClass tc ON tc.class_id = cr.class_id
             WHERE cr.customer_id = ? AND tc.start_time = ?
             LIMIT 1");
+        if (!$stmt) return null;
         $stmt->bind_param('is', $customer_id, $start_time);
         $stmt->execute();
         $row = $stmt->get_result()->fetch_assoc();
@@ -427,7 +500,11 @@ class Schedule extends Model
         if ($this->checkClassRegistrationExists($class_id, $customer_id)) {
             return false;
         }
-        $stmt = $this->db->prepare('INSERT INTO ClassRegistration (class_id, customer_id, registration_time) VALUES (?, ?, NOW())');
+        $regTimeCol = $this->getRegTimeColumn();
+        $insertCol  = ($regTimeCol === 'NULL') ? '' : ", {$regTimeCol}";
+        $insertVal  = ($regTimeCol === 'NULL') ? '' : ', NOW()';
+        $stmt = $this->prepareStmt("INSERT INTO ClassRegistration (class_id, customer_id{$insertCol}) VALUES (?, ?{$insertVal})");
+        if (!$stmt) return false;
         $stmt->bind_param('ii', $class_id, $customer_id);
         $ok = $stmt->execute();
         $stmt->close();
@@ -436,7 +513,8 @@ class Schedule extends Model
 
     public function cancelClass(int $class_id, int $customer_id): bool
     {
-        $stmt = $this->db->prepare('DELETE FROM ClassRegistration WHERE class_id = ? AND customer_id = ?');
+        $stmt = $this->prepareStmt('DELETE FROM ClassRegistration WHERE class_id = ? AND customer_id = ?');
+        if (!$stmt) return false;
         $stmt->bind_param('ii', $class_id, $customer_id);
         $ok = $stmt->execute();
         $stmt->close();
@@ -455,7 +533,8 @@ class Schedule extends Model
 
     public function assignTrainer(int $class_id, int $trainer_id): bool
     {
-        $stmt = $this->db->prepare('UPDATE TrainingClass SET trainer_id = ? WHERE class_id = ?');
+        $stmt = $this->prepareStmt('UPDATE TrainingClass SET trainer_id = ? WHERE class_id = ?');
+        if (!$stmt) return false;
         $stmt->bind_param('ii', $trainer_id, $class_id);
         $ok = $stmt->execute();
         $stmt->close();
@@ -464,7 +543,8 @@ class Schedule extends Model
 
     public function unassignTrainer(int $class_id, int $trainer_id): bool
     {
-        $stmt = $this->db->prepare('UPDATE TrainingClass SET trainer_id = NULL WHERE class_id = ? AND trainer_id = ?');
+        $stmt = $this->prepareStmt('UPDATE TrainingClass SET trainer_id = NULL WHERE class_id = ? AND trainer_id = ?');
+        if (!$stmt) return false;
         $stmt->bind_param('ii', $class_id, $trainer_id);
         $ok = $stmt->execute();
         $stmt->close();
@@ -480,13 +560,15 @@ class Schedule extends Model
 
         $equipment = 'thiết bị cơ bản';
         if (!empty($class['room_id'])) {
-            $stmt = $this->db->prepare('SELECT GROUP_CONCAT(equipment_name SEPARATOR ", ") AS equipment_list FROM Equipment WHERE room_id = ?');
-            $stmt->bind_param('i', $class['room_id']);
-            $stmt->execute();
-            $row = $stmt->get_result()->fetch_assoc();
-            $stmt->close();
-            if (!empty($row['equipment_list'])) {
-                $equipment = $row['equipment_list'];
+            $stmt = $this->prepareStmt('SELECT GROUP_CONCAT(equipment_name SEPARATOR ", ") AS equipment_list FROM Equipment WHERE room_id = ?');
+            if ($stmt) {
+                $stmt->bind_param('i', $class['room_id']);
+                $stmt->execute();
+                $row = $stmt->get_result()->fetch_assoc();
+                $stmt->close();
+                if (!empty($row['equipment_list'])) {
+                    $equipment = $row['equipment_list'];
+                }
             }
         }
         $class['equipment_list'] = $equipment;
@@ -496,6 +578,7 @@ class Schedule extends Model
     public function getTrainers(): array
     {
         $res = $this->db->query('SELECT employee_id, full_name FROM Employee ORDER BY full_name ASC');
+        if (!$res) return [];
         $rows = [];
         while ($row = $res->fetch_assoc()) {
             $rows[] = $row;
@@ -506,6 +589,7 @@ class Schedule extends Model
     public function getRooms(): array
     {
         $res = $this->db->query('SELECT room_id, room_name FROM GymRoom ORDER BY room_name ASC');
+        if (!$res) return [];
         $rows = [];
         while ($row = $res->fetch_assoc()) {
             $rows[] = $row;
@@ -515,7 +599,8 @@ class Schedule extends Model
 
     public function getRoomInfo(int $room_id): ?array
     {
-        $stmt = $this->db->prepare('SELECT room_name, open_time, close_time FROM GymRoom WHERE room_id = ? LIMIT 1');
+        $stmt = $this->prepareStmt('SELECT room_name, open_time, close_time FROM GymRoom WHERE room_id = ? LIMIT 1');
+        if (!$stmt) return null;
         $stmt->bind_param('i', $room_id);
         $stmt->execute();
         $room = $stmt->get_result()->fetch_assoc();
@@ -523,19 +608,60 @@ class Schedule extends Model
         return $room ?: null;
     }
 
+    /** Detect actual phone column name in Customer table */
+    private function getCustomerPhoneColumn(): string
+    {
+        static $col = null;
+        if ($col !== null) return $col;
+        foreach (['phone', 'phone_number', 'phone_no', 'mobile', 'mobile_phone', 'telephone'] as $c) {
+            if ($this->hasColumn('Customer', $c)) { $col = $c; return $col; }
+        }
+        $col = 'NULL';
+        return $col;
+    }
+
+    /** Detect actual account_id FK column in Customer table */
+    private function getCustomerAccountColumn(): string
+    {
+        static $col = null;
+        if ($col !== null) return $col;
+        foreach (['account_id', 'accountId', 'acc_id', 'user_id', 'userId'] as $c) {
+            if ($this->hasColumn('Customer', $c)) { $col = $c; return $col; }
+        }
+        $col = '';
+        return $col;
+    }
+
     public function getCustomersSearch(string $search, string $packageRequirement = ''): array
     {
-        $where = ['1=1'];
+        $phoneCol   = $this->getCustomerPhoneColumn();
+        $accCol     = $this->getCustomerAccountColumn();
+
+        // Build JOIN to Account only if FK column exists
+        $accountJoin = $accCol ? "LEFT JOIN Account a ON a.account_id = c.{$accCol}" : '';
+        $usernameExpr = $accCol ? "COALESCE(a.username, '')" : "''";
+        $phoneExpr  = ($phoneCol !== 'NULL') ? "c.{$phoneCol}" : "NULL";
+        $phoneAlias = ($phoneCol !== 'NULL') ? "c.{$phoneCol} AS phone" : "NULL AS phone";
+
+        $where  = ['1=1'];
         $params = [];
-        $types = '';
+        $types  = '';
 
         if ($search !== '') {
-            $where[] = "(c.full_name LIKE ? OR c.phone LIKE ? OR COALESCE(c.username, '') LIKE ?)";
-            $like = "%{$search}%";
-            $params[] = $like;
-            $params[] = $like;
-            $params[] = $like;
-            $types .= 'sss';
+            $conditions = ["c.full_name LIKE ?"];
+            $params[] = "%{$search}%";
+            $types .= 's';
+            if ($phoneCol !== 'NULL') {
+                $conditions[] = "c.{$phoneCol} LIKE ?";
+                $params[] = "%{$search}%";
+                $types .= 's';
+            }
+            if ($accCol) {
+                $conditions[] = "COALESCE(a.username, '') LIKE ?";
+                $params[] = "%{$search}%";
+                $types .= 's';
+            }
+            $where[] = '(' . implode(' OR ', $conditions) . ')';
         }
 
         if ($packageRequirement !== '') {
@@ -546,9 +672,12 @@ class Schedule extends Model
             $types .= 'ss';
         }
 
-        $sql = "SELECT DISTINCT c.customer_id, c.full_name, COALESCE(c.username, '') AS username, c.phone,
+        $sql = "SELECT DISTINCT c.customer_id, c.full_name,
+                {$usernameExpr} AS username,
+                {$phoneAlias},
                 COALESCE(mp.plan_name, '') AS package_name
             FROM Customer c
+            {$accountJoin}
             LEFT JOIN MembershipRegistration mr ON mr.customer_id = c.customer_id AND mr.status = 'active' AND mr.end_date >= CURDATE()
             LEFT JOIN MembershipPlan mp ON mp.plan_id = mr.plan_id
             LEFT JOIN PackageType pt ON pt.type_id = mp.package_type_id
@@ -556,8 +685,9 @@ class Schedule extends Model
             ORDER BY c.full_name ASC
             LIMIT 25";
 
-        $stmt = $this->db->prepare($sql);
-        if ($stmt && $types !== '') {
+        $stmt = $this->prepareStmt($sql);
+        if (!$stmt) return [];
+        if ($types !== '') {
             $stmt->bind_param($types, ...$params);
         }
         $stmt->execute();
@@ -596,7 +726,8 @@ class Schedule extends Model
             $params[] = $start_time;
         }
 
-        $stmt = $this->db->prepare($query);
+        $stmt = $this->prepareStmt($query);
+        if (!$stmt) return null;
         $stmt->bind_param($types, ...$params);
         $stmt->execute();
         $row = $stmt->get_result()->fetch_assoc();
@@ -630,7 +761,8 @@ class Schedule extends Model
             $params[] = $start_time;
         }
 
-        $stmt = $this->db->prepare($query);
+        $stmt = $this->prepareStmt($query);
+        if (!$stmt) return null;
         $stmt->bind_param($types, ...$params);
         $stmt->execute();
         $row = $stmt->get_result()->fetch_assoc();

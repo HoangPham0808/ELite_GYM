@@ -4,14 +4,20 @@ var API = (window.ELITE_BASE || '') + '/api/admin/setting/system';
 var editingId = null, eqEditingId = null;
 var currentSection = 'pkg'; // default
 
-document.addEventListener('DOMContentLoaded', () => {
+// ✅ FIX: DOMContentLoaded không fire khi load qua SPA (adm.js inject innerHTML).
+function initSystemModule() {
     loadList();
     loadEqList();
-    // Close dropdown on outside click
     document.addEventListener('click', e => {
         if (!e.target.closest('#navTrigger')) closeNavDropdown();
     });
-});
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initSystemModule);
+} else {
+    initSystemModule();
+}
 
 // ══ NAV DROPDOWN ══════════════════════════
 function toggleNavDropdown() {
@@ -19,6 +25,7 @@ function toggleNavDropdown() {
     trigger.classList.toggle('open');
 }
 function closeNavDropdown() {
+    if (!document.getElementById('navTrigger')) return;
     document.getElementById('navTrigger').classList.remove('open');
 }
 function switchSection(key, e) {
@@ -60,6 +67,7 @@ function refreshCurrent() {
 
 // ══ TOAST ════════════════════════════════
 function showToast(type, msg) {
+    if (!document.getElementById('toast')) return;
     const el = document.getElementById('toast');
     el.className = `toast toast--${type} show`;
     el.innerHTML = `<i class="fas fa-${type==='ok'?'check-circle':'times-circle'}"></i> ${msg}`;
