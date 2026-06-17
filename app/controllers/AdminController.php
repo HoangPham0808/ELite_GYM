@@ -178,7 +178,7 @@ class AdminController extends Controller
     public function apiGym(): void
     {
         AuthMiddleware::requireRole('Admin');
-        header('Content-Type: application/json; charset=utf-8');
+        $this->prepareJson();
 
         $gymModel = new Gym();
         $action = $_POST['action'] ?? $_GET['action'] ?? '';

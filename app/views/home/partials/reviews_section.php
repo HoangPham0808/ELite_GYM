@@ -107,6 +107,7 @@ $can_reply = in_array($_SESSION['role'] ?? '', ['Admin', 'Employee']);
 <script>
 (function () {
   /* ── Config ─────────────────────────────────────────── */
+  // ✅ FIX: đổi từ path PHP cũ sang MVC API route
   const HANDLER   = (window.ELITE_BASE || '') + '/api/review';
   const IS_CUST   = <?= $is_customer  ? 'true' : 'false' ?>;
   const CAN_REPLY = <?= $can_reply    ? 'true' : 'false' ?>;

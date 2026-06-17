@@ -69,6 +69,13 @@ $rev_max = max($rev_by_month) ?: 1;
 $months_vi = ['T1','T2','T3','T4','T5','T6','T7','T8','T9','T10','T11','T12'];
 ?>
 <link rel="stylesheet" href="<?= asset('css/management_statistics.css') ?>">
+<script>
+/* Chống duplicate CSS khi SPA load lại */
+(function(){
+  var h='<?= asset('css/management_statistics.css') ?>';
+  document.querySelectorAll('link[rel="stylesheet"][href="'+h+'"]').forEach(function(el,i){ if(i>0) el.remove(); });
+})();
+</script>
 <div class="wrapper">
 
   <!-- ══ TOPBAR ════════════════════════════════════════════ -->
@@ -443,4 +450,12 @@ $months_vi = ['T1','T2','T3','T4','T5','T6','T7','T8','T9','T10','T11','T12'];
 <!-- ══ TOAST ════════════════════════════════════════════════ -->
 <div class="toast" id="toast"><i class="fas fa-check-circle"></i><span id="toastMsg"></span></div>
 
-<script src="<?= asset('js/management_statistics.js') ?>"></script>
+<script>
+/* Xóa script cũ → inject mới để re-execute khi SPA navigate lại */
+(function(){
+  var src='<?= asset('js/management_statistics.js') ?>';
+  document.querySelectorAll('script[src="'+src+'"]').forEach(function(el){ el.remove(); });
+  var s=document.createElement('script'); s.src=src;
+  document.body.appendChild(s);
+})();
+</script>

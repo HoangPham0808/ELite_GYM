@@ -11,8 +11,9 @@ class PaymentController extends Controller
 
     public function api(): void
     {
+        header('Content-Type: application/json; charset=utf-8');
         AuthMiddleware::requireRole('Customer');
-        $this->ensureSession();
+        ensureSession(); // ✅ FIX: hàm global, không phải method
 
         if (!isset($_SESSION['account_id']) || ($_SESSION['role'] ?? '') !== 'Customer') {
             header('Content-Type: application/json; charset=utf-8');
@@ -179,19 +180,16 @@ class PaymentController extends Controller
         $writeLog("Invoice ID extracted: #$invoice_id");
 
         // Lấy thông tin hóa đơn
-        $stmt = $this->paymentModel->db->prepare("SELECT invoice_id, final_amount, status FROM Invoice WHERE invoice_id = ?");
-        $stmt->bind_param('i', $invoice_id);
-        $stmt->execute();
-        $inv = $stmt->get_result()->fetch_assoc();
-        $stmt->close();
-
+        // ✅ FIX: dùng method công khai thay vì truy cập $db protected
+        $inv = $this->paymentModel->getInvoiceForWebhook($invoice_id);
         if (!$inv) {
             $writeLog("Invoice #$invoice_id KHONG TON TAI trong DB");
             echo json_encode(['success' => false, 'message' => "Invoice #$invoice_id not found"]);
             exit;
         }
-
         $writeLog("Invoice #$invoice_id found. Status: " . $inv['status'] . " | Amount in DB: " . $inv['final_amount']);
+
+
 
         if ($inv['status'] === 'Paid') {
             $writeLog("Invoice #$invoice_id da Paid roi, bo qua");
@@ -217,19 +215,11 @@ class PaymentController extends Controller
         $txDate      = $body['transactionDate'] ?? date('d/m/Y H:i');
         $note_append = "Auto SePay - $txDate - Ref: $ref - " . number_format($amount) . "d";
 
-        $stmt = $this->paymentModel->db->prepare("
-            UPDATE Invoice
-            SET status = 'Paid',
-                note   = CONCAT(IFNULL(note,''), IF(note IS NULL OR note = '', '', ' | '), ?)
-            WHERE invoice_id = ?
-              AND status != 'Paid'
-        ");
-        $stmt->bind_param('si', $note_append, $invoice_id);
-        $ok = $stmt->execute();
-        $stmt->close();
+        // ✅ FIX: dùng method công khai
+        $ok = $this->paymentModel->markPaidFromWebhook($invoice_id, $note_append);
 
         if (!$ok) {
-            $writeLog("ERROR: DB update that bai - " . $this->paymentModel->db->error);
+            $writeLog("ERROR: DB update that bai");
             http_response_code(500);
             echo json_encode(['success' => false, 'message' => 'DB update failed']);
             exit;

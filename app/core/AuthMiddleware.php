@@ -15,6 +15,7 @@ class AuthMiddleware
 
     public static function requireLogin(): void
     {
+        SecurityMiddleware::checkSessionTimeout();
         if (!isLoggedIn()) {
             if (self::isApiRequest()) {
                 header('Content-Type: application/json; charset=utf-8');

@@ -87,7 +87,7 @@ function getStatusOptions() {
         { v: 'In Progress', l: '🔧 Đang xử lý' },
         { v: 'Scheduled',   l: '📅 Lên lịch'   }
     ];
-    if (IS_RECEPT) return [
+    if (window.IS_RECEPT) return [
         { v: 'In Progress', l: '🔧 Đang xử lý' },
         { v: 'Completed',   l: '✅ Hoàn thành' }
     ];
@@ -109,15 +109,18 @@ function buildStatusSelect(selectId, currentValue) {
 
 // ── STATS ─────────────────────────────────────────────────────────
 async function loadStats() {
+    // HLV không có stat panel → skip
+    if (!document.getElementById('statTotal')) return;
     const d = await apiFetch('get_stats');
-    document.getElementById('statTotal').textContent     = d.total       ?? '0';
-    document.getElementById('statHoatDong').textContent  = d.hoat_dong   ?? '0';
-    document.getElementById('statHong').textContent      = d.hong        ?? '0';
-    document.getElementById('statBaoDuong').textContent  = d.bao_duong   ?? '0';
-    document.getElementById('statCanBaoTri').textContent = d.can_bao_tri ?? '0';
+    var setText = (id, val) => { var el = document.getElementById(id); if (el) el.textContent = val; };
+    setText('statTotal',     d.total       ?? '0');
+    setText('statHoatDong',  d.hoat_dong   ?? '0');
+    setText('statHong',      d.hong        ?? '0');
+    setText('statBaoDuong',  d.bao_duong   ?? '0');
+    setText('statCanBaoTri', d.can_bao_tri ?? '0');
     const g = parseFloat(d.tong_gia || 0);
-    document.getElementById('statTongGia').textContent =
-        g >= 1e9 ? (g/1e9).toFixed(1)+'T₫' : g >= 1e6 ? Math.round(g/1e6)+'M₫' : fmtMoney(g);
+    setText('statTongGia',
+        g >= 1e9 ? (g/1e9).toFixed(1)+'T₫' : g >= 1e6 ? Math.round(g/1e6)+'M₫' : fmtMoney(g));
 }
 
 // ── CATEGORIES (EquipmentType) ────────────────────────────────────
@@ -184,7 +187,7 @@ async function loadTrainerRoomDevices(page = 1) {
 
     const params = new URLSearchParams({
         action:     'get_trainer_room_devices',
-        trainer_id: USER_EMP_ID,
+        trainer_id: (window.HLV_EMP_ID || window.USER_EMPLOYEE_ID || window.TRAINER_ID || 0),
         page,
         limit:      LIMIT
     });
@@ -426,7 +429,7 @@ async function openMaintenanceModal(preDevId = null) {
     document.getElementById('fBtNguoi').value    = '';
     document.getElementById('fBtNoiDung').value  = '';
     // Set trạng thái theo role
-    const defaultStatus = IS_RECEPT ? 'In Progress' : 'Scheduled';
+    const defaultStatus = window.IS_RECEPT ? 'In Progress' : 'Scheduled';
     buildStatusSelect('fBtStatus', defaultStatus);
     const d = await apiFetch('get_all_devices_list');
     document.getElementById('fBtDev').innerHTML = '<option value="">-- Chọn thiết bị --</option>'

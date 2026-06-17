@@ -123,6 +123,16 @@ class ScheduleController extends Controller
         try {
             $action = $_POST['action'] ?? $_GET['action'] ?? '';
 
+        // ── Phân quyền HLV: chỉ được assign/unassign trainer ────────────
+        $role = $_SESSION['role'] ?? '';
+        $position = $_SESSION['position'] ?? '';
+        $isHLV = ($role === 'Employee' && $position === 'Personal Trainer');
+        $hlvAllowed = ['assign_trainer', 'unassign_trainer', 'get_week_schedules', 'get_day_schedules', 'get_class_detail', 'get_schedule_detail', 'get_trainers', 'get_rooms'];
+        if ($isHLV && !in_array($action, $hlvAllowed, true)) {
+            echo json_encode(['success' => false, 'message' => 'Bạn không có quyền thực hiện thao tác này.']);
+            exit;
+        }
+
         switch ($action) {
             case 'get_stats':
                 echo json_encode(array_merge(['success' => true], $this->scheduleModel->getAdminStats()));
@@ -768,7 +778,7 @@ class ScheduleController extends Controller
 Tổng kcal: ~{$kcal_total} kcal | Đạt {$pct_achieved}% mục tiêu đốt calo | Lời khuyên: {$advice}";
 
         // ── Groq API ─────────────────────────────────────────────────
-        $groq_api_key = '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';
+        $groq_api_key = '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';
         $groq_url     = 'https://api.groq.com/openai/v1/chat/completions';
         $groq_model   = 'llama-3.1-8b-instant';
 

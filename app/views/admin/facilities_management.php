@@ -6,6 +6,20 @@ $_emp_id     = (int)($_SESSION['employee_id'] ?? 0);
 $is_admin    = ($_role === 'Admin');
 $is_recept   = ($_role === 'Employee' && $_position === 'Receptionist');
 $is_hlv      = ($_role === 'Employee' && $_position === 'Personal Trainer');
+
+// Nếu chưa có employee_id trong session → query DB
+if ($_emp_id === 0 && !empty($_SESSION['account_id']) && ($_is_admin ?? false) !== true) {
+    $_db_tmp = Database::getInstance();
+    $_s_tmp  = $_db_tmp->prepare("SELECT employee_id FROM Employee WHERE account_id = ? LIMIT 1");
+    $_s_tmp->bind_param("i", $_SESSION['account_id']);
+    $_s_tmp->execute();
+    $_r_tmp = $_s_tmp->get_result()->fetch_assoc();
+    $_s_tmp->close();
+    if ($_r_tmp) {
+        $_emp_id = (int)$_r_tmp['employee_id'];
+        $_SESSION['employee_id'] = $_emp_id;
+    }
+}
 // Encode for JS
 $js_role     = json_encode($_role);
 $js_position = json_encode($_position);
@@ -305,9 +319,14 @@ $js_emp_id   = json_encode($_emp_id);
     const USER_ROLE     = <?= $js_role ?>;
     const USER_POSITION = <?= $js_position ?>;
     const USER_EMP_ID   = <?= $js_emp_id ?>;
-    const IS_ADMIN      = <?= $is_admin  ? 'true' : 'false' ?>;
-    const IS_RECEPT     = <?= $is_recept ? 'true' : 'false' ?>;
-    const IS_HLV        = <?= $is_hlv    ? 'true' : 'false' ?>;
+    window.IS_ADMIN     = <?= $is_admin  ? 'true' : 'false' ?>;
+    window.IS_RECEPT    = <?= $is_recept ? 'true' : 'false' ?>;
+    window.IS_HLV       = <?= $is_hlv    ? 'true' : 'false' ?>;
+    window.HLV_EMP_ID   = <?= $_emp_id ?>;
+    // aliases cho code cũ
+    var IS_ADMIN  = window.IS_ADMIN;
+    var IS_RECEPT = window.IS_RECEPT;
+    var IS_HLV    = window.IS_HLV;
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="<?= asset('js/Facilities_Management.js') ?>"></script>

@@ -17,6 +17,13 @@ $admin_name = htmlspecialchars($_SESSION['full_name'] ?? $_SESSION['username'] ?
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous"/>
 <link rel="stylesheet" href="<?= asset('css/System.css') ?>"/>
+<script>
+/* Chống duplicate CSS khi SPA load lại module */
+(function(){
+  var h='<?= asset('css/System.css') ?>';
+  document.querySelectorAll('link[rel="stylesheet"][href="'+h+'"]').forEach(function(el,i){ if(i>0) el.remove(); });
+})();
+</script>
 </head>
 <body>
 
@@ -148,6 +155,14 @@ $admin_name = htmlspecialchars($_SESSION['full_name'] ?? $_SESSION['username'] ?
     } else { fn(); }
   }
 </script>
-<script src="<?= asset('js/System.js') ?>"></script>
+<script>
+/* Xóa script cũ → inject mới để re-execute khi SPA navigate lại */
+(function(){
+  var src='<?= asset('js/System.js') ?>';
+  document.querySelectorAll('script[src="'+src+'"]').forEach(function(el){ el.remove(); });
+  var s=document.createElement('script'); s.src=src;
+  document.body.appendChild(s);
+})();
+</script>
 </body>
 </html>

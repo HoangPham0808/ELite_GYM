@@ -229,6 +229,16 @@
 <!-- TOAST -->
 <div class="toast-container" id="toastContainer"></div>
 
+<script>
+  window.ELITE_BASE = "<?= BASE_URL ?>";
+  if (typeof runWhenReady === 'undefined') {
+    function runWhenReady(fn) {
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', fn);
+      } else { fn(); }
+    }
+  }
+</script>
 <script src="<?= asset('js/Gym_Management.js') ?>"></script>
 </body>
 </html>

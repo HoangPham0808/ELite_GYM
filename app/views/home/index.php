@@ -200,6 +200,18 @@ $type_icon_map = [
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer"/>
 <link rel="stylesheet" href="<?= asset('css/landing.css') ?>"/>
 <link rel="stylesheet" href="<?= asset('css/notification.css') ?>"/>
+<script>
+(function(){
+  // ✅ FIX: Set ELITE_BASE để reviews_section.js và notification_ui.js dùng đúng API route
+  var s = (!!(window.location.protocol==='https:')) ? 'https' : 'http';
+  var h = window.location.hostname;
+  var p = window.location.port ? ':'+window.location.port : '';
+  var pathParts = window.location.pathname.split('/');
+  var pubIdx = pathParts.indexOf('public');
+  var base = pubIdx >= 0 ? pathParts.slice(0, pubIdx+1).join('/') : '';
+  window.ELITE_BASE = s + '://' + h + p + base;
+})();
+</script>
 </head>
 <body>
 

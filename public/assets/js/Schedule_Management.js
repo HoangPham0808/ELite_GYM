@@ -17,6 +17,11 @@
     }
 })();
 
+/* ── USER_EMPLOYEE_ID alias (view dùng TRAINER_ID) ── */
+if (typeof window.USER_EMPLOYEE_ID === 'undefined') {
+    window.USER_EMPLOYEE_ID = (typeof window.TRAINER_ID !== 'undefined') ? window.TRAINER_ID : 0;
+}
+
 /* ── 2. BIẾN TOÀN CỤC CẤU HÌNH LỊCH TRÌNH ── */
 var _schBase = (window.ELITE_BASE && window.ELITE_BASE !== 'undefined')
     ? window.ELITE_BASE
@@ -735,9 +740,25 @@ window.openClassDetail = async function(classId) {
             '<div class="dig-card"><span class="lbl">Thời gian lớp</span><span class="val"><i class="far fa-clock"></i> ' + formatTimeHHMM(cls.start_time) + (cls.end_time ? ' - ' + formatTimeHHMM(cls.end_time) : '') + '</span></div>' +
             '<div class="dig-card"><span class="lbl">Sức chứa phòng</span><span class="val"><i class="fas fa-users"></i> Đã đăng ký ' + currentReg + '/' + maxReg + ' chỗ</span></div>' +
             '</div>' +
-            '<div class="detail-section-heading">' +
+            '</div>';
+
+        // Nút action theo role
+        var _role = (typeof window.USER_ROLE !== 'undefined') ? window.USER_ROLE : 'admin';
+        var _myEmpId = (typeof window.USER_EMPLOYEE_ID !== 'undefined') ? parseInt(window.USER_EMPLOYEE_ID) : 0;
+        var _isMyClass = cls.trainer_id && parseInt(cls.trainer_id) === _myEmpId;
+        var _sectionBtn = '';
+        if (_role === 'trainer') {
+            if (_isMyClass) {
+                _sectionBtn = '<button class="btn-sm" style="background:#ef4444;color:#fff;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:13px;" onclick="window.unassignTrainerSelf(' + cls.class_id + ')"><i class="fas fa-user-minus"></i> Hủy đăng ký dạy</button>';
+            } else {
+                _sectionBtn = '<button class="btn-primary btn-sm" onclick="window.assignTrainerSelf(' + cls.class_id + ')"><i class="fas fa-chalkboard-teacher"></i> Đăng ký dạy buổi này</button>';
+            }
+        } else {
+            _sectionBtn = '<button class="btn-primary btn-sm" onclick="window.openRegistrationModal(' + cls.class_id + ', \'' + pkg + '\')"><i class="fas fa-user-plus"></i> Đăng ký hộ</button>';
+        }
+        html += '<div class="detail-section-heading">' +
             '<span><i class="fas fa-list-ol"></i> Danh sách hội viên tham gia (' + currentReg + ')</span>' +
-            '<button class="btn-primary btn-sm" onclick="window.openRegistrationModal(' + cls.class_id + ', \'' + pkg + '\')"><i class="fas fa-user-plus"></i> Đăng ký hộ</button>' +
+            _sectionBtn +
             '</div>';
 
         if (!members.length) {
@@ -1089,3 +1110,47 @@ window.toast = function(msg, type = 'info') {
 
 // Khởi chạy hệ thống độc lập
 window.initScheduleManagement();
+/* ══ HLV: Tự đăng ký / hủy dạy buổi tập ══════════════════════════ */
+window.assignTrainerSelf = async function(classId) {
+    if (!confirm('Xác nhận đăng ký dạy buổi tập này?')) return;
+    var myId = (typeof window.USER_EMPLOYEE_ID !== 'undefined') ? parseInt(window.USER_EMPLOYEE_ID) : 0;
+    if (!myId) { alert('Không tìm thấy thông tin huấn luyện viên.'); return; }
+    var fd = new FormData();
+    fd.append('action', 'assign_trainer');
+    fd.append('class_id', classId);
+    fd.append('trainer_id', myId);
+    try {
+        var res = await fetch(API_SCHEDULE, { method: 'POST', body: fd, credentials: 'include' });
+        var d = await res.json();
+        if (d.success) {
+            window.closeModal('detailModal');
+            if (typeof window.showToastNotification === 'function')
+                window.showToastNotification('Đã đăng ký dạy buổi tập thành công!', 'success');
+            loadScheduleData();
+        } else {
+            alert(d.message || 'Đăng ký thất bại.');
+        }
+    } catch(e) { alert('Lỗi kết nối.'); }
+};
+
+window.unassignTrainerSelf = async function(classId) {
+    if (!confirm('Xác nhận hủy đăng ký dạy buổi tập này?')) return;
+    var myId = (typeof window.USER_EMPLOYEE_ID !== 'undefined') ? parseInt(window.USER_EMPLOYEE_ID) : 0;
+    if (!myId) { alert('Không tìm thấy thông tin huấn luyện viên.'); return; }
+    var fd = new FormData();
+    fd.append('action', 'unassign_trainer');
+    fd.append('class_id', classId);
+    fd.append('trainer_id', myId);
+    try {
+        var res = await fetch(API_SCHEDULE, { method: 'POST', body: fd, credentials: 'include' });
+        var d = await res.json();
+        if (d.success) {
+            window.closeModal('detailModal');
+            if (typeof window.showToastNotification === 'function')
+                window.showToastNotification('Đã hủy đăng ký dạy buổi tập.', 'info');
+            loadScheduleData();
+        } else {
+            alert(d.message || 'Hủy thất bại.');
+        }
+    } catch(e) { alert('Lỗi kết nối.'); }
+};

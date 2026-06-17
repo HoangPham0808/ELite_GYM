@@ -1,6 +1,7 @@
 <?php
 ob_start();
 ensureSession();
+$db = Database::getInstance();
 // ── Auth guard ────────────────────────────────────────────────
 if (!isset($_SESSION['account_id']) || ($_SESSION['role'] ?? '') !== 'Customer') {
     header("Location: " . url("login"));
@@ -8,7 +9,7 @@ if (!isset($_SESSION['account_id']) || ($_SESSION['role'] ?? '') !== 'Customer')
 }
 
 // ── Lấy logo từ DB (giống index.php) ─────────────────────────
-$logo_row = $conn->query("
+$logo_row = $db->query("
     SELECT file_url FROM landing_images
     WHERE image_name = 'Logo_ELITY'
     LIMIT 1
@@ -20,7 +21,7 @@ $active_tab = $_GET['tab']     ?? 'info';
 $pw_step    = (int)($_GET['pw_step'] ?? 0); // 1 = passwords, 2 = OTP
 
 // ── Customer profile ──────────────────────────────────────────
-$stmt = $conn->prepare("
+$stmt = $db->prepare("
     SELECT c.customer_id, c.full_name, c.date_of_birth, c.gender,
            c.phone, c.email, c.address, c.registered_at, a.username
     FROM Customer c
@@ -36,7 +37,7 @@ if (!$customer) { header("Location: " . url()); exit; }
 $cid = (int)$customer['customer_id'];
 
 // ── Memberships ───────────────────────────────────────────────
-$memberships = $conn->query("
+$memberships = $db->query("
     SELECT mr.registration_id, mr.start_date, mr.end_date, mr.status,
            mp.plan_name, mp.duration_months, mp.price,
            pt.type_name, pt.color_code
@@ -55,7 +56,7 @@ foreach ($memberships as $m) {
 // ── Check-in ──────────────────────────────────────────────────
 // GymCheckIn lưu mỗi lượt checkin/checkout thành 1 row riêng
 // → ghép cặp: mỗi checkin + checkout gần nhất cùng ngày sau đó
-$checkins_raw = $conn->query("
+$checkins_raw = $db->query("
     SELECT
         gin.check_time  AS check_in,
         (SELECT MIN(gout.check_time)
@@ -74,10 +75,10 @@ $checkins_raw = $conn->query("
 
 // Đổi tên key để HTML cũ dùng $ci['check_in'] / $ci['check_out'] vẫn chạy đúng
 $checkins = $checkins_raw;
-$total_checkins = $conn->query("SELECT COUNT(*) AS c FROM GymCheckIn WHERE customer_id=$cid AND type='checkin'")->fetch_assoc()['c'] ?? 0;
+$total_checkins = $db->query("SELECT COUNT(*) AS c FROM GymCheckIn WHERE customer_id=$cid AND type='checkin'")->fetch_assoc()['c'] ?? 0;
 
 // ── Classes ───────────────────────────────────────────────────
-$classes = $conn->query("
+$classes = $db->query("
     SELECT tc.class_name, tc.start_time AS class_time, tc.end_time, e.full_name AS trainer_name
     FROM ClassRegistration cr
     JOIN TrainingClass tc ON tc.class_id = cr.class_id
@@ -86,19 +87,19 @@ $classes = $conn->query("
 ")->fetch_all(MYSQLI_ASSOC);
 
 // ── Reviews ───────────────────────────────────────────────────
-$reviews = $conn->query("
+$reviews = $db->query("
     SELECT content, rating, review_date FROM Review
     WHERE customer_id = $cid ORDER BY review_date DESC
 ")->fetch_all(MYSQLI_ASSOC);
 
 // ── All plans ─────────────────────────────────────────────────
-$all_plans = $conn->query("
+$all_plans = $db->query("
     SELECT plan_id, plan_name, duration_months, price, description
     FROM MembershipPlan ORDER BY price ASC
 ")->fetch_all(MYSQLI_ASSOC);
 
 // ── Invoices ──────────────────────────────────────────────────
-$invoices = $conn->query("
+$invoices = $db->query("
     SELECT i.invoice_id, i.invoice_date, i.final_amount, i.status,
            GROUP_CONCAT(mp.plan_name SEPARATOR ', ') AS plans
     FROM Invoice i
@@ -685,7 +686,15 @@ if ($pw_step === 2 && !empty($_SESSION['chpw_email'])) {
 </div><!-- /.modal-overlay -->
 
 
-<script src="<?= asset('js/Profile.js') ?>"></script>
+<script>
+    <?php
+        $_xs = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $_xh = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        $_xp = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/index.php')), '/');
+    ?>
+    window.ELITE_BASE = '<?php echo $_xs . "://" . $_xh . $_xp; ?>';
+</script>
+<script src="<?= asset('js/Profile_customer.js') ?>"></script>
 <!-- ── QRious — cùng thư viện với hệ thống check-in ── -->
 <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
 <script>

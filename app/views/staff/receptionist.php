@@ -1,6 +1,5 @@
 <?php
 ob_start();
-// Đặt tại: DATN/Internal/Receptionist/Receptionist.php
 $ho_ten        = htmlspecialchars($_SESSION['full_name'] ?? 'Receptionist');
 $ten_dang_nhap = htmlspecialchars($_SESSION['username']  ?? 'receptionist');
 $initials      = mb_strtoupper(mb_substr($ho_ten, 0, 1));
@@ -12,9 +11,23 @@ $initials      = mb_strtoupper(mb_substr($ho_ten, 0, 1));
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Elite Gym - Lễ tân</title>
     <link rel="stylesheet" href="<?= asset('css/Receptionist.css') ?>">
-    <script>window.ELITE_BASE = '<?= BASE_URL ?>';</script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&family=Barlow+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
+    <script>
+        window.ELITE_BASE    = '<?= BASE_URL ?>';
+        window.USER_ROLE     = 'receptionist';
+        window.IS_RECEPT     = true;
+        window.IS_ADMIN      = false;
+        window.IS_HLV        = false;
+
+        function runWhenReady(fn) {
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', fn);
+            } else {
+                fn();
+            }
+        }
+    </script>
 </head>
 <body>
     <div class="app-shell">
@@ -77,7 +90,6 @@ $initials      = mb_strtoupper(mb_substr($ho_ten, 0, 1));
                 </div>
             </nav>
 
-            <!-- User + Logout -->
             <div class="sidebar-footer">
                 <div class="user-info">
                     <div class="user-avatar"><?= $initials ?></div>

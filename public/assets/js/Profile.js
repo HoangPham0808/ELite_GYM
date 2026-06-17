@@ -1,4 +1,14 @@
-var API = '/PHP/ELite_GYM/Internal/Layout/Profile/window.ELITE_BASE + '/api/admin/profile'';
+// Tự tính BASE_URL nếu window.ELITE_BASE chưa được set
+(function () {
+    if (!window.ELITE_BASE) {
+        var path = window.location.pathname;
+        var pub  = path.indexOf('/public');
+        window.ELITE_BASE = pub !== -1
+            ? window.location.origin + path.substring(0, pub + 7)
+            : window.location.origin;
+    }
+})();
+var API = window.ELITE_BASE + '/api/admin/profile';
 
 // ===== CLOCK =====
 function updateClock() {
@@ -22,7 +32,7 @@ function showToast(id, msg, type = 'success') {
 // ===== LOAD PROFILE =====
 async function loadProfile() {
     try {
-        const res = await fetch(`${API}?action=get_profile`);
+        const res = await fetch(`${API}?action=get_profile`, { credentials: 'include' });
         const d   = await res.json();
         if (!d.success) return;
 
@@ -201,7 +211,7 @@ function haversine(lat1, lng1, lat2, lng2) {
 
 async function initGpsCheckin() {
     try {
-        const res  = await fetch(`${API}?action=get_gym_settings`);
+        const res  = await fetch(`${API}?action=get_gym_settings`, { credentials: 'include' });
         const text = await res.text();
         let d;
         try { d = JSON.parse(text); }
@@ -288,7 +298,7 @@ function setGpsIndicator(state, text) {
 
 async function loadTodayStatus() {
     try {
-        const res  = await fetch(`${API}?action=get_today_status`);
+        const res  = await fetch(`${API}?action=get_today_status`, { credentials: 'include' });
         const text = await res.text();
         let d;
         try { d = JSON.parse(text); }
@@ -352,7 +362,7 @@ async function doCheckIn() {
         fd.append('action', 'checkin');
         if (userLat !== null) { fd.append('lat', userLat); fd.append('lng', userLng); }
 
-        const res  = await fetch(API, { method:'POST', body: fd });
+        const res  = await fetch(API, {  method:'POST', body: fd, credentials: 'include' });
         const text = await res.text();
         let d;
         try { d = JSON.parse(text); }
@@ -387,7 +397,7 @@ async function doCheckOut() {
         fd.append('action', 'checkout');
         if (userLat !== null) { fd.append('lat', userLat); fd.append('lng', userLng); }
 
-        const res  = await fetch(API, { method:'POST', body: fd });
+        const res  = await fetch(API, {  method:'POST', body: fd, credentials: 'include' });
         const text = await res.text();
         let d;
         try { d = JSON.parse(text); }
@@ -413,7 +423,7 @@ async function loadGpsHistory() {
     const list = document.getElementById('gpsHistoryList');
     if (!list) return;
     try {
-        const res  = await fetch(`${API}?action=get_history&limit=7`);
+        const res  = await fetch(`${API}?action=get_history&limit=7`, { credentials: 'include' });
         const text = await res.text();
         let d;
         try { d = JSON.parse(text); }
@@ -465,7 +475,7 @@ function showGpsToast(type, msg) {
 // ════════════════════════════════════════
 async function loadPayroll() {
     try {
-        const res  = await fetch(`${API}?action=get_payroll&limit=6`);
+        const res  = await fetch(`${API}?action=get_payroll&limit=6`, { credentials: 'include' });
         const data = await res.json();
         const wrap = document.getElementById('payrollContent');
         if (!wrap) return;
@@ -547,12 +557,14 @@ async function loadPayroll() {
 // ════════════════════════════════════════
 // INIT
 // ════════════════════════════════════════
-runWhenReady( () => {
+function profileInit() {
     loadProfile();
     initGpsCheckin();
     loadPayroll();
 
-    document.getElementById('inp_newpw').addEventListener('input', function() {
+    const newpwEl = document.getElementById('inp_newpw');
+    if (!newpwEl) return;
+    newpwEl.addEventListener('input', function() {
         const val  = this.value;
         const wrap = document.getElementById('pwStrengthWrap');
         const fill = document.getElementById('pwStrengthFill');
@@ -578,4 +590,11 @@ runWhenReady( () => {
         text.textContent      = lv.label;
         text.style.color      = lv.color;
     });
-});
+}
+
+// Chạy ngay nếu DOM đã ready (script được inject động), hoặc đợi DOMContentLoaded
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', profileInit);
+} else {
+    profileInit();
+}

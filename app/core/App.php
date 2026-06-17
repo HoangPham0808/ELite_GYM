@@ -14,6 +14,7 @@ class App
         require_once APP_PATH . '/config/config.php';
         require_once APP_PATH . '/core/Database.php';
         require_once APP_PATH . '/helpers/session_helper.php';
+        require_once APP_PATH . '/core/SecurityMiddleware.php';
         require_once APP_PATH . '/helpers/format_helper.php';
         require_once APP_PATH . '/helpers/upload_helper.php';
         require_once APP_PATH . '/helpers/qr_helper.php';
@@ -23,6 +24,7 @@ class App
         require_once APP_PATH . '/core/Router.php';
 
         ensureSession();
+        SecurityMiddleware::setSecurityHeaders();
         ensureUploadDirs();
 
         spl_autoload_register(function (string $class) {

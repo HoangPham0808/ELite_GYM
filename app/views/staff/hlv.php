@@ -1,9 +1,22 @@
 <?php
 ob_start();
-// Đặt tại: DATN/Internal/Staff/HLV/HLV.php
+// Đặt tại: app/views/staff/hlv.php
+
 $ho_ten        = htmlspecialchars($_SESSION['full_name'] ?? 'Huấn luyện viên');
 $ten_dang_nhap = htmlspecialchars($_SESSION['username']  ?? 'hlv');
 $initials      = mb_strtoupper(mb_substr($ho_ten, 0, 1));
+
+// Lấy employee_id nếu chưa có trong session
+if (empty($_SESSION['employee_id']) && !empty($_SESSION['account_id'])) {
+    $db  = Database::getInstance();
+    $s   = $db->prepare("SELECT employee_id FROM Employee WHERE account_id = ? LIMIT 1");
+    $s->bind_param("i", $_SESSION['account_id']);
+    $s->execute();
+    $row = $s->get_result()->fetch_assoc();
+    $s->close();
+    $_SESSION['employee_id'] = (int)($row['employee_id'] ?? 0);
+}
+$emp_id = (int)($_SESSION['employee_id'] ?? 0);
 ?>
 <!DOCTYPE html>
 <html lang="vi">
@@ -12,9 +25,22 @@ $initials      = mb_strtoupper(mb_substr($ho_ten, 0, 1));
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Elite Gym - Huấn luyện viên</title>
     <link rel="stylesheet" href="<?= asset('css/HLV.css') ?>">
-    <script>window.ELITE_BASE = '<?= BASE_URL ?>';</script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&family=Barlow+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
+    <script>
+        window.ELITE_BASE       = '<?= BASE_URL ?>';
+        window.USER_ROLE        = 'trainer';
+        window.USER_EMPLOYEE_ID = <?= $emp_id ?>;
+        window.TRAINER_ID       = <?= $emp_id ?>;
+
+        function runWhenReady(fn) {
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', fn);
+            } else {
+                fn();
+            }
+        }
+    </script>
 </head>
 <body>
     <div class="app-shell">
@@ -65,7 +91,6 @@ $initials      = mb_strtoupper(mb_substr($ho_ten, 0, 1));
                 </div>
             </nav>
 
-            <!-- User + Logout -->
             <div class="sidebar-footer">
                 <div class="user-info">
                     <div class="user-avatar"><?= $initials ?></div>

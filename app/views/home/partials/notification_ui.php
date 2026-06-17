@@ -28,8 +28,9 @@ if (!$is_customer || !$cid) return;
   'use strict';
 
   const CID         = <?= (int)$cid ?>;
-  const AUTO_URL    = '<?= url('api/notification/auto') ?>?customer_id=' + CID;
-  const HANDLER_URL = '<?= url('api/notification') ?>';
+  // ✅ FIX: đổi sang MVC API route
+  const AUTO_URL    = (window.ELITE_BASE || '') + '/api/notification/auto?customer_id=' + CID;
+  const HANDLER_URL = (window.ELITE_BASE || '') + '/api/notification';
   const POLL_MS     = 5 * 60 * 1000;
 
   /* Toast cache reset mỗi ngày → không spam toast khi reload */

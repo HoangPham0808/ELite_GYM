@@ -59,6 +59,6 @@ $router->any('/api/admin/qr/bridge', 'QRController@bridge');
 $router->get('/qr-scanner', 'QRController@scanner');
 
 // Webhook thanh toán
-$router->post('/webhook/payment', 'PaymentController@webhook');
+$router->any('/webhook/payment', 'PaymentController@webhook'); // ✅ FIX: post() có thể chưa match đúng → dùng any() để đảm bảo nhận POST từ SePay
 
 return $router;

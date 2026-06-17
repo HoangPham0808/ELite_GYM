@@ -34,7 +34,53 @@ document.addEventListener('DOMContentLoaded', () => {
   renderReportCards('all');
   setDefaultDates();
   initModalClose();
+  _registerStatisticsCleanup();
 });
+
+/**
+ * Đóng tất cả overlay/panel khi SPA navigate khỏi module thống kê.
+ * Dùng MutationObserver theo dõi khi root element bị remove khỏi DOM.
+ */
+function _registerStatisticsCleanup() {
+  function closeAll() {
+    // Đóng view panel
+    const vp = document.getElementById('viewPanel');
+    if (vp) vp.classList.remove('open');
+
+    // Đóng export modal
+    const em = document.getElementById('exportModal');
+    if (em) em.classList.remove('open');
+
+    // Đóng toast
+    const t = document.getElementById('toast');
+    if (t) t.classList.remove('show');
+  }
+
+  // Observe khi root element của module bị detach khỏi DOM
+  const root = document.querySelector('.wrapper.mod-statistics') ||
+               document.querySelector('[data-module="statistics"]') ||
+               document.getElementById('viewPanel')?.closest('.wrapper');
+
+  if (!root) return;
+
+  const observer = new MutationObserver(function() {
+    if (!document.body.contains(root)) {
+      closeAll();
+      observer.disconnect();
+    }
+  });
+
+  observer.observe(document.body, { childList: true, subtree: true });
+
+  // Backup: hashchange event (SPA navigation)
+  window.addEventListener('hashchange', function onHashChange() {
+    const hash = window.location.hash;
+    if (!hash.includes('statistics') && !hash.includes('management_statistics')) {
+      closeAll();
+      window.removeEventListener('hashchange', onHashChange);
+    }
+  });
+}
 
 /* ══════════════════════════════════════════
    BAR CHART — tải dữ liệu thực từ API
@@ -419,6 +465,18 @@ function initModalClose() {
   if (overlay) overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
   const viewOverlay = document.getElementById('viewPanel');
   if (viewOverlay) viewOverlay.addEventListener('click', e => { if (e.target === viewOverlay) closeViewPanel(); });
+
+  // Escape key closes any open overlay
+  document.addEventListener('keydown', function _escHandler(e) {
+    if (e.key === 'Escape') {
+      closeModal();
+      closeViewPanel();
+    }
+    // Remove listener if module root is gone
+    if (!document.getElementById('exportModal')) {
+      document.removeEventListener('keydown', _escHandler);
+    }
+  });
 }
 
 function todayStr() { return new Date().toISOString().slice(0,10); }

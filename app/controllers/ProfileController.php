@@ -22,7 +22,7 @@ class ProfileController extends Controller
     public function api(): void
     {
         AuthMiddleware::requireRole('Customer');
-        $this->ensureSession();
+        ensureSession();
 
         $account_id = (int)($_SESSION['account_id'] ?? 0);
         if (!$account_id) {
@@ -32,7 +32,7 @@ class ProfileController extends Controller
 
         $cid = $this->customerModel->findIdByAccount($account_id);
         if (!$cid) {
-            header("Location: Profile.php?error=not_found");
+            header("Location: " . url('profile') . "?error=not_found");
             exit;
         }
 
@@ -41,7 +41,7 @@ class ProfileController extends Controller
         $email_to = $cusDetail['customer']['email'] ?? '';
 
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            header("Location: Profile.php");
+            header("Location: " . url('profile') . "");
             exit;
         }
 
@@ -57,11 +57,11 @@ class ProfileController extends Controller
             $address   = trim($_POST['address']       ?? '');
 
             if (empty($full_name)) {
-                header("Location: Profile.php?tab=info&error=empty_name");
+                header("Location: " . url('profile') . "?tab=info&error=empty_name");
                 exit;
             }
             if (!empty($email) && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                header("Location: Profile.php?tab=info&error=invalid_email");
+                header("Location: " . url('profile') . "?tab=info&error=invalid_email");
                 exit;
             }
 
@@ -75,9 +75,9 @@ class ProfileController extends Controller
 
             if ($ok) {
                 $_SESSION['full_name'] = $full_name;
-                header("Location: Profile.php?tab=info&success=info_updated");
+                header("Location: " . url('profile') . "?tab=info&success=info_updated");
             } else {
-                header("Location: Profile.php?tab=info&error=db_error");
+                header("Location: " . url('profile') . "?tab=info&error=db_error");
             }
             exit;
         }
@@ -89,15 +89,15 @@ class ProfileController extends Controller
             $conf_pw = $_POST['confirm_password'] ?? '';
 
             if (empty($old_pw) || empty($new_pw) || empty($conf_pw)) {
-                header("Location: Profile.php?tab=info&pw_step=1&error=empty_fields");
+                header("Location: " . url('profile') . "?tab=info&pw_step=1&error=empty_fields");
                 exit;
             }
             if (strlen($new_pw) < 6) {
-                header("Location: Profile.php?tab=info&pw_step=1&error=weak_password");
+                header("Location: " . url('profile') . "?tab=info&pw_step=1&error=weak_password");
                 exit;
             }
             if ($new_pw !== $conf_pw) {
-                header("Location: Profile.php?tab=info&pw_step=1&error=password_mismatch");
+                header("Location: " . url('profile') . "?tab=info&pw_step=1&error=password_mismatch");
                 exit;
             }
 
@@ -106,7 +106,7 @@ class ProfileController extends Controller
             $acc = $accInfo['account'] ?? null;
 
             if (!$acc) {
-                header("Location: Profile.php?tab=info&pw_step=1&error=db_error");
+                header("Location: " . url('profile') . "?tab=info&pw_step=1&error=db_error");
                 exit;
             }
 
@@ -115,12 +115,12 @@ class ProfileController extends Controller
                 : hash_equals($acc['password'], $old_pw);
 
             if (!$pw_ok) {
-                header("Location: Profile.php?tab=info&pw_step=1&error=wrong_old_password");
+                header("Location: " . url('profile') . "?tab=info&pw_step=1&error=wrong_old_password");
                 exit;
             }
 
             if (empty($email_to)) {
-                header("Location: Profile.php?tab=info&pw_step=1&error=no_email");
+                header("Location: " . url('profile') . "?tab=info&pw_step=1&error=no_email");
                 exit;
             }
 
@@ -134,18 +134,18 @@ class ProfileController extends Controller
             $_SESSION['chpw_email']        = $email_to;
 
             if (!$this->sendChangePasswordOtp($email_to, $otp)) {
-                header("Location: Profile.php?tab=info&pw_step=1&error=send_fail");
+                header("Location: " . url('profile') . "?tab=info&pw_step=1&error=send_fail");
                 exit;
             }
 
-            header("Location: Profile.php?tab=info&pw_step=2&success=otp_sent");
+            header("Location: " . url('profile') . "?tab=info&pw_step=2&success=otp_sent");
             exit;
         }
 
         // 3. RESEND OTP
         if ($action === 'resend_change_pw_otp') {
             if (empty($_SESSION['chpw_account_id']) || empty($_SESSION['chpw_email'])) {
-                header("Location: Profile.php?tab=info");
+                header("Location: " . url('profile') . "?tab=info");
                 exit;
             }
 
@@ -155,32 +155,32 @@ class ProfileController extends Controller
             $_SESSION['chpw_otp_expiry'] = $expiry;
 
             if (!$this->sendChangePasswordOtp($_SESSION['chpw_email'], $otp)) {
-                header("Location: Profile.php?tab=info&pw_step=2&error=send_fail");
+                header("Location: " . url('profile') . "?tab=info&pw_step=2&error=send_fail");
                 exit;
             }
-            header("Location: Profile.php?tab=info&pw_step=2&success=otp_sent");
+            header("Location: " . url('profile') . "?tab=info&pw_step=2&success=otp_sent");
             exit;
         }
 
         // 4. VERIFY OTP & SAVE PASSWORD
         if ($action === 'verify_change_pw_otp') {
             if (empty($_SESSION['chpw_account_id'])) {
-                header("Location: Profile.php?tab=info");
+                header("Location: " . url('profile') . "?tab=info");
                 exit;
             }
 
             $otp_input = trim($_POST['otp_full'] ?? '');
 
             if (strlen($otp_input) !== 6 || !ctype_digit($otp_input)) {
-                header("Location: Profile.php?tab=info&pw_step=2&error=invalid_otp");
+                header("Location: " . url('profile') . "?tab=info&pw_step=2&error=invalid_otp");
                 exit;
             }
             if (time() > ($_SESSION['chpw_otp_expiry'] ?? 0)) {
-                header("Location: Profile.php?tab=info&pw_step=2&error=otp_expired");
+                header("Location: " . url('profile') . "?tab=info&pw_step=2&error=otp_expired");
                 exit;
             }
             if (!hash_equals($_SESSION['chpw_otp'], $otp_input)) {
-                header("Location: Profile.php?tab=info&pw_step=2&error=invalid_otp");
+                header("Location: " . url('profile') . "?tab=info&pw_step=2&error=invalid_otp");
                 exit;
             }
 
@@ -194,29 +194,33 @@ class ProfileController extends Controller
                 $_SESSION['chpw_account_id'], $_SESSION['chpw_new_password'], $_SESSION['chpw_email']
             );
 
-            header($ok
-                ? "Location: Profile.php?tab=info&success=password_changed"
-                : "Location: Profile.php?tab=info&error=db_error"
-            );
+            header("Location: " . url('profile') . ($ok
+                ? "?tab=info&success=password_changed"
+                : "?tab=info&error=db_error"
+            ));
             exit;
         }
 
-        header("Location: Profile.php");
+        header("Location: " . url('profile') . "");
         exit;
     }
 
     // API dành cho Nhân viên/Admin (Employee/Admin) - Cung cấp AJAX profile, GPS checkin và Payroll
     public function apiAdmin(): void
     {
+        ob_start();
         AuthMiddleware::requireRole(['Admin', 'Employee']);
-        $this->ensureSession();
+        ensureSession();
         header('Content-Type: application/json; charset=utf-8');
 
         $acc_id = (int)($_SESSION['account_id'] ?? 0);
         if (!$acc_id) {
+            ob_end_clean();
             echo json_encode(['ok' => false, 'success' => false, 'msg' => 'Chưa đăng nhập']);
             exit;
         }
+
+        $db = Database::getInstance();
 
         $action = trim($_GET['action'] ?? '');
         $body = [];
@@ -226,9 +230,11 @@ class ProfileController extends Controller
             $action = trim($body['action'] ?? $_POST['action'] ?? '');
         }
 
+        ob_end_clean();
+
         switch ($action) {
             case 'get_profile':
-                $st = $this->accountModel->db->prepare("SELECT employee_id, full_name, date_of_birth, gender, phone, email, address, hire_date, position FROM Employee WHERE account_id=? LIMIT 1");
+                $st = $db->prepare("SELECT employee_id, full_name, date_of_birth, gender, phone, email, address, hire_date, position FROM Employee WHERE account_id=? LIMIT 1");
                 $st->bind_param('i', $acc_id);
                 $st->execute();
                 $row = $st->get_result()->fetch_assoc();
@@ -252,13 +258,13 @@ class ProfileController extends Controller
                 $gen = in_array($body['gender'] ?? '', ['Male', 'Female', 'Other']) ? $body['gender'] : null;
                 $adr = trim($body['address'] ?? '');
 
-                $st  = $this->accountModel->db->prepare("UPDATE Employee SET full_name=?, phone=?, email=?, date_of_birth=?, gender=?, address=? WHERE account_id=?");
+                $st  = $db->prepare("UPDATE Employee SET full_name=?, phone=?, email=?, date_of_birth=?, gender=?, address=? WHERE account_id=?");
                 $st->bind_param('ssssssi', $fn, $ph, $em, $dob, $gen, $adr, $acc_id);
                 if ($st->execute()) {
                     $_SESSION['ho_ten'] = $_SESSION['full_name'] = $fn;
                     echo json_encode(['success' => true, 'message' => 'Cập nhật thành công']);
                 } else {
-                    echo json_encode(['success' => false, 'message' => 'Lỗi: ' . $this->accountModel->db->error]);
+                    echo json_encode(['success' => false, 'message' => 'Lỗi: ' . $db->error]);
                 }
                 $st->close();
                 break;
@@ -270,7 +276,7 @@ class ProfileController extends Controller
                     echo json_encode(['success' => false, 'message' => 'Mật khẩu mới phải có ít nhất 6 ký tự']);
                     exit;
                 }
-                $st  = $this->accountModel->db->prepare("SELECT password FROM Account WHERE account_id=? LIMIT 1");
+                $st  = $db->prepare("SELECT password FROM Account WHERE account_id=? LIMIT 1");
                 $st->bind_param('i', $acc_id);
                 $st->execute();
                 $row = $st->get_result()->fetch_assoc();
@@ -284,7 +290,7 @@ class ProfileController extends Controller
                     exit;
                 }
                 $h   = password_hash($npw, PASSWORD_DEFAULT);
-                $st2 = $this->accountModel->db->prepare("UPDATE Account SET password=? WHERE account_id=?");
+                $st2 = $db->prepare("UPDATE Account SET password=? WHERE account_id=?");
                 $st2->bind_param('si', $h, $acc_id);
                 if ($st2->execute()) {
                     echo json_encode(['success' => true, 'message' => 'Đổi mật khẩu thành công']);
@@ -295,7 +301,7 @@ class ProfileController extends Controller
                 break;
 
             case 'get_gym_settings':
-                $res = $this->accountModel->db->query("SELECT setting_key, setting_value FROM gym_settings");
+                $res = $db->query("SELECT setting_key, setting_value FROM gym_settings");
                 $cfg = [];
                 if ($res) {
                     while ($r = $res->fetch_assoc()) {
@@ -319,7 +325,7 @@ class ProfileController extends Controller
                     exit;
                 }
                 $today = date('Y-m-d');
-                $st  = $this->accountModel->db->prepare("SELECT status, check_in, check_out FROM Attendance WHERE employee_id=? AND work_date=? LIMIT 1");
+                $st  = $db->prepare("SELECT status, check_in, check_out FROM Attendance WHERE employee_id=? AND work_date=? LIMIT 1");
                 $st->bind_param('is', $eid, $today);
                 $st->execute();
                 $rec = $st->get_result()->fetch_assoc();
@@ -334,7 +340,7 @@ class ProfileController extends Controller
                     exit;
                 }
                 $today = date('Y-m-d');
-                $st  = $this->accountModel->db->prepare("SELECT attendance_id, check_in FROM Attendance WHERE employee_id=? AND work_date=? LIMIT 1");
+                $st  = $db->prepare("SELECT attendance_id, check_in FROM Attendance WHERE employee_id=? AND work_date=? LIMIT 1");
                 $st->bind_param('is', $eid, $today);
                 $st->execute();
                 $ex  = $st->get_result()->fetch_assoc();
@@ -353,12 +359,12 @@ class ProfileController extends Controller
                 $this->ensureGpsColumns();
 
                 if ($ex) {
-                    $s = $this->accountModel->db->prepare("UPDATE Attendance SET check_in=?, status=?, checkin_lat=?, checkin_lng=? WHERE attendance_id=?");
+                    $s = $db->prepare("UPDATE Attendance SET check_in=?, status=?, checkin_lat=?, checkin_lng=? WHERE attendance_id=?");
                     $s->bind_param('ssddi', $now, $status, $lat, $lng, $ex['attendance_id']);
                     $s->execute();
                     $s->close();
                 } else {
-                    $s = $this->accountModel->db->prepare("INSERT INTO Attendance (employee_id, work_date, check_in, status, checkin_lat, checkin_lng) VALUES (?, ?, ?, ?, ?, ?)");
+                    $s = $db->prepare("INSERT INTO Attendance (employee_id, work_date, check_in, status, checkin_lat, checkin_lng) VALUES (?, ?, ?, ?, ?, ?)");
                     $s->bind_param('isssdd', $eid, $today, $now, $status, $lat, $lng);
                     $s->execute();
                     $s->close();
@@ -373,7 +379,7 @@ class ProfileController extends Controller
                     exit;
                 }
                 $today = date('Y-m-d');
-                $st  = $this->accountModel->db->prepare("SELECT attendance_id, check_in, check_out FROM Attendance WHERE employee_id=? AND work_date=? LIMIT 1");
+                $st  = $db->prepare("SELECT attendance_id, check_in, check_out FROM Attendance WHERE employee_id=? AND work_date=? LIMIT 1");
                 $st->bind_param('is', $eid, $today);
                 $st->execute();
                 $rec = $st->get_result()->fetch_assoc();
@@ -400,7 +406,7 @@ class ProfileController extends Controller
                 // Đảm bảo cột GPS tồn tại
                 $this->ensureGpsColumns();
 
-                $s = $this->accountModel->db->prepare("UPDATE Attendance SET check_out=?, checkout_lat=?, checkout_lng=? WHERE attendance_id=?");
+                $s = $db->prepare("UPDATE Attendance SET check_out=?, checkout_lat=?, checkout_lng=? WHERE attendance_id=?");
                 $s->bind_param('sddi', $now, $lat, $lng, $rec['attendance_id']);
                 $s->execute();
                 $s->close();
@@ -414,7 +420,7 @@ class ProfileController extends Controller
                     exit;
                 }
                 $limit = max(1, min(30, intval($_GET['limit'] ?? 7)));
-                $st    = $this->accountModel->db->prepare("SELECT work_date, check_in, check_out, status FROM Attendance WHERE employee_id=? ORDER BY work_date DESC LIMIT ?");
+                $st    = $db->prepare("SELECT work_date, check_in, check_out, status FROM Attendance WHERE employee_id=? ORDER BY work_date DESC LIMIT ?");
                 $st->bind_param('ii', $eid, $limit);
                 $st->execute();
                 $rows  = $st->get_result()->fetch_all(MYSQLI_ASSOC);
@@ -429,7 +435,7 @@ class ProfileController extends Controller
                     exit;
                 }
                 $limit = max(1, min(12, intval($_GET['limit'] ?? 6)));
-                $st = $this->accountModel->db->prepare("
+                $st = $db->prepare("
                     SELECT p.month, p.year, p.base_salary, p.allowance, p.bonus,
                            p.deduction, p.net_salary,
                            e.monthly_salary
@@ -453,7 +459,8 @@ class ProfileController extends Controller
 
     private function getEid(int $aid): ?int
     {
-        $st = $this->accountModel->db->prepare("SELECT employee_id FROM Employee WHERE account_id=? LIMIT 1");
+        $db = Database::getInstance();
+        $st = $db->prepare("SELECT employee_id FROM Employee WHERE account_id=? LIMIT 1");
         $st->bind_param('i', $aid);
         $st->execute();
         $r  = $st->get_result()->fetch_assoc();
@@ -463,8 +470,9 @@ class ProfileController extends Controller
 
     private function ensureGpsColumns(): void
     {
+        $db = Database::getInstance();
         $gps_cols = ['checkin_lat', 'checkin_lng', 'checkout_lat', 'checkout_lng'];
-        $exist_res = $this->accountModel->db->query("SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='datn' AND TABLE_NAME='Attendance'");
+        $exist_res = $db->query("SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='datn' AND TABLE_NAME='Attendance'");
         $exist_cols = [];
         if ($exist_res) {
             while ($ec = $exist_res->fetch_assoc()) {
@@ -473,7 +481,7 @@ class ProfileController extends Controller
         }
         foreach ($gps_cols as $gc) {
             if (!in_array($gc, $exist_cols)) {
-                $this->accountModel->db->query("ALTER TABLE Attendance ADD COLUMN `$gc` DOUBLE NULL");
+                $db->query("ALTER TABLE Attendance ADD COLUMN `$gc` DOUBLE NULL");
             }
         }
     }

@@ -1,28 +1,13 @@
 // Admin SPA routing — MVC public/
-// Tự tính ELITE_BASE từ location nếu dashboard.php chưa set
-if (!window.ELITE_BASE || window.ELITE_BASE === 'undefined' || window.ELITE_BASE === '') {
-    // URL admin: http://localhost/PHP/ELite_GYM/public/admin
-    // Cần:       http://localhost/PHP/ELite_GYM/public
-    window.ELITE_BASE = window.location.origin
-        + window.location.pathname.replace(/\/admin.*$/, '');
-}
-const ELITE_BASE = window.ELITE_BASE;
+const ELITE_BASE = window.ELITE_BASE || '';
 
 // Global error logging to aid debugging in development
 window.addEventListener('error', event => {
     try { console.error('Uncaught error:', event.error || event.message, event); } catch (e) {}
-    // Chỉ hiện toast nếu lỗi từ code của mình (không phải extension/CDN)
-    const src = event.filename || '';
-    const isOwnCode = src.includes('/PHP/ELite_GYM/') || src === '';
-    if (isOwnCode && typeof showToast === 'function') {
-        showToast('Lỗi nội bộ - kiểm tra console', 'error');
-    }
+    if (typeof showToast === 'function') showToast('Lỗi nội bộ - kiểm tra console', 'error');
 });
 window.addEventListener('unhandledrejection', event => {
-    const reason = event.reason;
-    try { console.error('Unhandled promise rejection:', reason); } catch (e) {}
-    // Bỏ qua lỗi fetch bị cancel hoặc network nhỏ
-    if (reason && (reason.name === 'AbortError' || reason.message === 'Failed to fetch')) return;
+    try { console.error('Unhandled promise rejection:', event.reason); } catch (e) {}
     if (typeof showToast === 'function') showToast('Lỗi bất ngờ - kiểm tra console', 'error');
 });
 
@@ -99,40 +84,20 @@ function resolveAssetJs(src) {
 function injectModuleHtml(html) {
     const doc = new DOMParser().parseFromString(html, 'text/html');
 
-    // Load stylesheet links and preconnect hints from module fragments.
-    doc.querySelectorAll('link[rel="stylesheet"], link[rel="preconnect"], link[rel="preload"]').forEach(link => {
-        const rel = link.getAttribute('rel');
-        const href = link.getAttribute('href');
-        if (!href) return;
+    // ✅ FIX: Xóa CSS của module cũ trước khi inject module mới.
+    // Nếu không xóa, CSS tích lũy từ tất cả module đã từng mở
+    // và đè lên nhau gây sai style (màu nút, border, layout...).
+    document.querySelectorAll('link[data-module-href]').forEach(el => el.remove());
 
-        if (rel === 'stylesheet') {
-            const resolved = resolveAssetCss(href);
-            if (!resolved || resolved.includes('font-awesome')) return;
-            if (document.querySelector(`link[data-module-href="${resolved}"]`)) return;
-            const l = document.createElement('link');
-            l.rel = 'stylesheet';
-            l.href = resolved;
-            l.dataset.moduleHref = resolved;
-            document.head.appendChild(l);
-            return;
-        }
-
-        if (rel === 'preconnect' || rel === 'preload') {
-            if (document.querySelector(`link[rel="${rel}"][href="${href}"]`)) return;
-            const l = document.createElement('link');
-            l.rel = rel;
-            l.href = href;
-            if (link.hasAttribute('crossorigin')) {
-                l.crossOrigin = link.crossOrigin;
-            }
-            document.head.appendChild(l);
-        }
-    });
-
-    doc.querySelectorAll('style').forEach(style => {
-        const s = document.createElement('style');
-        s.textContent = style.textContent;
-        document.head.appendChild(s);
+    doc.querySelectorAll('link[rel="stylesheet"]').forEach(link => {
+        const href = resolveAssetCss(link.getAttribute('href'));
+        if (!href || href.includes('font-awesome')) return;
+        if (document.querySelector(`link[data-module-href="${href}"]`)) return;
+        const l = document.createElement('link');
+        l.rel = 'stylesheet';
+        l.href = href;
+        l.dataset.moduleHref = href;
+        document.head.appendChild(l);
     });
 
     contentWrapper.innerHTML = doc.body ? doc.body.innerHTML : html;
@@ -157,13 +122,28 @@ async function runModuleScript(src, inlineCode) {
     const url = resolveAssetJs(src);
     if (isCdnScript(url)) {
         if (_cdnScriptsLoaded.has(url)) return;
-        await new Promise(resolve => {
+        // ✅ FIX: CSP chặn script-src từ CDN (cdn.jsdelivr.net, cdnjs...).
+        // Giải pháp: fetch nội dung script về, inject dưới dạng inline.
+        // CSP có 'unsafe-inline' nên inline script được phép.
+        try {
+            const res = await fetch(url);
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const code = await res.text();
             const s = document.createElement('script');
-            s.src = url;
-            s.onload = () => { _cdnScriptsLoaded.add(url); resolve(); };
-            s.onerror = resolve;
+            s.textContent = code;
             document.body.appendChild(s);
-        });
+            _cdnScriptsLoaded.add(url);
+        } catch(e) {
+            console.warn('[adm] CDN script failed, trying src fallback:', url, e);
+            // Fallback: thử load bằng src bình thường (hoạt động nếu không có CSP)
+            await new Promise(resolve => {
+                const s = document.createElement('script');
+                s.src = url;
+                s.onload = () => { _cdnScriptsLoaded.add(url); resolve(); };
+                s.onerror = resolve;
+                document.body.appendChild(s);
+            });
+        }
         return;
     }
     await new Promise((resolve, reject) => {
@@ -203,7 +183,7 @@ updateClock();
 
 async function loadCustomerBadge() {
     try {
-        const res = await fetch(apiRoutes.customer + '?action=get_stats', { credentials: 'include' });
+        const res = await fetch(apiRoutes.customer + '?action=get_stats');
         const d = await res.json();
         if (!d.success) return;
         const badge = document.getElementById('customerBadge');
@@ -243,7 +223,7 @@ async function loadPage(page) {
 
     contentWrapper.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Đang tải...</div>';
     try {
-        const res = await fetch(url, { credentials: 'include' });
+        const res = await fetch(url);
         const html = await res.text();
         injectModuleHtml(html);
         updateTopbar(page);

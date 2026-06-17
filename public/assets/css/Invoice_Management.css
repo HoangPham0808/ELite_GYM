@@ -1024,20 +1024,21 @@ select.form-control option { background: #fff; color: var(--tp); }
 
 /* Print invoice styles */
 @media print {
-    /* Ẩn hoàn toàn (display:none) mọi thứ — không chiếm không gian,
-       tránh trình duyệt tính nhiều trang rồi in lặp lại fixed element */
+    /* Khi dùng window.open() để in, body chỉ chứa nội dung hóa đơn */
     body > *:not(#printInvoiceArea) { display: none !important; }
     .modal-overlay, .toast-container { display: none !important; }
 
     #printInvoiceArea {
         display: block !important;
         position: static !important;
-        width: 100%; margin: 0; padding: 32px 40px;
+        width: 100%; margin: 0; padding: 0;
         background: #fff; color: #111;
         font-family: 'Barlow', sans-serif;
         font-size: 14px;
         box-sizing: border-box;
     }
+
+    @page { margin: 16mm 14mm; }
 }
 
 /* Invoice print template */

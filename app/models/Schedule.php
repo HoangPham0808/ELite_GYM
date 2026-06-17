@@ -251,19 +251,17 @@ class Schedule extends Model
         $usernameExpr = $accCol ? "COALESCE(a.username, '')" : "''";
         $phoneAlias  = ($phoneCol !== 'NULL') ? "c.{$phoneCol} AS phone" : "NULL AS phone";
 
+        // Only fetch customer info - no membership JOIN to avoid duplicate rows
         $sql2 = "SELECT
                 cr.class_registration_id,
                 c.customer_id,
                 c.full_name,
                 {$usernameExpr} AS username,
                 {$phoneAlias},
-                mp.plan_name AS package_name,
                 {$regTimeCol} AS registration_time
             FROM ClassRegistration cr
             JOIN Customer c ON c.customer_id = cr.customer_id
             {$accountJoin}
-            LEFT JOIN MembershipRegistration mr ON mr.customer_id = c.customer_id AND mr.status = 'active' AND mr.end_date >= CURDATE()
-            LEFT JOIN MembershipPlan mp ON mp.plan_id = mr.plan_id
             WHERE cr.class_id = ?
             ORDER BY cr.class_registration_id ASC";
 
@@ -503,12 +501,15 @@ class Schedule extends Model
         $regTimeCol = $this->getRegTimeColumn();
         $insertCol  = ($regTimeCol === 'NULL') ? '' : ", {$regTimeCol}";
         $insertVal  = ($regTimeCol === 'NULL') ? '' : ', NOW()';
-        $stmt = $this->prepareStmt("INSERT INTO ClassRegistration (class_id, customer_id{$insertCol}) VALUES (?, ?{$insertVal})");
+        // INSERT IGNORE prevents duplicate even under race conditions
+        $stmt = $this->prepareStmt("INSERT IGNORE INTO ClassRegistration (class_id, customer_id{$insertCol}) VALUES (?, ?{$insertVal})");
         if (!$stmt) return false;
         $stmt->bind_param('ii', $class_id, $customer_id);
         $ok = $stmt->execute();
+        // affected_rows = 0 means duplicate was silently ignored
+        $inserted = $this->db->affected_rows > 0;
         $stmt->close();
-        return $ok;
+        return $inserted;
     }
 
     public function cancelClass(int $class_id, int $customer_id): bool
@@ -664,23 +665,12 @@ class Schedule extends Model
             $where[] = '(' . implode(' OR ', $conditions) . ')';
         }
 
-        if ($packageRequirement !== '') {
-            $where[] = '(mp.plan_name LIKE ? OR pt.type_name LIKE ?)';
-            $pkg = "%{$packageRequirement}%";
-            $params[] = $pkg;
-            $params[] = $pkg;
-            $types .= 'ss';
-        }
-
+        // No membership JOIN needed — just find the customer by name/phone
         $sql = "SELECT DISTINCT c.customer_id, c.full_name,
                 {$usernameExpr} AS username,
-                {$phoneAlias},
-                COALESCE(mp.plan_name, '') AS package_name
+                {$phoneAlias}
             FROM Customer c
             {$accountJoin}
-            LEFT JOIN MembershipRegistration mr ON mr.customer_id = c.customer_id AND mr.status = 'active' AND mr.end_date >= CURDATE()
-            LEFT JOIN MembershipPlan mp ON mp.plan_id = mr.plan_id
-            LEFT JOIN PackageType pt ON pt.type_id = mp.package_type_id
             WHERE " . $this->buildWhereClause($where) . "
             ORDER BY c.full_name ASC
             LIMIT 25";

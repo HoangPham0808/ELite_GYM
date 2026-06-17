@@ -1,11 +1,23 @@
-# ELITE_GYM
+﻿# ELITE_GYM
 
 ```
 ELITE_GYM/
+├── .gitattributes
+├── README.md
+├── PROJECT_STRUCTURE.md
+├── SETUP_DATABASE.sql
+├── index.php
+├── review_api_response.html
+├── start
+├── stop
+├── temp_admin.html
+├── temp_review.html
+├── temp_review_check.php
 ├── app/
 │   ├── config/
 │   │   ├── config.php
-│   │   └── database.php
+│   │   ├── database.php
+│   │   └── mail.php
 │   ├── controllers/
 │   │   ├── AdminController.php
 │   │   ├── AuthController.php
@@ -29,7 +41,8 @@ ELITE_GYM/
 │   │   ├── Controller.php
 │   │   ├── Database.php
 │   │   ├── Model.php
-│   │   └── Router.php
+│   │   ├── Router.php
+│   │   └── SecurityMiddleware.php
 │   ├── helpers/
 │   │   ├── format_helper.php
 │   │   ├── qr_helper.php
@@ -40,7 +53,10 @@ ELITE_GYM/
 │   │   ├── Customer.php
 │   │   ├── Employee.php
 │   │   ├── Facility.php
+│   │   ├── Gym.php
 │   │   ├── Invoice.php
+│   │   ├── output_MailService.php
+│   │   ├── output_NotificationService.php
 │   │   ├── Package.php
 │   │   ├── Payment.php
 │   │   ├── Promotion.php
@@ -49,168 +65,159 @@ ELITE_GYM/
 │   │   ├── Schedule.php
 │   │   ├── Statistics.php
 │   │   └── SystemSetting.php
-│   ├── modules/
-│   │   ├── admin/
-│   │   │   ├── Account_Management/
-│   │   │   │   ├── Account_Management.php
-│   │   │   │   ├── Account_Management.js
-│   │   │   │   └── Account_Management.css
-│   │   │   ├── Customer_Management/
-│   │   │   │   ├── Customer_Management.php
-│   │   │   │   ├── Customer_Management.js
-│   │   │   │   ├── Customer_Management.css
-│   │   │   │   └── QZ_Check/
-│   │   │   │       ├── QR_CheckIn_function.php
-│   │   │   │       └── QR_CheckIn.js
-│   │   │   ├── Employee_Management/
-│   │   │   │   ├── Employee_Management.php
-│   │   │   │   ├── Employee_Management.js
-│   │   │   │   ├── Employee_Management.css
-│   │   │   │   └── Employee_attendance_tracking/
-│   │   │   │       ├── Employee_attendance_tracking.php
-│   │   │   │       └── Employee_attendance_tracking.js
-│   │   │   ├── Facilities_Management/
-│   │   │   │   ├── Facilities_Management.php
-│   │   │   │   ├── Facilities_Management.js
-│   │   │   │   └── Facilities_Management.css
-│   │   │   ├── Gym_Management/
-│   │   │   │   ├── Gym_Management.php
-│   │   │   │   ├── Gym_Management.js
-│   │   │   │   └── Gym_Management.css
-│   │   │   ├── Invoice_Management/
-│   │   │   │   ├── Invoice_Management.php
-│   │   │   │   ├── Invoice_Management.js
-│   │   │   │   └── Invoice_Management.css
-│   │   │   ├── Management_statistics/
-│   │   │   │   ├── management_statistics.php
-│   │   │   │   ├── management_statistics.js
-│   │   │   │   └── management_statistics.css
-│   │   │   ├── overview/
-│   │   │   │   ├── overview.php
-│   │   │   │   ├── overview.js
-│   │   │   │   └── overview.css
-│   │   │   ├── Package_Management/
-│   │   │   │   ├── Package_Management.php
-│   │   │   │   ├── Package_Management.js
-│   │   │   │   └── Package_Management.css
-│   │   │   ├── Profile/
-│   │   │   │   ├── Profile.php
-│   │   │   │   ├── Profile.js
-│   │   │   │   └── Profile.css
-│   │   │   ├── Promotion_Management/
-│   │   │   │   ├── Promotion_Management.php
-│   │   │   │   ├── Promotion_Management.js
-│   │   │   │   └── Promotion_Management.css
-│   │   │   ├── Review_Management/
-│   │   │   │   ├── Review_Management.php
-│   │   │   │   ├── Review_Management.js
-│   │   │   │   └── Review_Management.css
-│   │   │   ├── Schedule_Management/
-│   │   │   │   ├── Schedule_Management.php
-│   │   │   │   ├── Schedule_Management.js
-│   │   │   │   └── Schedule_Management.css
-│   │   │   └── Setting/
-│   │   │       ├── GPS/
-│   │   │       │   ├── GPS.php
-│   │   │       │   ├── GPS.js
-│   │   │       │   └── GPS.css
-│   │   │       ├── Image_landing/
-│   │   │       │   ├── Image_landing.php
-│   │   │       │   ├── Image_landing.js
-│   │   │       │   └── Image_landing.css
-│   │   │       └── System/
-│   │   │           ├── System.php
-│   │   │           ├── System.js
-│   │   │           └── System.css
-│   │   ├── admin_shell/
-│   │   │   ├── adm.php
-│   │   │   ├── adm.js
-│   │   │   └── adm.css
-│   │   ├── api/
-│   │   │   ├── review_handler.php
-│   │   │   ├── Review_Management_function.php
-│   │   │   ├── notification_handler.php
-│   │   │   ├── notification_auto.php
-│   │   │   └── notification_ui.php
-│   │   ├── auth/
-│   │   │   ├── Login/
-│   │   │   ├── Register/
-│   │   │   └── Forgot_Password/
-│   │   ├── home/
-│   │   │   ├── Payment/
-│   │   │   ├── Profile/
-│   │   │   ├── Review/
-│   │   │   ├── Schedule/
-│   │   │   └── index.php
-│   │   └── staff/
-│   │       ├── HLV/
-│   │       └── Receptionist/
+│   ├── services/
+│   │   ├── MailService.php
+│   │   └── NotificationService.php
+│   ├── storage/
+│   │   └── qr_bridge_store.json
 │   └── views/
-│       └── layouts/
-│           ├── footer.php
-│           ├── header.php
-│           ├── navbar.php
-│           └── sidebar.php
+│       ├── admin/
+│       │   ├── account_management.php
+│       │   ├── customer_management.php
+│       │   ├── dashboard.php
+│       │   ├── employee_attendance.php
+│       │   ├── employee_management.php
+│       │   ├── facilities_management.php
+│       │   ├── gym_management.php
+│       │   ├── invoice_management.php
+│       │   ├── overview.php
+│       │   ├── package_management.php
+│       │   ├── profile.php
+│       │   ├── promotion_management.php
+│       │   ├── review_management.php
+│       │   ├── schedule_management.php
+│       │   ├── setting_gps.php
+│       │   ├── setting_landing.php
+│       │   ├── setting_system.php
+│       │   └── statistics.php
+│       ├── auth/
+│       │   ├── forgot_password.php
+│       │   ├── login.php
+│       │   └── register.php
+│       ├── home/
+│       │   ├── index.php
+│       │   ├── partials/
+│       │   │   ├── notification_ui.php
+│       │   │   └── reviews_section.php
+│       │   ├── payment.php
+│       │   ├── profile.php
+│       │   ├── review.php
+│       │   ├── schedule.php
+│       │   └── Schedule_view_backup.php
+│       ├── layouts/
+│       │   ├── footer.php
+│       │   ├── header.php
+│       │   ├── navbar.php
+│       │   └── sidebar.php
+│       └── staff/
+│           ├── hlv.php
+│           └── receptionist.php
 ├── public/
-│   ├── assets/
-│   │   ├── css/
-│   │   │   ├── adm.css
-│   │   │   ├── Login.css
-│   │   │   ├── Landing.css
-│   │   │   ├── Review_Management.css
-│   │   │   └── ...
-│   │   ├── js/
-│   │   │   ├── adm.js
-│   │   │   ├── legacy-ready.js
-│   │   │   ├── Login.js
-│   │   │   ├── Landing.js
-│   │   │   ├── Review_Management.js
-│   │   │   ├── ai_stream.js
-│   │   │   └── ...
-│   │   ├── images/
-│   │   │   └── ELITY.png
-│   │   └── uploads/
-│   │       ├── image_package/
-│   │       └── image_panel/
+│   ├── .htaccess
 │   ├── index.php
-│   └── .htaccess
+│   └── assets/
+│       ├── css/
+│       │   ├── Account_Management.css
+│       │   ├── adm.css
+│       │   ├── Customer_Management.css
+│       │   ├── Employee_attendance_tracking.css
+│       │   ├── Employee_Management.css
+│       │   ├── Facilities_Management.css
+│       │   ├── Forgot_Password.css
+│       │   ├── GPS.css
+│       │   ├── Gym_Management.css
+│       │   ├── HLV.css
+│       │   ├── Image_landing.css
+│       │   ├── Invoice_Management.css
+│       │   ├── landing.css
+│       │   ├── Login.css
+│       │   ├── management_statistics.css
+│       │   ├── notification.css
+│       │   ├── overview.css
+│       │   ├── Package_Management.css
+│       │   ├── Payment.css
+│       │   ├── Profile.css
+│       │   ├── Profile_employee.css
+│       │   ├── Promotion_Management.css
+│       │   ├── QR_CheckIn.css
+│       │   ├── Receptionist.css
+│       │   ├── Register.css
+│       │   ├── Review_Management.css
+│       │   ├── reviews_section.css
+│       │   ├── Schedule.css
+│       │   ├── Schedule_Management.css
+│       │   └── System.css
+│       ├── images/
+│       │   └── ELITY.png
+│       ├── js/
+│       │   ├── Account_Management.js
+│       │   ├── adm.js
+│       │   ├── ai_stream.js
+│       │   ├── Customer_Management.js
+│       │   ├── Employee_attendance_tracking.js
+│       │   ├── Employee_Management.js
+│       │   ├── Facilities_Management.js
+│       │   ├── Forgot_Password.js
+│       │   ├── GPS.js
+│       │   ├── Gym_Management.js
+│       │   ├── HLV.js
+│       │   ├── Image_landing.js
+│       │   ├── Invoice_Management.js
+│       │   ├── landing.js
+│       │   ├── legacy-ready.js
+│       │   ├── Login.js
+│       │   ├── management_statistics.js
+│       │   ├── overview.js
+│       │   ├── Package_Management.js
+│       │   ├── Payment.js
+│       │   ├── Profile.js
+│       │   ├── Profile_customer.js
+│       │   ├── Promotion_Management.js
+│       │   ├── QR_CheckIn.js
+│       │   ├── qrcode.min.js
+│       │   ├── Receptionist.js
+│       │   ├── Register.js
+│       │   ├── Review_Management.js
+│       │   ├── Schedule.js
+│       │   ├── Schedule_Management.js
+│       │   └── System.js
+│       └── uploads/
+│           ├── image_package/
+│           │   ├── pkg_1_69bfa0ce4a3b0.jpg
+│       │   │   ├── pkg_1_69bfa11032e87.jpg
+│       │   │   ├── pkg_1_69bfa15c531c6.jpg
+│       │   │   ├── pkg_2_69bfa0d54d722.jpg
+│       │   │   └── pkg_3_69bfa0dc6608f.jpg
+│           └── image_panel/
+│               ├── ELITY_69e6776f49af6.png
+│               ├── thiet-ke-phong-gym-10__1__69c12ec1e392a.jpg
+│               ├── thiet-ke-phong-gym-10_69c12eb4c58f8.jpg
+│               ├── thiet-ke-phong-gym-21_69c12ebca67fd.jpg
+│               └── thiet-ke-phong-gym-9_69c12f04e6274.jpg
 ├── routes/
 │   └── web.php
-├── Database/
-│   └── db.php
-├── Internal/
-│   ├── Index/
-│   ├── Layout/
-│   ├── Auth/
-│   ├── Admin/
-│   └── ...
-├── Home/
-│   ├── index.php
-│   ├── Landing.css
-│   ├── Landing.js
-│   ├── Payment/
-│   ├── Profile/
-│   ├── Review/
-│   └── Schedule/
-├── PHPMailer/
-│   ├── Exception.php
-│   ├── PHPMailer.php
-│   └── SMTP.php
-├── gym-ai/
-├── QLY_NV/
-├── storage/
-│   ├── logs/
-│   └── cache/
-├── upload/
-│   ├── image_package/
-│   └── image_panel/
-├── vendor/
 ├── scripts/
-├── README.md
-├── SETUP_DATABASE.sql
-├── .gitattributes
-├── index.php
-├── start
-└── stop
+│   ├── fix_js_quotes.php
+│   ├── migrate_mvc_structure.php
+│   ├── notification_cron.php
+│   ├── patch_admin_js_vars.php
+│   ├── patch_api_js.php
+│   ├── patch_dom_ready.php
+│   ├── patch_module_assets.php
+│   ├── patch_modules.php
+│   ├── patch_mvc_paths.php
+│   ├── patch_sessions.php
+│   └── patch_urls.php
+├── storage/
+│   ├── cache/
+│   │   └── security/
+│   └── logs/
+│       ├── notification_cron.log
+│       ├── smtp_debug.log
+│       └── webhook_log.txt
+└── vendor/
+    └── PHPMailer/
+        ├── Exception.php
+        ├── PHPMailer.php
+        └── SMTP.php
 ```
-

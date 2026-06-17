@@ -43,13 +43,24 @@ $error_message = '';
 if (isset($_GET['error'])) {
     switch ($_GET['error']) {
         case 'invalid_credentials':
+            $remaining = (int)($_GET['remaining'] ?? 5);
             $error_message = 'Tên đăng nhập hoặc mật khẩu không chính xác!';
+            if ($remaining > 0 && $remaining < 5) {
+                $error_message .= ' Còn ' . $remaining . ' lần thử trước khi bị khóa.';
+            }
+            break;
+        case 'too_many_attempts':
+            $wait = (int)($_GET['wait'] ?? 15);
+            $error_message = "Tài khoản bị khóa tạm thời do đăng nhập sai quá nhiều lần. Vui lòng thử lại sau {$wait} phút.";
             break;
         case 'empty_fields':
             $error_message = 'Vui lòng nhập tên đăng nhập và mật khẩu!';
             break;
         case 'account_disabled':
             $error_message = 'Tài khoản đã bị vô hiệu hóa!';
+            break;
+        case 'session_expired':
+            $error_message = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
             break;
         case 'database_error':
             $error_message = 'Lỗi hệ thống, vui lòng thử lại sau!';
@@ -103,6 +114,7 @@ if (isset($_GET['error'])) {
             <?php endif; ?>
 
             <form id="loginForm" method="POST" action="<?= url('login') ?>" class="login-form">
+                <?= SecurityMiddleware::csrfField() ?>
                 <div class="form-group">
                     <label for="username">USERNAME</label>
                     <div class="input-wrapper">

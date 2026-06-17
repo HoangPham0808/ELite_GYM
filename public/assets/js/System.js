@@ -105,19 +105,27 @@ async function loadList() {
 }
 
 function renderRow(r) {
-    const active = parseInt(r.is_active), color = escHtml(r.color_code||'#6b7280');
+    const active = parseInt(r.is_active), color = escHtml(r.color_code || '#6b7280');
     return `<tr id="row-${r.type_id}">
         <td class="td-id">${r.sort_order}</td>
-        <td><div class="td-name"><div class="type-dot" style="background:${color}"></div>${escHtml(r.type_name)}</div>
-            ${r.description?`<div class="td-muted" style="padding-left:17px;margin-top:1px">${escHtml(r.description)}</div>`:''}
+        <td>
+            <div class="td-name">
+                <div class="type-dot" style="background:${color}"></div>
+                ${escHtml(r.type_name)}
+            </div>
         </td>
-        <td class="td-muted">${escHtml(r.description||'—')}</td>
-        <td class="td-id">${r.sort_order}</td>
-        <td><span class="badge badge--${active?'on':'off'}">${active?'● Bật':'○ Tắt'}</span></td>
+        <td class="td-muted">${escHtml(r.description || '—')}</td>
+        <td>
+            <div class="color-preview-wrap" onclick="return false" title="${color}">
+                <div class="type-dot" style="background:${color};width:18px;height:18px;border-radius:4px;border:1px solid rgba(0,0,0,.12)"></div>
+                <span class="td-muted" style="font-size:.75rem">${color}</span>
+            </div>
+        </td>
+        <td><span class="badge badge--${active ? 'on' : 'off'}">${active ? '● Bật' : '○ Tắt'}</span></td>
         <td><div class="td-actions">
             <button class="btn btn--ghost btn--sm" onclick="startEdit(${r.type_id})" title="Sửa"><i class="fas fa-pen"></i></button>
-            <button class="btn btn--ghost btn--sm" onclick="toggleType(${r.type_id})" title="${active?'Tắt':'Bật'}">
-                <i class="fas fa-power-off" style="color:${active?'var(--green)':'var(--red)'}"></i>
+            <button class="btn btn--ghost btn--sm" onclick="toggleType(${r.type_id})" title="${active ? 'Tắt' : 'Bật'}">
+                <i class="fas fa-power-off" style="color:${active ? 'var(--green)' : 'var(--red)'}"></i>
             </button>
             <button class="btn btn--danger btn--sm" onclick="deleteType(${r.type_id},'${escAttr(r.type_name)}')"><i class="fas fa-trash"></i></button>
         </div></td>
@@ -125,22 +133,28 @@ function renderRow(r) {
 }
 
 function renderEditRow(r) {
-    const color = escHtml(r.color_code||'#6b7280');
+    const color = escHtml(r.color_code || '#6b7280');
     return `<tr id="row-${r.type_id}" style="background:var(--gold-dim)">
-        <td class="td-id">${r.sort_order}</td>
-        <td colspan="2"><div style="display:flex;flex-direction:column;gap:6px">
-            <input class="edit-input" id="edit-name-${r.type_id}" value="${escHtml(r.type_name)}" placeholder="Tên loại gói"/>
-            <input class="edit-input" id="edit-desc-${r.type_id}" value="${escHtml(r.description||'')}" placeholder="Mô tả"/>
-        </div></td>
-        <td><input class="edit-input" id="edit-order-${r.type_id}" type="number" value="${r.sort_order}" min="0" style="width:60px"/></td>
-        <td><div class="edit-color-wrap" onclick="document.getElementById('edit-cp-${r.type_id}').click()">
-            <div class="edit-swatch" id="edit-swatch-${r.type_id}" style="background:${color}"></div>
-            <span class="edit-hex" id="edit-hex-${r.type_id}">${color}</span>
-            <input type="color" id="edit-cp-${r.type_id}" value="${color}" oninput="syncEditColor(${r.type_id},this.value)"/>
-        </div></td>
+        <td class="td-id">
+            <input class="edit-input" id="edit-order-${r.type_id}" type="number" value="${r.sort_order}" min="0" style="width:52px;text-align:center" title="Thứ tự"/>
+        </td>
+        <td>
+            <input class="edit-input" id="edit-name-${r.type_id}" value="${escHtml(r.type_name)}" placeholder="Tên loại gói" style="margin-bottom:4px"/>
+        </td>
+        <td>
+            <input class="edit-input" id="edit-desc-${r.type_id}" value="${escHtml(r.description || '')}" placeholder="Mô tả"/>
+        </td>
+        <td>
+            <div class="edit-color-wrap" onclick="document.getElementById('edit-cp-${r.type_id}').click()" style="cursor:pointer;display:flex;align-items:center;gap:6px">
+                <div class="edit-swatch" id="edit-swatch-${r.type_id}" style="background:${color};width:22px;height:22px;border-radius:4px;border:1px solid rgba(0,0,0,.15);flex-shrink:0"></div>
+                <span class="edit-hex td-muted" id="edit-hex-${r.type_id}" style="font-size:.74rem">${color}</span>
+                <input type="color" id="edit-cp-${r.type_id}" value="${color}" oninput="syncEditColor(${r.type_id},this.value)" style="position:absolute;opacity:0;width:0;height:0"/>
+            </div>
+        </td>
+        <td>—</td>
         <td><div class="td-actions">
-            <button class="btn btn--gold btn--sm" onclick="saveEdit(${r.type_id})"><i class="fas fa-check"></i></button>
-            <button class="btn btn--ghost btn--sm" onclick="cancelEdit(${r.type_id},${JSON.stringify(r)})"><i class="fas fa-times"></i></button>
+            <button class="btn btn--gold btn--sm" onclick="saveEdit(${r.type_id})" title="Lưu"><i class="fas fa-check"></i></button>
+            <button class="btn btn--ghost btn--sm" onclick="cancelEdit(${r.type_id},${JSON.stringify(r)})" title="Hủy"><i class="fas fa-times"></i></button>
         </div></td>
     </tr>`;
 }

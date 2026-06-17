@@ -55,7 +55,7 @@ if ($active_plan) {
 <!-- ══ NAVBAR ══ -->
 <header class="pay-nav" id="payNav">
   <div class="pay-nav-inner">
-    <a href="../index.php" class="nav-logo">
+    <a href="<?= url() ?>" class="nav-logo">
       <svg viewBox="0 0 44 44" width="34" height="34">
         <polygon points="22,2 40,12 40,32 22,42 4,32 4,12" fill="none" stroke="#cc0000" stroke-width="1.8"/>
         <text x="50%" y="56%" dominant-baseline="middle" text-anchor="middle" fill="#cc0000" font-size="12" font-weight="800" font-family="Barlow Condensed">EG</text>
@@ -73,7 +73,7 @@ if ($active_plan) {
         <span style="font-size:.75rem;color:rgba(255,255,255,.35)">· còn <?= $days_left ?> ngày</span>
       </div>
       <?php endif; ?>
-      <a href="../index.php" class="nav-back-btn"><i class="fas fa-arrow-left"></i> Trang chủ</a>
+      <a href="<?= url() ?>" class="nav-back-btn"><i class="fas fa-arrow-left"></i> Trang chủ</a>
     </div>
   </div>
 </header>
@@ -303,10 +303,10 @@ if ($active_plan) {
     <div class="success-title">Thanh toán thành công!</div>
     <div class="success-msg" id="successMsg">Gói tập của bạn đã được kích hoạt.</div>
     <div class="success-actions">
-      <a href="../Profile/Profile.php?tab=plans" class="btn-success-profile">
+      <a href="<?= url('profile') ?>?tab=plans" class="btn-success-profile">
         <i class="fas fa-id-card"></i> Xem gói tập của tôi
       </a>
-      <a href="../index.php" class="btn-success-home">
+      <a href="<?= url() ?>" class="btn-success-home">
         <i class="fas fa-home"></i> Về trang chủ
       </a>
     </div>
@@ -316,6 +316,15 @@ if ($active_plan) {
 <!-- Toast container -->
 <div id="toastContainer" style="position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none"></div>
 
+<script>
+// ✅ FIX: Set ELITE_BASE để Payment.js dùng đúng API route /api/payment
+(function(){
+  var pathParts = window.location.pathname.split('/');
+  var pubIdx = pathParts.indexOf('public');
+  var base = pubIdx >= 0 ? pathParts.slice(0, pubIdx+1).join('/') : '';
+  window.ELITE_BASE = window.location.protocol + '//' + window.location.host + base;
+})();
+</script>
 <script src="<?= asset('js/Payment.js') ?>" defer></script>
 <style>
 @keyframes toastIn { from{opacity:0;transform:translateX(20px)} to{opacity:1;transform:translateX(0)} }

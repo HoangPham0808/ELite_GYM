@@ -1,3 +1,14 @@
+// ── DOM-ready helper (chạy đúng dù script inject tĩnh hay động) ──
+if (typeof runWhenReady === 'undefined') {
+    window.runWhenReady = function(fn) {
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', fn);
+        } else {
+            fn();
+        }
+    };
+}
+
 // ============ ROUTING ============
 var BASE = window.ELITE_BASE || '';
 
@@ -64,19 +75,30 @@ async function loadContent(page) {
         const html = await res.text();
         const doc  = new DOMParser().parseFromString(html, 'text/html');
 
-        // Inject CSS của module nếu có
+        // Inject CSS — xoá CSS module cũ, inject CSS mới tránh xung đột
+        document.querySelectorAll('link[data-module-css]').forEach(l => l.remove());
         doc.querySelectorAll('link[rel="stylesheet"]').forEach(link => {
             const href = link.getAttribute('href');
-            if (href && !document.querySelector(`link[href="${href}"]`)) {
+            if (href) {
                 const el = document.createElement('link');
                 el.rel = 'stylesheet'; el.href = href;
+                el.setAttribute('data-module-css', '1');
                 document.head.appendChild(el);
             }
         });
 
-        // Inject JS của module nếu có
-        const oldScripts = document.querySelectorAll('script[data-module]');
-        oldScripts.forEach(s => s.remove());
+        // Inject JS — xoá module cũ, inject inline scripts trước, rồi external scripts
+        document.querySelectorAll('script[data-module]').forEach(s => s.remove());
+
+        // 1. Inline scripts trước (window.IS_HLV, IS_ADMIN, HLV_EMP_ID...)
+        doc.querySelectorAll('script:not([src])').forEach(s => {
+            const el = document.createElement('script');
+            el.setAttribute('data-module', '1');
+            el.textContent = s.textContent;
+            document.body.appendChild(el);
+        });
+
+        // 2. External scripts sau
         doc.querySelectorAll('script[src]').forEach(s => {
             const el = document.createElement('script');
             el.src = s.getAttribute('src');

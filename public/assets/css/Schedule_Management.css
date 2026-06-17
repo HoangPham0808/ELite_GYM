@@ -595,7 +595,7 @@ body{
 .pb-student {background:var(--green-bg);       color:var(--pkg-student)}
 
 /* Status badge */
-.status-badge{
+.mod-schedule .status-badge {
     display:inline-flex;align-items:center;
     padding:3px 10px;border-radius:20px;
     font-size:11.5px;font-weight:600;
@@ -695,8 +695,8 @@ body{
 
 /* ── FORMS ────────────────────────────────────────────────── */
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-.form-group{display:flex;flex-direction:column;gap:6px}
-.form-group.full{grid-column:1/-1}
+.mod-schedule .form-group {display:flex;flex-direction:column;gap:6px}
+.mod-schedule .form-group.full {grid-column:1/-1}
 label{font-size:12px;font-weight:600;color:var(--ts)}
 .req{color:var(--red)}
 .form-control{
@@ -1108,11 +1108,11 @@ input[type="datetime-local"].form-control{color-scheme:light}
 /* ══════════════════════════════════════════════════════════════
    TOAST
    ══════════════════════════════════════════════════════════════ */
-.toast-container{
+.mod-schedule .toast-container {
     position:fixed;bottom:24px;right:24px;
     display:flex;flex-direction:column;gap:10px;z-index:9999;
 }
-.toast{
+.mod-schedule .toast {
     background:var(--surface);border:1px solid var(--border-md);
     border-radius:10px;padding:13px 17px;
     display:flex;align-items:center;gap:11px;
@@ -1121,11 +1121,15 @@ input[type="datetime-local"].form-control{color-scheme:light}
     animation:tIn .3s ease;border-left-width:3px;
     font-family:'Barlow',sans-serif;color:var(--tp);
 }
-.toast.success{border-left-color:var(--green)} .toast.success i{color:var(--green)}
-.toast.error  {border-left-color:var(--red)}   .toast.error   i{color:var(--red)}
-.toast.info   {border-left-color:var(--gold)}  .toast.info    i{color:var(--gold)}
-.toast.warning{border-left-color:var(--yellow)}.toast.warning i{color:var(--yellow)}
-.toast i{font-size:15px;flex-shrink:0}
+.mod-schedule .toast.success {border-left-color:var(--green)}
+.mod-schedule .toast.success i{color:var(--green)}
+.mod-schedule .toast.error {border-left-color:var(--red)}
+.mod-schedule .toast.error i{color:var(--red)}
+.mod-schedule .toast.info {border-left-color:var(--gold)}
+.mod-schedule .toast.info i{color:var(--gold)}
+.mod-schedule .toast.warning {border-left-color:var(--yellow)}
+.mod-schedule .toast.warning i{color:var(--yellow)}
+.mod-schedule .toast i {font-size:15px;flex-shrink:0}
 @keyframes tIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
 
 /* ══════════════════════════════════════════════════════════════
@@ -1165,7 +1169,7 @@ input[type="datetime-local"].form-control{color-scheme:light}
     .det-grid{grid-template-columns:1fr}
     .di-block.full{grid-column:1}
     .form-grid{grid-template-columns:1fr}
-    .form-group.full{grid-column:1}
+    .mod-schedule .form-group.full {grid-column:1}
 }
 
 /* ── ≤ 900px ───────────────────────────────────── */
@@ -1211,8 +1215,8 @@ input[type="datetime-local"].form-control{color-scheme:light}
     .trainer-action-btn{width:100%;justify-content:center}
     .pagination{flex-direction:column;align-items:flex-start}
     .pagination-controls{width:100%;justify-content:center}
-    .toast-container{bottom:12px;right:10px;left:10px}
-    .toast{min-width:unset;width:100%;max-width:unset}
+    .mod-schedule .toast-container {bottom:12px;right:10px;left:10px}
+    .mod-schedule .toast {min-width:unset;width:100%;max-width:unset}
 }
 
 /* ── ≤ 600px ───────────────────────────────────── */
@@ -1254,7 +1258,7 @@ input[type="datetime-local"].form-control{color-scheme:light}
     .tg-body{max-height:380px}
     .rcg-body{max-height:380px}
     .page-btn{min-width:30px;height:30px;font-size:12px}
-    .toast{font-size:13px;padding:11px 14px}
+    .mod-schedule .toast {font-size:13px;padding:11px 14px}
     .det-name{font-size:16px}
     .confirm-modal h4{font-size:17px}
     .confirm-icon{width:60px;height:60px;font-size:22px}
@@ -1276,7 +1280,7 @@ input[type="datetime-local"].form-control{color-scheme:light}
 /* ── Print ──────────────────────────────────────── */
 @media print{
     .view-controls,.filter-bar,.pagination,
-    .action-btns,.toast-container,.modal-overlay{display:none!important}
+    .action-btns, .mod-schedule .toast-container, .modal-overlay {display:none!important}
     .sch-container{padding:0}
     body{background:#fff;color:var(--tp)}
     .table-card{border:1px solid var(--border-md)}

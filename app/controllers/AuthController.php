@@ -39,6 +39,17 @@ class AuthController extends Controller
             $this->redirect('login');
         }
 
+        // ── Brute Force Protection ────────────────────────────
+        $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+        $lockRemaining = SecurityMiddleware::checkBruteForce($ip);
+        if ($lockRemaining > 0) {
+            $minutes = ceil($lockRemaining / 60);
+            $this->redirect('login?error=too_many_attempts&wait=' . $minutes);
+        }
+
+        // ── CSRF ──────────────────────────────────────────────
+        SecurityMiddleware::requireCsrf();
+
         $username = trim($_POST['username'] ?? '');
         $password = $_POST['password'] ?? '';
 
@@ -70,24 +81,29 @@ class AuthController extends Controller
             : hash_equals($user['password'], $password);
 
         if (!$password_valid) {
-            $this->redirect('login?error=invalid_credentials');
+            SecurityMiddleware::recordFailedLogin($ip);
+            $remaining = SecurityMiddleware::getRemainingAttempts($ip);
+            $this->redirect('login?error=invalid_credentials&remaining=' . $remaining);
         }
 
         $full_name = $user['username'];
         $position = null;
 
+        $employee_id = null;
         if ($user['role'] === 'Employee') {
             $employeeModel = new Employee();
             $emp = $employeeModel->getByAccountId($user['account_id']);
             if ($emp) {
-                $full_name = $emp['full_name'];
-                $position  = $emp['position'];
+                $full_name   = $emp['full_name'];
+                $position    = $emp['position'];
+                $employee_id = (int)($emp['employee_id'] ?? 0) ?: null;
             }
         } elseif ($user['role'] === 'Admin') {
             $employeeModel = new Employee();
             $emp = $employeeModel->getByAccountId($user['account_id']);
             if ($emp) {
-                $full_name = $emp['full_name'];
+                $full_name   = $emp['full_name'];
+                $employee_id = (int)($emp['employee_id'] ?? 0) ?: null;
             }
         } else {
             $customerModel = new Customer();
@@ -97,15 +113,17 @@ class AuthController extends Controller
             }
         }
 
-        session_regenerate_id(false);
+        SecurityMiddleware::clearFailedLogin($ip);
+        session_regenerate_id(true);
 
-        $_SESSION['account_id'] = (int)$user['account_id'];
-        $_SESSION['username']   = $user['username'];
-        $_SESSION['role']       = $user['role'];
-        $_SESSION['full_name']  = $full_name;
-        $_SESSION['position']   = $position;
-        $_SESSION['login_time'] = time();
-        $_SESSION['ip_address'] = $_SERVER['REMOTE_ADDR'] ?? '';
+        $_SESSION['account_id']  = (int)$user['account_id'];
+        $_SESSION['username']    = $user['username'];
+        $_SESSION['role']        = $user['role'];
+        $_SESSION['full_name']   = $full_name;
+        $_SESSION['position']    = $position;
+        $_SESSION['employee_id'] = $employee_id;
+        $_SESSION['login_time']  = time();
+        $_SESSION['ip_address']  = $_SERVER['REMOTE_ADDR'] ?? '';
 
         $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
         $ua = $_SERVER['HTTP_USER_AGENT'] ?? '';
@@ -125,6 +143,8 @@ class AuthController extends Controller
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->redirect('register');
         }
+
+        SecurityMiddleware::requireCsrf();
 
         $username         = trim($_POST['username'] ?? '');
         $email            = trim($_POST['email'] ?? '');
@@ -335,7 +355,8 @@ class AuthController extends Controller
             if (!$stmt) {
                 $this->redirect('forgot-password?step=3&error=database_error');
             }
-            $stmt->bind_param("si", $new_password, $_SESSION['otp_account_id']);
+            $hashed = password_hash($new_password, PASSWORD_BCRYPT);
+            $stmt->bind_param("si", $hashed, $_SESSION['otp_account_id']);
             $stmt->execute();
             $stmt->close();
 

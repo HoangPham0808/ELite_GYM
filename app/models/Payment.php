@@ -151,6 +151,26 @@ class Payment extends Model
         return ['success' => false, 'message' => 'Lỗi xác nhận thanh toán'];
     }
 
+    // ✅ FIX: method công khai để PaymentController::webhook() dùng thay vì $this->paymentModel->db
+    public function getInvoiceForWebhook(int $invoiceId): ?array
+    {
+        $stmt = $this->db->prepare("SELECT invoice_id, final_amount, status FROM Invoice WHERE invoice_id = ?");
+        $stmt->bind_param('i', $invoiceId);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return $row ?: null;
+    }
+
+    public function markPaidFromWebhook(int $invoiceId, string $note): bool
+    {
+        $stmt = $this->db->prepare("UPDATE Invoice SET status='Paid', note=CONCAT(IFNULL(note,''),IF(note IS NULL OR note='','',' | '),?) WHERE invoice_id=? AND status != 'Paid'");
+        $stmt->bind_param('si', $note, $invoiceId);
+        $ok = $stmt->execute();
+        $stmt->close();
+        return $ok;
+    }
+
     public function checkStatus(int $invoiceId, int $cid): string
     {
         $row = $this->db->query("SELECT status FROM Invoice WHERE invoice_id = $invoiceId AND customer_id = $cid")->fetch_assoc();

@@ -1,0 +1,32 @@
+[2026-06-08 05:41:40] === Webhook called ===
+[2026-06-08 05:41:40] Method: POST
+[2026-06-08 05:41:40] Auth header: Apikey elitegym_PAY
+[2026-06-08 05:41:40] API Key OK
+[2026-06-08 05:41:40] Raw body: {"gateway":"MBBank","transactionDate":"2026-06-08 05:40:00","accountNumber":"0981015808","subAccount":null,"code":null,"content":"SHOPEEPAY CHUYEN TIEN 2063752898154807296 Scan QR ELITEGYM HD76","transferType":"in","description":"BankAPINotify SHOPEEPAY CHUYEN TIEN 2063752898154807296 Scan QR ELITEGYM HD76","transferAmount":5555,"referenceCode":"FT26159162649026","accumulated":0,"id":62317791}
+[2026-06-08 05:41:40] transferType: in
+[2026-06-08 05:41:40] Content: SHOPEEPAY CHUYEN TIEN 2063752898154807296 Scan QR ELITEGYM HD76 | Amount: 5555
+[2026-06-08 05:41:40] Invoice ID extracted: #76
+[2026-06-08 05:41:40] Invoice #76 found. Status: Pending | Amount in DB: 5555.00
+[2026-06-08 05:41:40] Invoice #76 cap nhat Paid thanh cong!
+[2026-06-08 05:41:40] Da dang ky goi tap cho invoice #76
+[2026-06-08 05:41:40] === Done ===
+[2026-06-08 14:50:56] === Webhook called ===
+[2026-06-08 14:50:56] Method: POST
+[2026-06-08 14:50:56] Auth header: Apikey elitegym_PAY
+[2026-06-08 14:50:56] API Key OK
+[2026-06-08 14:50:56] Raw body: {"gateway":"MBBank","transactionDate":"2026-06-08 14:50:00","accountNumber":"0981015808","subAccount":null,"code":null,"content":"Nguyen Anh Tuan chuyen tien QR I2BY8XZH\/037754","transferType":"in","description":"BankAPINotify Nguyen Anh Tuan chuyen tien QR I2BY8XZH\/037754","transferAmount":6070000,"referenceCode":"FT26159908062290","accumulated":0,"id":62382502}
+[2026-06-08 14:50:56] transferType: in
+[2026-06-08 14:50:56] Content: Nguyen Anh Tuan chuyen tien QR I2BY8XZH/037754 | Amount: 6070000
+[2026-06-08 14:50:56] Khong tim thay ma hoa don trong: Nguyen Anh Tuan chuyen tien QR I2BY8XZH/037754
+[2026-06-09 13:44:03] === Webhook called ===
+[2026-06-09 13:44:03] Method: POST
+[2026-06-09 13:44:03] Auth header: Apikey elitegym_PAY
+[2026-06-09 13:44:03] API Key OK
+[2026-06-09 13:44:03] Raw body: {"gateway":"MBBank","transactionDate":"2026-06-09 13:43:00","accountNumber":"0981015808","subAccount":null,"code":null,"content":"SHOPEEPAY CHUYEN TIEN 2064237044477009920 Scan QR ELITEGYM HD78 Hong Phm Vn","transferType":"in","description":"BankAPINotify SHOPEEPAY CHUYEN TIEN 2064237044477009920 Scan QR ELITEGYM HD78 Hong Phm Vn","transferAmount":3000,"referenceCode":"FT26160004330452","accumulated":0,"id":62514603}
+[2026-06-09 13:44:03] transferType: in
+[2026-06-09 13:44:03] Content: SHOPEEPAY CHUYEN TIEN 2064237044477009920 Scan QR ELITEGYM HD78 Hong Phm Vn | Amount: 3000
+[2026-06-09 13:44:03] Invoice ID extracted: #78
+[2026-06-09 13:44:03] Invoice #78 found. Status: Pending | Amount in DB: 3000.00
+[2026-06-09 13:44:03] Invoice #78 cap nhat Paid thanh cong!
+[2026-06-09 13:44:03] Da dang ky goi tap cho invoice #78
+[2026-06-09 13:44:03] === Done ===

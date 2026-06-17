@@ -44,6 +44,15 @@ function showToast(msg, type = 'info') {
     setTimeout(() => el.remove(), 4000);
 }
 
+// ✅ FIX: runWhenReady bị gọi nhưng chưa được định nghĩa → ReferenceError → loadPlans() không chạy
+function runWhenReady(fn) {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', fn);
+    } else {
+        fn(); // DOM đã sẵn sàng (script defer / SPA inject) → chạy ngay
+    }
+}
+
 // ══════════════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════════════

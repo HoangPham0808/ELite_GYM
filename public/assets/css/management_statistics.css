@@ -42,56 +42,19 @@
 
 /* ── Base ──────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; }
-body {
-  font-family: 'Be Vietnam Pro', 'Barlow', sans-serif;
-  background: var(--bg);
-  color: var(--tp);
-  min-height: 100vh;
-  overflow-x: hidden;
-  font-size: 15px;
-}
+/* [scoped-out: html] */
+/* [scoped-out: body] */
 
 /* ── Layout ────────────────────────────────────────────────── */
-.wrapper {
-  max-width: 1440px;
-  margin: 0 auto;
-  padding: 0 28px 72px;
-}
+/* [scoped-out: .wrapper] */
 
 /* ── Topbar ────────────────────────────────────────────────── */
-.topbar {
-  display: flex;
-  align-items: center;
-  padding: 22px 0 24px;
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 28px;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-.topbar-left {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  flex: 1;
-  min-width: 180px;
-}
-.brand-icon {
-  width: 44px; height: 44px;
-  border-radius: 11px; flex-shrink: 0;
-  background: linear-gradient(135deg, var(--gold-light) 0%, var(--gold) 100%);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 19px; color: #fff;
-  box-shadow: 0 4px 16px var(--gold-dim);
-}
-.brand-name {
-  font-size: 17px; font-weight: 800; color: var(--tp);
-}
-.brand-sub {
-  font-size: 11px; color: var(--tm);
-  text-transform: uppercase; letter-spacing: .5px; margin-top: 2px;
-}
-.topbar-meta { display: flex; gap: 8px; flex-wrap: wrap; }
+/* [scoped-out: .topbar] */
+/* [scoped-out: .topbar-left] */
+/* [scoped-out: .brand-icon] */
+/* [scoped-out: .brand-name] */
+/* [scoped-out: .brand-sub] */
+/* [scoped-out: .topbar-meta] */
 .meta-chip {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 5px 12px; border-radius: 20px;
@@ -100,7 +63,7 @@ body {
   font-size: 12px; color: var(--ts);
 }
 .meta-chip i { color: var(--gold-light); font-size: 11px; }
-.topbar-right { display: flex; gap: 10px; flex-shrink: 0; }
+/* [scoped-out: .topbar-right] */
 
 /* ── Buttons ───────────────────────────────────────────────── */
 .btn {
@@ -447,14 +410,17 @@ tbody tr:hover td { background: var(--surface-2); }
 
 /* ── Export Modal ──────────────────────────────────────────── */
 .modal-overlay {
+  display: none; /* hidden by default — prevents blocking when module navigated away */
   position: fixed; inset: 0;
   background: rgba(0,0,0,.45);
   backdrop-filter: blur(6px);
-  display: flex; align-items: center; justify-content: center;
-  z-index: 1000; opacity: 0; pointer-events: none; transition: .22s;
-  padding: 20px;
+  align-items: center; justify-content: center;
+  z-index: 1000; padding: 20px;
 }
-.modal-overlay.open { opacity: 1; pointer-events: all; }
+.modal-overlay.open {
+  display: flex; /* show only when explicitly opened */
+  opacity: 1; pointer-events: all;
+}
 .modal {
   background: var(--surface);
   border: 1px solid var(--border-md);
@@ -566,17 +532,17 @@ tbody tr:hover td { background: var(--surface-2); }
 
 /* 1024 — tablet landscape */
 @media (max-width: 1024px) {
-  .wrapper { padding: 0 20px 60px; }
+/* [scoped-out: .wrapper] */
   .charts-row { grid-template-columns: 1fr; }
   .report-grid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
 }
 
 /* 768 — tablet portrait */
 @media (max-width: 768px) {
-  .wrapper { padding: 0 16px 56px; }
-  .topbar { padding: 16px 0 20px; gap: 12px; margin-bottom: 20px; }
-  .topbar-meta { display: none; }          /* meta chips hidden */
-  .topbar-right .btn-ghost { display: none; } /* hide Print on mobile */
+/* [scoped-out: .wrapper] */
+/* [scoped-out: .topbar] */
+/* [scoped-out: .topbar-meta] */
+/* [scoped-out: .topbar-right .btn-ghost] */
   .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
   .kpi-val  { font-size: 19px; }
   .charts-row { gap: 12px; margin-bottom: 16px; }
@@ -594,7 +560,7 @@ tbody tr:hover td { background: var(--surface-2); }
 
 /* 600 — large phone */
 @media (max-width: 600px) {
-  .topbar-right { gap: 8px; }
+/* [scoped-out: .topbar-right] */
   .btn-gold { padding: 8px 14px; font-size: 12px; }
   .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
   .kpi-card { padding: 15px 13px 13px; }
@@ -608,8 +574,8 @@ tbody tr:hover td { background: var(--surface-2); }
 
 /* 480 — small phone */
 @media (max-width: 480px) {
-  .wrapper { padding: 0 12px 48px; }
-  .brand-name { font-size: 15px; }
+/* [scoped-out: .wrapper] */
+/* [scoped-out: .brand-name] */
   .kpi-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
   .charts-row { grid-template-columns: 1fr; }
   .bar-chart-wrap { height: 140px; }
@@ -625,15 +591,17 @@ tbody tr:hover td { background: var(--surface-2); }
 
 /* ── View Drawer ────────────────────────────────────────────── */
 .view-overlay {
+  display: none; /* hidden by default — prevents blocking when module navigated away */
   position: fixed; inset: 0;
   background: rgba(0,0,0,.45);
   backdrop-filter: blur(4px);
   z-index: 1000;
-  opacity: 0; pointer-events: none;
-  transition: opacity .25s;
-  display: flex; justify-content: flex-end;
+  justify-content: flex-end;
 }
-.view-overlay.open { opacity: 1; pointer-events: all; }
+.view-overlay.open {
+  display: flex; /* show only when explicitly opened */
+  opacity: 1; pointer-events: all;
+}
 
 .view-drawer {
   background: var(--surface);
@@ -733,9 +701,9 @@ tbody tr:hover td { background: var(--surface-2); }
 
 /* ── Print ─────────────────────────────────────────────────── */
 @media print {
-  body { background: #fff; }
+/* [scoped-out: body] */
   .topbar-right, .tabs, .report-grid,
   .modal-overlay, .view-overlay, .toast, .btn-export { display: none !important; }
   .chart-card, .kpi-card, .alert-card { break-inside: avoid; }
-  .wrapper { padding: 0; max-width: 100%; }
+/* [scoped-out: .wrapper] */
 }

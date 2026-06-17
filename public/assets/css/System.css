@@ -28,7 +28,7 @@ button{font-family:'Barlow',sans-serif;cursor:pointer}
 /* ══════════════════════════════════════════════════════
    TOPBAR
    ══════════════════════════════════════════════════════ */
-.topbar{
+.mod-system .topbar {
     position:sticky;top:0;z-index:200;height:var(--nav-h);
     background:rgba(245,243,239,.97);
     border-bottom:1px solid var(--border-gold);
@@ -67,7 +67,7 @@ button{font-family:'Barlow',sans-serif;cursor:pointer}
 /* ══════════════════════════════════════════════════════
    TOAST
    ══════════════════════════════════════════════════════ */
-.toast{
+.mod-system .toast {
     position:fixed;top:76px;right:24px;z-index:999;
     display:flex;align-items:center;gap:10px;
     padding:13px 18px;border-radius:11px;border-left-width:4px;
@@ -77,11 +77,11 @@ button{font-family:'Barlow',sans-serif;cursor:pointer}
     opacity:0;pointer-events:none;transform:translateY(-8px);
     transition:all .3s;max-width:360px;min-width:240px;
 }
-.toast.show{opacity:1;pointer-events:auto;transform:translateY(0)}
-.toast--ok {border-left-color:var(--green);color:var(--green)}
-.toast--ok i{color:var(--green)}
-.toast--err{border-left-color:var(--red);color:var(--red)}
-.toast--err i{color:var(--red)}
+.mod-system .toast.show {opacity:1;pointer-events:auto;transform:translateY(0)}
+.mod-system .toast--ok {border-left-color:var(--green);color:var(--green)}
+.mod-system .toast--ok i {color:var(--green)}
+.mod-system .toast--err {border-left-color:var(--red);color:var(--red)}
+.mod-system .toast--err i {color:var(--red)}
 
 /* ══════════════════════════════════════════════════════
    PAGE
@@ -158,13 +158,13 @@ button{font-family:'Barlow',sans-serif;cursor:pointer}
     grid-template-columns:1fr 1fr auto auto;
     gap:12px;align-items:end;
 }
-.form-group{display:flex;flex-direction:column;gap:6px}
-.form-group label{
+.mod-system .form-group {display:flex;flex-direction:column;gap:6px}
+.mod-system .form-group label {
     font-size:.72rem;font-weight:600;color:var(--ts);
     letter-spacing:.05em;text-transform:uppercase;
 }
-.form-group-color{min-width:140px}
-.form-group-sm  {max-width:140px}
+.mod-system .form-group-color {min-width:140px}
+.mod-system .form-group-sm {max-width:140px}
 .req{color:var(--red)}
 .form-btn{align-self:flex-end;height:40px}
 
@@ -319,7 +319,7 @@ tr[id^="eq-row-"][style*="background"]{background:var(--blue-dim)!important}
     cursor:pointer;transition:background .15s,color .15s;text-align:left;
 }
 .tb-nav-item:hover{background:var(--surface-2);color:var(--tp)}
-.tb-nav-item.active{background:var(--gold-dim);color:var(--gold-light)}
+.tb-nav-item.active {background:var(--gold-dim);color:var(--gold-light)}
 
 .tb-nav-dot{width:9px;height:9px;border-radius:3px;flex-shrink:0}
 .gold-dot{background:var(--gold-light)}
@@ -344,12 +344,12 @@ tr[id^="eq-row-"][style*="background"]{background:var(--blue-dim)!important}
 /* ── ≤ 900px ──────────────────────────────────────────── */
 @media(max-width:900px){
     .page{padding:26px 22px 56px}
-    .topbar{padding:0 22px}
+    .mod-system .topbar {padding:0 22px}
 }
 
 /* ── ≤ 700px ──────────────────────────────────────────── */
 @media(max-width:700px){
-    .topbar{padding:0 14px;gap:10px}
+    .mod-system .topbar {padding:0 14px;gap:10px}
     .tb-brand{font-size:1rem}
     .tb-user span{display:none} /* ẩn tên admin, giữ icon */
     .tb-sep{display:none}
@@ -359,8 +359,8 @@ tr[id^="eq-row-"][style*="background"]{background:var(--blue-dim)!important}
     /* Form 2 cột rồi nút full */
     .form-row{grid-template-columns:1fr 1fr}
     .form-btn{grid-column:1/-1;justify-content:center;width:100%}
-    .form-group-sm{max-width:100%}
-    .form-group-color{min-width:unset}
+    .mod-system .form-group-sm {max-width:100%}
+    .mod-system .form-group-color {min-width:unset}
 
     /* Table: ẩn cột mô tả */
     .acc-table thead th:nth-child(3),
@@ -387,7 +387,7 @@ tr[id^="eq-row-"][style*="background"]{background:var(--blue-dim)!important}
 
 /* ── ≤ 400px ──────────────────────────────────────────── */
 @media(max-width:400px){
-    .topbar{padding:0 10px}
+    .mod-system .topbar {padding:0 10px}
     .page{padding:16px 10px 44px}
 
     /* Actions dồn dọc nếu quá chật */
