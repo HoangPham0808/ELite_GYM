@@ -3646,3 +3646,315 @@
 [06:43:59] SERVER -> CLIENT: 250 2.0.0 OK  1781653439 d9443c01a7336-2c433558449sm149996405ad.78 - gsmtp
 [06:43:59] CLIENT -> SERVER: QUIT
 [06:43:59] SERVER -> CLIENT: 221 2.0.0 closing connection d9443c01a7336-2c433558449sm149996405ad.78 - gsmtp
+[06:43:41] SERVER -> CLIENT: 220 smtp.gmail.com ESMTP 41be03b00d2f7-c8665186828sm14221034a12.21 - gsmtp
+[06:43:41] CLIENT -> SERVER: EHLO DESKTOP-8FL2APL
+[06:43:41] SERVER -> CLIENT: 250-smtp.gmail.com at your service, [42.114.85.215]
+250-SIZE 35882577
+250-8BITMIME
+250-STARTTLS
+250-ENHANCEDSTATUSCODES
+250-PIPELINING
+250-CHUNKING
+250 SMTPUTF8
+[06:43:41] CLIENT -> SERVER: STARTTLS
+[06:43:41] SERVER -> CLIENT: 220 2.0.0 Ready to start TLS
+[06:43:42] CLIENT -> SERVER: EHLO DESKTOP-8FL2APL
+[06:43:42] SERVER -> CLIENT: 250-smtp.gmail.com at your service, [42.114.85.215]
+250-SIZE 35882577
+250-8BITMIME
+250-AUTH LOGIN PLAIN XOAUTH2 PLAIN-CLIENTTOKEN OAUTHBEARER XOAUTH
+250-ENHANCEDSTATUSCODES
+250-PIPELINING
+250-CHUNKING
+250 SMTPUTF8
+[06:43:42] CLIENT -> SERVER: AUTH LOGIN
+[06:43:42] SERVER -> CLIENT: 334 VXNlcm5hbWU6
+[06:43:42] CLIENT -> SERVER: [credentials hidden]
+[06:43:42] SERVER -> CLIENT: 334 UGFzc3dvcmQ6
+[06:43:42] CLIENT -> SERVER: [credentials hidden]
+[06:43:43] SERVER -> CLIENT: 235 2.7.0 Accepted
+[06:43:43] CLIENT -> SERVER: MAIL FROM:<pvhoang08082004@gmail.com>
+[06:43:43] SERVER -> CLIENT: 250 2.1.0 OK 41be03b00d2f7-c8665186828sm14221034a12.21 - gsmtp
+[06:43:43] CLIENT -> SERVER: RCPT TO:<tcuc041126@gmail.com>
+[06:43:43] SERVER -> CLIENT: 250 2.1.5 OK 41be03b00d2f7-c8665186828sm14221034a12.21 - gsmtp
+[06:43:43] CLIENT -> SERVER: DATA
+[06:43:43] SERVER -> CLIENT: 354 Go ahead 41be03b00d2f7-c8665186828sm14221034a12.21 - gsmtp
+[06:43:43] CLIENT -> SERVER: Date: Thu, 18 Jun 2026 06:43:39 +0700
+[06:43:43] CLIENT -> SERVER: To: tcuc041126@gmail.com
+[06:43:43] CLIENT -> SERVER: From: Elite Fitness Gym <pvhoang08082004@gmail.com>
+[06:43:43] CLIENT -> SERVER: Subject: =?UTF-8?Q?[Elite_Gym]_Nh=E1=BA=AFc_nh=E1=BB=9F:_Ch=C6=B0a_=C4=91=C4=83ng_k=C3=BD_ca_t=E1=BA=ADp?=
+[06:43:43] CLIENT -> SERVER: Message-ID: <ZW90GrsNdiQBA0gqeXIrX95Kzt3Iewmw4E40RAlmLg@DESKTOP-8FL2APL>
+[06:43:43] CLIENT -> SERVER: X-Mailer: PHPMailer 7.0.2 (https://github.com/PHPMailer/PHPMailer)
+[06:43:43] CLIENT -> SERVER: MIME-Version: 1.0
+[06:43:43] CLIENT -> SERVER: Content-Type: multipart/alternative;
+[06:43:43] CLIENT -> SERVER:  boundary="b1=_ZW90GrsNdiQBA0gqeXIrX95Kzt3Iewmw4E40RAlmLg"
+[06:43:43] CLIENT -> SERVER: Content-Transfer-Encoding: 8bit
+[06:43:43] CLIENT -> SERVER:
+[06:43:43] CLIENT -> SERVER: --b1=_ZW90GrsNdiQBA0gqeXIrX95Kzt3Iewmw4E40RAlmLg
+[06:43:43] CLIENT -> SERVER: Content-Type: text/plain; charset=UTF-8
+[06:43:43] CLIENT -> SERVER: Content-Transfer-Encoding: 8bit
+[06:43:43] CLIENT -> SERVER:
+[06:43:43] CLIENT -> SERVER: Hôm nay (18/06/2026) bạn chưa đăng ký ca tập nào. Hãy liên hệ lễ tân hoặc đặt lịch ngay!
+[06:43:43] CLIENT -> SERVER:
+[06:43:43] CLIENT -> SERVER: --b1=_ZW90GrsNdiQBA0gqeXIrX95Kzt3Iewmw4E40RAlmLg
+[06:43:43] CLIENT -> SERVER: Content-Type: text/html; charset=UTF-8
+[06:43:43] CLIENT -> SERVER: Content-Transfer-Encoding: 8bit
+[06:43:43] CLIENT -> SERVER:
+[06:43:43] CLIENT -> SERVER:
+[06:43:43] CLIENT -> SERVER:         <html>
+[06:43:43] CLIENT -> SERVER:         <body style='font-family:Arial,sans-serif;background:#0a0a0a;color:#fff;padding:30px;margin:0;'>
+[06:43:43] CLIENT -> SERVER:           <div style='max-width:520px;margin:auto;background:#111111;border-radius:4px;overflow:hidden;border:1px solid rgba(204,0,0,.25);'>
+[06:43:43] CLIENT -> SERVER:
+[06:43:43] CLIENT -> SERVER:             <!-- Header -->
+[06:43:43] CLIENT -> SERVER:             <div style='background:#cc0000;padding:18px 32px;display:flex;align-items:center;gap:12px;'>
+[06:43:43] CLIENT -> SERVER:               <span style='font-family:Arial,sans-serif;font-size:1.5rem;font-weight:900;color:#fff;letter-spacing:2px;text-transform:uppercase;'>ELITE GYM</span>
+[06:43:43] CLIENT -> SERVER:               <span style='color:rgba(255,255,255,.6);font-size:.8rem;margin-left:auto;text-transform:uppercase;letter-spacing:1px;'>Thông báo</span>
+[06:43:43] CLIENT -> SERVER:             </div>
+[06:43:43] CLIENT -> SERVER:
+[06:43:43] CLIENT -> SERVER:             <!-- Body -->
+[06:43:43] CLIENT -> SERVER:             <div style='padding:28px 32px;'>
+[06:43:43] CLIENT -> SERVER:               <p style='color:rgba(255,255,255,.6);margin:0 0 6px;font-size:.85rem;'>Xin chào,</p>
+[06:43:43] CLIENT -> SERVER:               <p style='color:#fff;font-size:1rem;font-weight:700;margin:0 0 20px;'>Nguyễn Thị Thu Cúc</p>
+[06:43:43] CLIENT -> SERVER:
+[06:43:43] CLIENT -> SERVER:               <!-- Notification card -->
+[06:43:43] CLIENT -> SERVER:               <div style='background:rgba(255,255,255,.04);border-left:3px solid #f59e0b;border-radius:2px;padding:16px 20px;margin-bottom:20px;'>
+[06:43:43] CLIENT -> SERVER:                 <div style='font-size:.85rem;color:#f59e0b;font-weight:700;margin-bottom:8px;'>
+[06:43:43] CLIENT -> SERVER:                   📅 Chưa đăng ký ca tập hôm nay
+[06:43:43] CLIENT -> SERVER:                 </div>
+[06:43:43] CLIENT -> SERVER:                 <div style='color:rgba(255,255,255,.75);font-size:.9rem;line-height:1.6;'>
+[06:43:43] CLIENT -> SERVER:                   Hôm nay (18/06/2026) bạn chưa đăng ký ca tập nào. Hãy liên hệ lễ tân hoặc đặt lịch ngay!
+[06:43:43] CLIENT -> SERVER:                 </div>
+[06:43:43] CLIENT -> SERVER:               </div>
+[06:43:43] CLIENT -> SERVER:
+[06:43:43] CLIENT -> SERVER:               <div style='text-align:center;margin:24px 0 8px;'>
+[06:43:43] CLIENT -> SERVER:                 <a href='http://localhost/PHP/ELite_GYM/public/'
+[06:43:43] CLIENT -> SERVER:                    style='background:#cc0000;color:#fff;text-decoration:none;padding:12px 32px;border-radius:3px;font-weight:700;font-size:.9rem;letter-spacing:1px;display:inline-block;'>
+[06:43:43] CLIENT -> SERVER:                   Vào trang Elite Gym
+[06:43:43] CLIENT -> SERVER:                 </a>
+[06:43:43] CLIENT -> SERVER:               </div>
+[06:43:43] CLIENT -> SERVER:             </div>
+[06:43:43] CLIENT -> SERVER:
+[06:43:43] CLIENT -> SERVER:             <!-- Footer -->
+[06:43:43] CLIENT -> SERVER:             <div style='padding:16px 32px;border-top:1px solid rgba(255,255,255,.08);'>
+[06:43:43] CLIENT -> SERVER:               <p style='color:rgba(255,255,255,.3);font-size:.75rem;margin:0;text-align:center;'>
+[06:43:43] CLIENT -> SERVER:                 © 2026 Elite Fitness Gym. Nếu bạn không muốn nhận email này, liên hệ lễ tân.
+[06:43:43] CLIENT -> SERVER:               </p>
+[06:43:43] CLIENT -> SERVER:             </div>
+[06:43:43] CLIENT -> SERVER:           </div>
+[06:43:43] CLIENT -> SERVER:         </body></html>
+[06:43:43] CLIENT -> SERVER:
+[06:43:43] CLIENT -> SERVER:
+[06:43:43] CLIENT -> SERVER: --b1=_ZW90GrsNdiQBA0gqeXIrX95Kzt3Iewmw4E40RAlmLg--
+[06:43:43] CLIENT -> SERVER:
+[06:43:43] CLIENT -> SERVER: .
+[06:43:44] SERVER -> CLIENT: 250 2.0.0 OK  1781739823 41be03b00d2f7-c8665186828sm14221034a12.21 - gsmtp
+[06:43:44] CLIENT -> SERVER: QUIT
+[06:43:44] SERVER -> CLIENT: 221 2.0.0 closing connection 41be03b00d2f7-c8665186828sm14221034a12.21 - gsmtp
+[06:43:46] SERVER -> CLIENT: 220 smtp.gmail.com ESMTP d2e1a72fcca58-8434b048496sm18274703b3a.54 - gsmtp
+[06:43:46] CLIENT -> SERVER: EHLO DESKTOP-8FL2APL
+[06:43:46] SERVER -> CLIENT: 250-smtp.gmail.com at your service, [42.114.85.215]
+250-SIZE 35882577
+250-8BITMIME
+250-STARTTLS
+250-ENHANCEDSTATUSCODES
+250-PIPELINING
+250-CHUNKING
+250 SMTPUTF8
+[06:43:46] CLIENT -> SERVER: STARTTLS
+[06:43:46] SERVER -> CLIENT: 220 2.0.0 Ready to start TLS
+[06:43:46] CLIENT -> SERVER: EHLO DESKTOP-8FL2APL
+[06:43:47] SERVER -> CLIENT: 250-smtp.gmail.com at your service, [42.114.85.215]
+250-SIZE 35882577
+250-8BITMIME
+250-AUTH LOGIN PLAIN XOAUTH2 PLAIN-CLIENTTOKEN OAUTHBEARER XOAUTH
+250-ENHANCEDSTATUSCODES
+250-PIPELINING
+250-CHUNKING
+250 SMTPUTF8
+[06:43:47] CLIENT -> SERVER: AUTH LOGIN
+[06:43:47] SERVER -> CLIENT: 334 VXNlcm5hbWU6
+[06:43:47] CLIENT -> SERVER: [credentials hidden]
+[06:43:47] SERVER -> CLIENT: 334 UGFzc3dvcmQ6
+[06:43:47] CLIENT -> SERVER: [credentials hidden]
+[06:43:47] SERVER -> CLIENT: 235 2.7.0 Accepted
+[06:43:47] CLIENT -> SERVER: MAIL FROM:<pvhoang08082004@gmail.com>
+[06:43:48] SERVER -> CLIENT: 250 2.1.0 OK d2e1a72fcca58-8434b048496sm18274703b3a.54 - gsmtp
+[06:43:48] CLIENT -> SERVER: RCPT TO:<20221672@eaut.edu.vn>
+[06:43:48] SERVER -> CLIENT: 250 2.1.5 OK d2e1a72fcca58-8434b048496sm18274703b3a.54 - gsmtp
+[06:43:48] CLIENT -> SERVER: DATA
+[06:43:48] SERVER -> CLIENT: 354 Go ahead d2e1a72fcca58-8434b048496sm18274703b3a.54 - gsmtp
+[06:43:48] CLIENT -> SERVER: Date: Thu, 18 Jun 2026 06:43:44 +0700
+[06:43:48] CLIENT -> SERVER: To: 20221672@eaut.edu.vn
+[06:43:48] CLIENT -> SERVER: From: Elite Fitness Gym <pvhoang08082004@gmail.com>
+[06:43:48] CLIENT -> SERVER: Subject: =?UTF-8?Q?[Elite_Gym]_Nh=E1=BA=AFc_nh=E1=BB=9F:_Ch=C6=B0a_=C4=91=C4=83ng_k=C3=BD_ca_t=E1=BA=ADp?=
+[06:43:48] CLIENT -> SERVER: Message-ID: <LtaEFhjCM1f96YxFiBIdMBwJm1l4nqLVTLsXYnrrI@DESKTOP-8FL2APL>
+[06:43:48] CLIENT -> SERVER: X-Mailer: PHPMailer 7.0.2 (https://github.com/PHPMailer/PHPMailer)
+[06:43:48] CLIENT -> SERVER: MIME-Version: 1.0
+[06:43:48] CLIENT -> SERVER: Content-Type: multipart/alternative;
+[06:43:48] CLIENT -> SERVER:  boundary="b1=_LtaEFhjCM1f96YxFiBIdMBwJm1l4nqLVTLsXYnrrI"
+[06:43:48] CLIENT -> SERVER: Content-Transfer-Encoding: 8bit
+[06:43:48] CLIENT -> SERVER:
+[06:43:48] CLIENT -> SERVER: --b1=_LtaEFhjCM1f96YxFiBIdMBwJm1l4nqLVTLsXYnrrI
+[06:43:48] CLIENT -> SERVER: Content-Type: text/plain; charset=UTF-8
+[06:43:48] CLIENT -> SERVER: Content-Transfer-Encoding: 8bit
+[06:43:48] CLIENT -> SERVER:
+[06:43:48] CLIENT -> SERVER: Hôm nay (18/06/2026) bạn chưa đăng ký ca tập nào. Hãy liên hệ lễ tân hoặc đặt lịch ngay!
+[06:43:48] CLIENT -> SERVER:
+[06:43:48] CLIENT -> SERVER: --b1=_LtaEFhjCM1f96YxFiBIdMBwJm1l4nqLVTLsXYnrrI
+[06:43:48] CLIENT -> SERVER: Content-Type: text/html; charset=UTF-8
+[06:43:48] CLIENT -> SERVER: Content-Transfer-Encoding: 8bit
+[06:43:48] CLIENT -> SERVER:
+[06:43:48] CLIENT -> SERVER:
+[06:43:48] CLIENT -> SERVER:         <html>
+[06:43:48] CLIENT -> SERVER:         <body style='font-family:Arial,sans-serif;background:#0a0a0a;color:#fff;padding:30px;margin:0;'>
+[06:43:48] CLIENT -> SERVER:           <div style='max-width:520px;margin:auto;background:#111111;border-radius:4px;overflow:hidden;border:1px solid rgba(204,0,0,.25);'>
+[06:43:48] CLIENT -> SERVER:
+[06:43:48] CLIENT -> SERVER:             <!-- Header -->
+[06:43:48] CLIENT -> SERVER:             <div style='background:#cc0000;padding:18px 32px;display:flex;align-items:center;gap:12px;'>
+[06:43:48] CLIENT -> SERVER:               <span style='font-family:Arial,sans-serif;font-size:1.5rem;font-weight:900;color:#fff;letter-spacing:2px;text-transform:uppercase;'>ELITE GYM</span>
+[06:43:48] CLIENT -> SERVER:               <span style='color:rgba(255,255,255,.6);font-size:.8rem;margin-left:auto;text-transform:uppercase;letter-spacing:1px;'>Thông báo</span>
+[06:43:48] CLIENT -> SERVER:             </div>
+[06:43:48] CLIENT -> SERVER:
+[06:43:48] CLIENT -> SERVER:             <!-- Body -->
+[06:43:48] CLIENT -> SERVER:             <div style='padding:28px 32px;'>
+[06:43:48] CLIENT -> SERVER:               <p style='color:rgba(255,255,255,.6);margin:0 0 6px;font-size:.85rem;'>Xin chào,</p>
+[06:43:48] CLIENT -> SERVER:               <p style='color:#fff;font-size:1rem;font-weight:700;margin:0 0 20px;'>Hoàng Phạm Văn</p>
+[06:43:48] CLIENT -> SERVER:
+[06:43:48] CLIENT -> SERVER:               <!-- Notification card -->
+[06:43:48] CLIENT -> SERVER:               <div style='background:rgba(255,255,255,.04);border-left:3px solid #f59e0b;border-radius:2px;padding:16px 20px;margin-bottom:20px;'>
+[06:43:48] CLIENT -> SERVER:                 <div style='font-size:.85rem;color:#f59e0b;font-weight:700;margin-bottom:8px;'>
+[06:43:48] CLIENT -> SERVER:                   📅 Chưa đăng ký ca tập hôm nay
+[06:43:48] CLIENT -> SERVER:                 </div>
+[06:43:48] CLIENT -> SERVER:                 <div style='color:rgba(255,255,255,.75);font-size:.9rem;line-height:1.6;'>
+[06:43:48] CLIENT -> SERVER:                   Hôm nay (18/06/2026) bạn chưa đăng ký ca tập nào. Hãy liên hệ lễ tân hoặc đặt lịch ngay!
+[06:43:48] CLIENT -> SERVER:                 </div>
+[06:43:48] CLIENT -> SERVER:               </div>
+[06:43:48] CLIENT -> SERVER:
+[06:43:48] CLIENT -> SERVER:               <div style='text-align:center;margin:24px 0 8px;'>
+[06:43:48] CLIENT -> SERVER:                 <a href='http://localhost/PHP/ELite_GYM/public/'
+[06:43:48] CLIENT -> SERVER:                    style='background:#cc0000;color:#fff;text-decoration:none;padding:12px 32px;border-radius:3px;font-weight:700;font-size:.9rem;letter-spacing:1px;display:inline-block;'>
+[06:43:48] CLIENT -> SERVER:                   Vào trang Elite Gym
+[06:43:48] CLIENT -> SERVER:                 </a>
+[06:43:48] CLIENT -> SERVER:               </div>
+[06:43:48] CLIENT -> SERVER:             </div>
+[06:43:48] CLIENT -> SERVER:
+[06:43:48] CLIENT -> SERVER:             <!-- Footer -->
+[06:43:48] CLIENT -> SERVER:             <div style='padding:16px 32px;border-top:1px solid rgba(255,255,255,.08);'>
+[06:43:48] CLIENT -> SERVER:               <p style='color:rgba(255,255,255,.3);font-size:.75rem;margin:0;text-align:center;'>
+[06:43:48] CLIENT -> SERVER:                 © 2026 Elite Fitness Gym. Nếu bạn không muốn nhận email này, liên hệ lễ tân.
+[06:43:48] CLIENT -> SERVER:               </p>
+[06:43:48] CLIENT -> SERVER:             </div>
+[06:43:48] CLIENT -> SERVER:           </div>
+[06:43:48] CLIENT -> SERVER:         </body></html>
+[06:43:48] CLIENT -> SERVER:
+[06:43:48] CLIENT -> SERVER:
+[06:43:48] CLIENT -> SERVER: --b1=_LtaEFhjCM1f96YxFiBIdMBwJm1l4nqLVTLsXYnrrI--
+[06:43:48] CLIENT -> SERVER:
+[06:43:48] CLIENT -> SERVER: .
+[06:43:49] SERVER -> CLIENT: 250 2.0.0 OK  1781739828 d2e1a72fcca58-8434b048496sm18274703b3a.54 - gsmtp
+[06:43:49] CLIENT -> SERVER: QUIT
+[06:43:49] SERVER -> CLIENT: 221 2.0.0 closing connection d2e1a72fcca58-8434b048496sm18274703b3a.54 - gsmtp
+[06:43:51] SERVER -> CLIENT: 220 smtp.gmail.com ESMTP 98e67ed59e1d1-37ce7d0348bsm32984a91.2 - gsmtp
+[06:43:51] CLIENT -> SERVER: EHLO DESKTOP-8FL2APL
+[06:43:51] SERVER -> CLIENT: 250-smtp.gmail.com at your service, [42.114.85.215]
+250-SIZE 35882577
+250-8BITMIME
+250-STARTTLS
+250-ENHANCEDSTATUSCODES
+250-PIPELINING
+250-CHUNKING
+250 SMTPUTF8
+[06:43:51] CLIENT -> SERVER: STARTTLS
+[06:43:51] SERVER -> CLIENT: 220 2.0.0 Ready to start TLS
+[06:43:51] CLIENT -> SERVER: EHLO DESKTOP-8FL2APL
+[06:43:51] SERVER -> CLIENT: 250-smtp.gmail.com at your service, [42.114.85.215]
+250-SIZE 35882577
+250-8BITMIME
+250-AUTH LOGIN PLAIN XOAUTH2 PLAIN-CLIENTTOKEN OAUTHBEARER XOAUTH
+250-ENHANCEDSTATUSCODES
+250-PIPELINING
+250-CHUNKING
+250 SMTPUTF8
+[06:43:51] CLIENT -> SERVER: AUTH LOGIN
+[06:43:52] SERVER -> CLIENT: 334 VXNlcm5hbWU6
+[06:43:52] CLIENT -> SERVER: [credentials hidden]
+[06:43:52] SERVER -> CLIENT: 334 UGFzc3dvcmQ6
+[06:43:52] CLIENT -> SERVER: [credentials hidden]
+[06:43:52] SERVER -> CLIENT: 235 2.7.0 Accepted
+[06:43:52] CLIENT -> SERVER: MAIL FROM:<pvhoang08082004@gmail.com>
+[06:43:52] SERVER -> CLIENT: 250 2.1.0 OK 98e67ed59e1d1-37ce7d0348bsm32984a91.2 - gsmtp
+[06:43:52] CLIENT -> SERVER: RCPT TO:<pvhoang08082004@gmail.com>
+[06:43:52] SERVER -> CLIENT: 250 2.1.5 OK 98e67ed59e1d1-37ce7d0348bsm32984a91.2 - gsmtp
+[06:43:52] CLIENT -> SERVER: DATA
+[06:43:53] SERVER -> CLIENT: 354 Go ahead 98e67ed59e1d1-37ce7d0348bsm32984a91.2 - gsmtp
+[06:43:53] CLIENT -> SERVER: Date: Thu, 18 Jun 2026 06:43:49 +0700
+[06:43:53] CLIENT -> SERVER: To: pvhoang08082004@gmail.com
+[06:43:53] CLIENT -> SERVER: From: Elite Fitness Gym <pvhoang08082004@gmail.com>
+[06:43:53] CLIENT -> SERVER: Subject: =?UTF-8?Q?[Elite_Gym]_Nh=E1=BA=AFc_nh=E1=BB=9F:_Ch=C6=B0a_=C4=91=C4=83ng_k=C3=BD_ca_t=E1=BA=ADp?=
+[06:43:53] CLIENT -> SERVER: Message-ID: <RAbVZRwXKC5sMeDMk3EFn1P22OxwlwaFJgy0rvAHbM@DESKTOP-8FL2APL>
+[06:43:53] CLIENT -> SERVER: X-Mailer: PHPMailer 7.0.2 (https://github.com/PHPMailer/PHPMailer)
+[06:43:53] CLIENT -> SERVER: MIME-Version: 1.0
+[06:43:53] CLIENT -> SERVER: Content-Type: multipart/alternative;
+[06:43:53] CLIENT -> SERVER:  boundary="b1=_RAbVZRwXKC5sMeDMk3EFn1P22OxwlwaFJgy0rvAHbM"
+[06:43:53] CLIENT -> SERVER: Content-Transfer-Encoding: 8bit
+[06:43:53] CLIENT -> SERVER:
+[06:43:53] CLIENT -> SERVER: --b1=_RAbVZRwXKC5sMeDMk3EFn1P22OxwlwaFJgy0rvAHbM
+[06:43:53] CLIENT -> SERVER: Content-Type: text/plain; charset=UTF-8
+[06:43:53] CLIENT -> SERVER: Content-Transfer-Encoding: 8bit
+[06:43:53] CLIENT -> SERVER:
+[06:43:53] CLIENT -> SERVER: Hôm nay (18/06/2026) bạn chưa đăng ký ca tập nào. Hãy liên hệ lễ tân hoặc đặt lịch ngay!
+[06:43:53] CLIENT -> SERVER:
+[06:43:53] CLIENT -> SERVER: --b1=_RAbVZRwXKC5sMeDMk3EFn1P22OxwlwaFJgy0rvAHbM
+[06:43:53] CLIENT -> SERVER: Content-Type: text/html; charset=UTF-8
+[06:43:53] CLIENT -> SERVER: Content-Transfer-Encoding: 8bit
+[06:43:53] CLIENT -> SERVER:
+[06:43:53] CLIENT -> SERVER:
+[06:43:53] CLIENT -> SERVER:         <html>
+[06:43:53] CLIENT -> SERVER:         <body style='font-family:Arial,sans-serif;background:#0a0a0a;color:#fff;padding:30px;margin:0;'>
+[06:43:53] CLIENT -> SERVER:           <div style='max-width:520px;margin:auto;background:#111111;border-radius:4px;overflow:hidden;border:1px solid rgba(204,0,0,.25);'>
+[06:43:53] CLIENT -> SERVER:
+[06:43:53] CLIENT -> SERVER:             <!-- Header -->
+[06:43:53] CLIENT -> SERVER:             <div style='background:#cc0000;padding:18px 32px;display:flex;align-items:center;gap:12px;'>
+[06:43:53] CLIENT -> SERVER:               <span style='font-family:Arial,sans-serif;font-size:1.5rem;font-weight:900;color:#fff;letter-spacing:2px;text-transform:uppercase;'>ELITE GYM</span>
+[06:43:53] CLIENT -> SERVER:               <span style='color:rgba(255,255,255,.6);font-size:.8rem;margin-left:auto;text-transform:uppercase;letter-spacing:1px;'>Thông báo</span>
+[06:43:53] CLIENT -> SERVER:             </div>
+[06:43:53] CLIENT -> SERVER:
+[06:43:53] CLIENT -> SERVER:             <!-- Body -->
+[06:43:53] CLIENT -> SERVER:             <div style='padding:28px 32px;'>
+[06:43:53] CLIENT -> SERVER:               <p style='color:rgba(255,255,255,.6);margin:0 0 6px;font-size:.85rem;'>Xin chào,</p>
+[06:43:53] CLIENT -> SERVER:               <p style='color:#fff;font-size:1rem;font-weight:700;margin:0 0 20px;'>Phạm Văn Hoàng</p>
+[06:43:53] CLIENT -> SERVER:
+[06:43:53] CLIENT -> SERVER:               <!-- Notification card -->
+[06:43:53] CLIENT -> SERVER:               <div style='background:rgba(255,255,255,.04);border-left:3px solid #f59e0b;border-radius:2px;padding:16px 20px;margin-bottom:20px;'>
+[06:43:53] CLIENT -> SERVER:                 <div style='font-size:.85rem;color:#f59e0b;font-weight:700;margin-bottom:8px;'>
+[06:43:53] CLIENT -> SERVER:                   📅 Chưa đăng ký ca tập hôm nay
+[06:43:53] CLIENT -> SERVER:                 </div>
+[06:43:53] CLIENT -> SERVER:                 <div style='color:rgba(255,255,255,.75);font-size:.9rem;line-height:1.6;'>
+[06:43:53] CLIENT -> SERVER:                   Hôm nay (18/06/2026) bạn chưa đăng ký ca tập nào. Hãy liên hệ lễ tân hoặc đặt lịch ngay!
+[06:43:53] CLIENT -> SERVER:                 </div>
+[06:43:53] CLIENT -> SERVER:               </div>
+[06:43:53] CLIENT -> SERVER:
+[06:43:53] CLIENT -> SERVER:               <div style='text-align:center;margin:24px 0 8px;'>
+[06:43:53] CLIENT -> SERVER:                 <a href='http://localhost/PHP/ELite_GYM/public/'
+[06:43:53] CLIENT -> SERVER:                    style='background:#cc0000;color:#fff;text-decoration:none;padding:12px 32px;border-radius:3px;font-weight:700;font-size:.9rem;letter-spacing:1px;display:inline-block;'>
+[06:43:53] CLIENT -> SERVER:                   Vào trang Elite Gym
+[06:43:53] CLIENT -> SERVER:                 </a>
+[06:43:53] CLIENT -> SERVER:               </div>
+[06:43:53] CLIENT -> SERVER:             </div>
+[06:43:53] CLIENT -> SERVER:
+[06:43:53] CLIENT -> SERVER:             <!-- Footer -->
+[06:43:53] CLIENT -> SERVER:             <div style='padding:16px 32px;border-top:1px solid rgba(255,255,255,.08);'>
+[06:43:53] CLIENT -> SERVER:               <p style='color:rgba(255,255,255,.3);font-size:.75rem;margin:0;text-align:center;'>
+[06:43:53] CLIENT -> SERVER:                 © 2026 Elite Fitness Gym. Nếu bạn không muốn nhận email này, liên hệ lễ tân.
+[06:43:53] CLIENT -> SERVER:               </p>
+[06:43:53] CLIENT -> SERVER:             </div>
+[06:43:53] CLIENT -> SERVER:           </div>
+[06:43:53] CLIENT -> SERVER:         </body></html>
+[06:43:53] CLIENT -> SERVER:
+[06:43:53] CLIENT -> SERVER:
+[06:43:53] CLIENT -> SERVER: --b1=_RAbVZRwXKC5sMeDMk3EFn1P22OxwlwaFJgy0rvAHbM--
+[06:43:53] CLIENT -> SERVER:
+[06:43:53] CLIENT -> SERVER: .
+[06:43:53] SERVER -> CLIENT: 250 2.0.0 OK  1781739833 98e67ed59e1d1-37ce7d0348bsm32984a91.2 - gsmtp
+[06:43:53] CLIENT -> SERVER: QUIT
+[06:43:53] SERVER -> CLIENT: 221 2.0.0 closing connection 98e67ed59e1d1-37ce7d0348bsm32984a91.2 - gsmtp
