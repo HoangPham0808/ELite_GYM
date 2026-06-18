@@ -778,7 +778,7 @@ class ScheduleController extends Controller
 Tổng kcal: ~{$kcal_total} kcal | Đạt {$pct_achieved}% mục tiêu đốt calo | Lời khuyên: {$advice}";
 
         // ── Groq API ─────────────────────────────────────────────────
-        $groq_api_key = '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';
+        $groq_api_key = 'gsk_00000000000';
         $groq_url     = 'https://api.groq.com/openai/v1/chat/completions';
         $groq_model   = 'llama-3.1-8b-instant';
 
